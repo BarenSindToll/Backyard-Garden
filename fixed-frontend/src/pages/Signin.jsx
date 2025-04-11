@@ -30,7 +30,11 @@ export default function Signin() {
                                 className="w-full border border-gray-300 rounded px-3 py-2"
                             />
                         </div>
-
+                        <div className="text-right text-sm">
+                            <a href="/forgot-password" className="text-forest font-medium hover:underline">
+                                Forgot Password?
+                            </a>
+                        </div>
                         <button
                             type="submit"
                             className="bg-forest text-white font-semibold py-2 rounded hover:bg-green-800 transition"
