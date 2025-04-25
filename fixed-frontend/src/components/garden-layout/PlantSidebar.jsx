@@ -1,20 +1,27 @@
 import { useState } from 'react';
-import basilIcon from '../../assets/veg-icons/basil.svg';
-import carrotIcon from '../../assets/veg-icons/carrot.svg';
-import lettuceIcon from '../../assets/veg-icons/lettuce.svg';
-import tomatoIcon from '../../assets/veg-icons/tomato.svg';
-import parsleyIcon from '../../assets/veg-icons/parsley.svg';
+import basil from '../../assets/veg-icons/basil.svg';
+import carrot from '../../assets/veg-icons/carrot.svg';
+import lettuce from '../../assets/veg-icons/lettuce.svg';
+import tomato from '../../assets/veg-icons/tomato.svg';
+import parsley from '../../assets/veg-icons/parsley.svg';
+import path from '../../assets/veg-icons/path.svg';
 
 const iconMap = {
-    Basil: basilIcon,
-    Carrot: carrotIcon,
-    Lettuce: lettuceIcon,
-    Tomato: tomatoIcon,
-    Parsley: parsleyIcon // fallback or same as basil for now
+    Basil: basil,
+    Carrot: carrot,
+    Lettuce: lettuce,
+    Tomato: tomato,
+    Parsley: parsley,
+    Path: path,
 };
 
-
 const plants = [
+    {
+        name: 'Path',
+        sunlight: 'Cardboard',
+        season: '',
+        note: 'Best covered with woodchips',
+    },
     {
         name: 'Basil',
         sunlight: 'Full Sun',
@@ -47,7 +54,6 @@ const plants = [
     },
 ];
 
-
 export default function PlantSidebar() {
     const [search, setSearch] = useState('');
 
@@ -58,7 +64,7 @@ export default function PlantSidebar() {
             <input
                 type="text"
                 placeholder="Search"
-                className="w-full px-3 py-2 mb-5 border border-gray-300 rounded"
+                className="w-full px-3 py-2 border rounded text-sm mb-4"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
             />
@@ -73,14 +79,23 @@ export default function PlantSidebar() {
                         >
                             <div>
                                 <h4 className="text-sm font-semibold">{plant.name}</h4>
-                                <p className="text-xs text-gray-600">{plant.sunlight} · {plant.season}</p>
+                                <p className="text-xs text-gray-600">
+                                    {plant.sunlight} {plant.season && `· ${plant.season}`}
+                                </p>
                                 {plant.note && (
-                                    <p className="text-xs text-gray-500 italic mt-0.5">{plant.note}</p>
+                                    <p className="text-xs text-gray-500 italic mt-0.5">
+                                        {plant.note}
+                                    </p>
                                 )}
                             </div>
-                            <img src={iconMap[plant.name]} alt={`${plant.name} icon`} className="w-8 h-8" />
+                            <img
+                                src={iconMap[plant.name]}
+                                alt={`${plant.name} icon`}
+                                className="w-8 h-8 cursor-pointer"
+                                draggable
+                                onDragStart={(e) => e.dataTransfer.setData('plant', plant.name)}
+                            />
                         </div>
-
                     ))}
             </div>
         </aside>

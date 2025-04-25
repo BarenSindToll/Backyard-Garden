@@ -10,6 +10,12 @@ const userSchema = new mongoose.Schema({
     resetOtp: { type: String, default: '' },
     resetOtpExpireAt: { type: Number, default: 0 },
 
+    savedGrids: {
+        type: [[String]], // 2D array of strings like [["Tomato", null], [null, "Path"]]
+        default: [],
+    },
+
+
 })
 
 const userModel = mongoose.models.user || mongoose.model('user', userSchema);
