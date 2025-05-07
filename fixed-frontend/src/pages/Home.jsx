@@ -4,6 +4,9 @@ import ZoneTabs from '../components/garden-layout/ZoneTabs';
 import GardenGrid from '../components/garden-layout/GardenGrid';
 import PlantSidebar from '../components/garden-layout/PlantSidebar';
 
+
+
+
 const createEmptyGrid = (rows = 10, cols = 10) => {
     return Array.from({ length: rows }, () => Array(cols).fill(null));
 };

@@ -64,7 +64,7 @@ export default function GardenGrid({ grid, updateGrid }) {
                         {hoveredCol === colIndex && (
                             <button
                                 onClick={() => removeCol(colIndex)}
-                                className="absolute top-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center shadow z-10"
+                                className="absolute top-0 bg-forest text-white text-xs rounded-full w-5 h-5 flex items-center justify-center shadow z-10"
                             >
                                 –
                             </button>
@@ -88,7 +88,7 @@ export default function GardenGrid({ grid, updateGrid }) {
                                 {hoveredRow === rowIndex && (
                                     <button
                                         onClick={() => removeRow(rowIndex)}
-                                        className="absolute bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center shadow z-10"
+                                        className="absolute bg-forest text-white text-xs rounded-full w-5 h-5 flex items-center justify-center shadow z-10"
                                         title="Remove row"
                                     >
                                         –

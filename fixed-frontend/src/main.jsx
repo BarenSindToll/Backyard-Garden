@@ -8,6 +8,7 @@ import Signin from './pages/Signin.jsx';
 import ForgotPassword from './pages/ForgotPassword';
 import VerifyReset from './pages/VerifyReset';
 import ResetPassword from './pages/ResetPassword';
+import Profile from './pages/Profile';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -21,6 +22,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/verify-reset" element={<VerifyReset />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>

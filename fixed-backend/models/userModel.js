@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
     isAccountVerified: { type: Boolean, default: false },
     resetOtp: { type: String, default: '' },
     resetOtpExpireAt: { type: Number, default: 0 },
+    profileImage: { type: String, default: '' },
 
     savedGrids: {
         type: [[String]], // 2D array of strings like [["Tomato", null], [null, "Path"]]

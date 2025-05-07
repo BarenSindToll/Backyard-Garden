@@ -1,4 +1,6 @@
 import userModel from "../models/userModel.js";
+import path from 'path';
+import fs from 'fs';
 
 export const getUserData = async (req, res) => {
     try {
@@ -10,11 +12,12 @@ export const getUserData = async (req, res) => {
             return res.json({ success: false, message: 'User not found.' });
         }
 
-        res.json({
+        return res.json({
             success: true,
             userData: {
                 name: user.name,
-                isAccountVerified: user.isAccountVerified
+                isAccountVerified: user.isAccountVerified,
+                profileImage: user.profileImage,
             }
         });
 
@@ -58,5 +61,46 @@ export const loadGrid = async (req, res) => {
 
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+
+export const uploadProfileImage = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const image = req.file;
+
+        if (!image) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+
+        const user = await userModel.findById(userId);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        user.profileImage = `/uploads/${image.filename}`;
+        await user.save();
+
+        res.json({ success: true, imagePath: user.profileImage });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+export const updateProfile = async (req, res) => {
+    const { userId, newPassword } = req.body;
+
+    try {
+        const user = await userModel.findById(userId);
+        if (!user) return res.json({ success: false, message: "User not found." });
+
+        if (newPassword) {
+            const hashed = await bcrypt.hash(newPassword, 10);
+            user.password = hashed;
+        }
+
+        await user.save();
+        res.json({ success: true, message: "Profile updated." });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
     }
 };

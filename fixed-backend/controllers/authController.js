@@ -78,7 +78,7 @@ export const login = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000 //7 days converted in miliseconds
         });
 
-        return res.json({ success: true });
+        return res.json({ success: true, userId: user._id });
 
 
 

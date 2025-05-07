@@ -18,6 +18,8 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 //app.use(cors({ credentials: true })); //send the cookies in the response from express app
+app.use('/uploads', express.static('uploads'));
+
 
 //API Endpoints
 app.get('/', (req, res) => res.send("API Working"));

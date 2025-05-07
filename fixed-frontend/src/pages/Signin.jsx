@@ -22,7 +22,11 @@ export default function Signin() {
         setMessage(data.message || (data.success ? 'Login successful' : 'Login failed'));
 
         if (data.success) {
-            setTimeout(() => navigate('/home'), 1000); // redirect after short delay
+            // Store userId for future requests
+            localStorage.setItem('userId', data.userId); // backend must return it
+            navigate('/home'); // redirect to homepage
+        } else {
+            setMessage(data.message || 'Login failed');
         }
     };
 
