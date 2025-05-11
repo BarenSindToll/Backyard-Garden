@@ -11,6 +11,11 @@ export default function Profile() {
     const userId = localStorage.getItem('userId');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [notification, setNotification] = useState('');
+    const [email, setEmail] = useState('');
+    const [location, setLocation] = useState('');
+    const [locationSuggestions, setLocationSuggestions] = useState([]);
+
 
 
     useEffect(() => {
@@ -22,7 +27,11 @@ export default function Profile() {
                 body: JSON.stringify({ userId })
             });
             const data = await res.json();
-            if (data.success) setName(data.userData.name);
+            if (data.success) {
+                setName(data.userData.name);
+                setEmail(data.userData.email);
+                setLocation(data.userData.location || '');;
+            }
         };
         fetchName();
     }, [userId]);
@@ -30,58 +39,47 @@ export default function Profile() {
     const handleSave = async (e) => {
         e.preventDefault();
 
-        // update name
-        const nameRes = await fetch('http://localhost:4000/api/user/update-name', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ userId, name }),
-        });
+        if (newPassword && newPassword !== confirmPassword) {
+            alert("Passwords do not match!");
+            return;
+        }
 
-        const nameData = await nameRes.json();
+        try {
+            const formData = new FormData();
+            formData.append('userId', userId);
+            if (name) formData.append('name', name);
+            if (email) formData.append('email', email);
+            if (selectedFile) formData.append('profileImage', selectedFile);
+            if (newPassword) formData.append('newPassword', newPassword);
+            if (location) formData.append('location', location);
 
-        // update password (only if filled)
-        let passwordData = { success: true };
-        if (newPassword) {
-            if (newPassword !== confirmPassword) {
-                alert('Passwords do not match!');
-                return;
-            }
 
-            const passRes = await fetch('http://localhost:4000/api/user/update-profile', {
+            const res = await fetch('http://localhost:4000/api/user/update-profile', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ userId, newPassword }),
+                body: formData
             });
-            passwordData = await passRes.json();
-        }
 
-        if (nameData.success && passwordData.success) {
-            alert('Changes saved!');
-            window.location.reload();
-        } else {
-            alert(nameData.message || passwordData.message || 'Failed to save.');
-        }
-    };
-
-
-
-
-    const handleNameSave = async (e) => {
-        e.preventDefault();
-        const res = await fetch('http://localhost:4000/api/user/update-name', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ userId, name })
-        });
-        const data = await res.json();
-        if (data.success) {
-            alert('Name updated!');
-            window.location.reload(); // Ensure DashboardHeader picks it up
+            const data = await res.json();
+            if (data.success) {
+                setNotification('Profile updated successfully!');
+                setNewPassword('');
+                setConfirmPassword('');
+                setSelectedFile(null);
+                if (data.updatedUser?.location) {
+                    setLocation(data.updatedUser.location);
+                }
+                setTimeout(() => setNotification(''), 3000);
+            } else {
+                alert(data.message || 'Failed to update.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert("An error occurred.");
         }
     };
+
+
+
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -89,22 +87,21 @@ export default function Profile() {
         setPreview(URL.createObjectURL(file));
     };
 
-    const handleUpload = async () => {
-        if (!selectedFile) return;
-        const formData = new FormData();
-        formData.append('profileImage', selectedFile);
-        formData.append('userId', userId);
 
-        const res = await fetch('http://localhost:4000/api/user/upload-profile-image', {
-            method: 'POST',
-            body: formData
-        });
-        const data = await res.json();
-        if (data.success) {
-            alert('Photo uploaded!');
-            window.location.reload();
+
+    const fetchLocationSuggestions = async (query) => {
+        if (!query) return setLocationSuggestions([]);
+
+        try {
+            const res = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=e3c7951748be483966dce7761fb84a39`);
+            const data = await res.json();
+            setLocationSuggestions(data.map(loc => `${loc.name}, ${loc.country}`));
+        } catch (err) {
+            console.error("Failed to fetch locations", err);
         }
     };
+
+
 
     return (
         <div className="bg-cream min-h-screen">
@@ -129,6 +126,11 @@ export default function Profile() {
                         <div>
                             <h3 className="text-xl font-bold mb-4 text-forest">Profile Information</h3>
                             <form onSubmit={handleSave} className="space-y-4">
+                                {notification && (
+                                    <div className="bg-green-100 text-green-800 px-4 py-2 rounded text-sm mb-4">
+                                        {notification}
+                                    </div>
+                                )}
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Profile Photo</label>
                                     {preview && (
@@ -139,15 +141,8 @@ export default function Profile() {
                                         />
                                     )}
                                     <input type="file" accept="image/*" onChange={handleFileChange} />
-                                    {selectedFile && (
-                                        <button
-                                            type="button"
-                                            onClick={handleUpload}
-                                            className="mt-2 bg-forest text-white px-4 py-1 rounded text-sm"
-                                        >
-                                            Upload Photo
-                                        </button>
-                                    )}
+
+
                                 </div>
 
                                 <div>
@@ -161,14 +156,47 @@ export default function Profile() {
                                     />
 
                                 </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium">Location</label>
+                                    <input
+                                        type="text"
+                                        value={location}
+                                        onChange={(e) => {
+                                            setLocation(e.target.value);
+                                            fetchLocationSuggestions(e.target.value);
+                                        }}
+                                        className="w-full border px-3 py-2 rounded"
+                                        placeholder="Start typing your city..."
+                                    />
+                                    {locationSuggestions.length > 0 && (
+                                        <ul className="border bg-white rounded mt-1 max-h-40 overflow-y-auto">
+                                            {locationSuggestions.map((loc, i) => (
+                                                <li
+                                                    key={i}
+                                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                                    onClick={() => {
+                                                        setLocation(loc);
+                                                        setLocationSuggestions([]);
+                                                    }}
+                                                >
+                                                    {loc}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+
+                                </div>
                                 <div>
                                     <label className="block text-sm font-medium">Email</label>
                                     <input
                                         type="email"
                                         className="w-full border px-3 py-2 rounded"
-                                        placeholder="your@email.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
                                     />
                                 </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium">New Password</label>
@@ -202,6 +230,7 @@ export default function Profile() {
                             </form>
                         </div>
                     )}
+
 
                     {/* Other sections remain unchanged */}
                 </div>

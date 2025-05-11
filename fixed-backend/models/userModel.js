@@ -10,9 +10,14 @@ const userSchema = new mongoose.Schema({
     resetOtp: { type: String, default: '' },
     resetOtpExpireAt: { type: Number, default: 0 },
     profileImage: { type: String, default: '' },
+    location: { type: String, default: '' },
 
-    savedGrids: {
-        type: [[String]], // 2D array of strings like [["Tomato", null], [null, "Path"]]
+    zones: {
+        type: [String],
+        default: ['Zone 1'],
+    },
+    grids: {
+        type: [[[String]]], // 3D array: array of 2D grid arrays
         default: [],
     },
 
