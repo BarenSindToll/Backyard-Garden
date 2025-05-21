@@ -1,19 +1,4 @@
 import { useState } from 'react';
-import basil from '../../assets/veg-icons/basil.svg';
-import carrot from '../../assets/veg-icons/carrot.svg';
-import lettuce from '../../assets/veg-icons/lettuce.svg';
-import tomato from '../../assets/veg-icons/tomato.svg';
-import parsley from '../../assets/veg-icons/parsley.svg';
-import path from '../../assets/veg-icons/path.svg';
-
-const plantIcons = {
-    Basil: basil,
-    Carrot: carrot,
-    Lettuce: lettuce,
-    Tomato: tomato,
-    Parsley: parsley,
-    Path: path,
-};
 
 export default function GardenGrid({ grid, updateGrid }) {
     const [hoveredCol, setHoveredCol] = useState(null);
@@ -36,12 +21,24 @@ export default function GardenGrid({ grid, updateGrid }) {
 
     const handleDrop = (e, rowIndex, colIndex) => {
         e.preventDefault();
-        const plant = e.dataTransfer.getData('plant');
-        if (!plantIcons[plant]) return;
+        const plantName = e.dataTransfer.getData('plant');
+        const plantIconData = e.dataTransfer.getData('iconData');
+        if (!plantName || !plantIconData) return;
 
         const newGrid = grid.map((row, rIdx) =>
             row.map((cell, cIdx) =>
-                rIdx === rowIndex && cIdx === colIndex ? plant : cell
+                rIdx === rowIndex && cIdx === colIndex
+                    ? { name: plantName, iconData: plantIconData }
+                    : cell
+            )
+        );
+        updateGrid(newGrid);
+    };
+
+    const handleDoubleClick = (rowIndex, colIndex) => {
+        const newGrid = grid.map((row, rIdx) =>
+            row.map((cell, cIdx) =>
+                rIdx === rowIndex && cIdx === colIndex ? null : cell
             )
         );
         updateGrid(newGrid);
@@ -102,36 +99,29 @@ export default function GardenGrid({ grid, updateGrid }) {
                                     key={`${rowIndex}-${colIndex}`}
                                     onDragOver={(e) => e.preventDefault()}
                                     onDrop={(e) => handleDrop(e, rowIndex, colIndex)}
-                                    className={`w-[56px] h-[56px] flex items-center justify-center border border-[#5D503E] ${item === 'Path' ? 'bg-[#ba8d68]' : 'bg-[#7D6C57]'
+                                    onDoubleClick={() => handleDoubleClick(rowIndex, colIndex)}
+                                    className={`w-[56px] h-[56px] flex items-center justify-center border border-[#5D503E] ${item?.name === 'Path' ? 'bg-[#ba8d68]' : 'bg-[#7D6C57]'
                                         }`}
                                 >
-                                    {item && item !== 'Path' && (
+                                    {item?.iconData && (
                                         <img
-                                            src={plantIcons[item]}
-                                            alt={item}
+                                            src={`data:image/svg+xml;base64,${item.iconData}`}
+                                            alt={item.name}
                                             className="w-5 h-5 cursor-move"
                                             draggable
-                                            onDragStart={(e) => e.dataTransfer.setData('plant', item)}
+                                            onDragStart={(e) => {
+                                                e.dataTransfer.setData('plant', item.name);
+                                                e.dataTransfer.setData('iconData', item.iconData);
+                                            }}
                                         />
                                     )}
-                                    {item === 'Path' && (
-                                        <img
-                                            src={plantIcons.Path}
-                                            alt="Path"
-                                            className="w-5 h-5 cursor-move"
-                                            draggable
-                                            onDragStart={(e) => e.dataTransfer.setData('plant', 'Path')}
-                                        />
-                                    )}
-
-
                                 </div>
                             ))}
                         </div>
                     ))}
                 </div>
 
-                {/* Add column button (vertically centered) */}
+                {/* Add column button */}
                 <div className="flex items-center ml-1">
                     <button
                         onClick={addCol}

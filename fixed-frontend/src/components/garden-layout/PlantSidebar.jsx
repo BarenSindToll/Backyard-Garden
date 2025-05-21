@@ -1,61 +1,18 @@
-import { useState } from 'react';
-import basil from '../../assets/veg-icons/basil.svg';
-import carrot from '../../assets/veg-icons/carrot.svg';
-import lettuce from '../../assets/veg-icons/lettuce.svg';
-import tomato from '../../assets/veg-icons/tomato.svg';
-import parsley from '../../assets/veg-icons/parsley.svg';
-import path from '../../assets/veg-icons/path.svg';
+import { useEffect, useState } from 'react';
 
-const iconMap = {
-    Basil: basil,
-    Carrot: carrot,
-    Lettuce: lettuce,
-    Tomato: tomato,
-    Parsley: parsley,
-    Path: path,
-};
-
-const plants = [
-    {
-        name: 'Path',
-        sunlight: 'Cardboard',
-        season: '',
-        note: 'Best covered with woodchips',
-    },
-    {
-        name: 'Basil',
-        sunlight: 'Full Sun',
-        season: 'Summer',
-        note: 'Good with tomatoes',
-    },
-    {
-        name: 'Parsley',
-        sunlight: 'Full Sun',
-        season: 'Summer',
-        note: 'Green',
-    },
-    {
-        name: 'Lettuce',
-        sunlight: 'Partial Shade',
-        season: 'Spring–Fall',
-        note: 'Stehm more',
-    },
-    {
-        name: 'Carrot',
-        sunlight: 'Full Sun',
-        season: 'Spring–Fall',
-        note: '',
-    },
-    {
-        name: 'Tomato',
-        sunlight: 'Full Sun',
-        season: 'Spring–Fall',
-        note: '',
-    },
-];
 
 export default function PlantSidebar() {
     const [search, setSearch] = useState('');
+    const [plants, setPlants] = useState([]);
+
+    useEffect(() => {
+        fetch('http://localhost:4000/api/plants/all')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) setPlants(data.plants);
+            })
+            .catch(err => console.error('Failed to load plants:', err));
+    }, []);
 
     return (
         <aside className="bg-[#f7f3ec] p-5 rounded-lg border border-gray-200 text-forest w-full">
@@ -89,12 +46,14 @@ export default function PlantSidebar() {
                                 )}
                             </div>
                             <img
-                                src={iconMap[plant.name]}
+                                src={`data:image/svg+xml;base64,${plant.iconData}`}
                                 alt={`${plant.name} icon`}
                                 className="w-8 h-8 cursor-pointer"
                                 draggable
                                 onDragStart={(e) => e.dataTransfer.setData('plant', plant.name)}
                             />
+
+
                         </div>
                     ))}
             </div>

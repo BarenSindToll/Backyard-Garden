@@ -6,6 +6,8 @@ import connectDB from "./config/mongodb.js";
 import authRouter from './routes/authRoutes.js';
 import userRouter from "./routes/userRoutes.js";
 import gardenLayoutRouter from "./routes/gardenLayoutRoutes.js";
+import plantRouter from './routes/plantRoutes.js';
+import calendarRouter from './routes/calendarRoutes.js';
 
 
 const app = express();
@@ -28,6 +30,9 @@ app.get('/', (req, res) => res.send("API Working"));
 app.use('/api/auth', authRouter)
 app.use('/api/user', userRouter);
 app.use('/api/gardenLayout', gardenLayoutRouter);
+app.use('/api/plants', plantRouter);
+app.use('/api/calendar', calendarRouter);
+
 
 app.listen(port, () => console.log(`Server started on PORT: ${port}`));
 

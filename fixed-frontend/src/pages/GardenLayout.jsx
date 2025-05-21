@@ -5,32 +5,13 @@ import GardenGrid from '../components/garden-layout/GardenGrid';
 import PlantSidebar from '../components/garden-layout/PlantSidebar';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { fetchCurrentUser } from '../utils/fetchCurrentUser';
 
 const createEmptyGrid = (rows = 10, cols = 10) => {
     return Array.from({ length: rows }, () => Array(cols).fill(null));
 };
 
-export async function fetchCurrentUser() {
-    try {
-        const res = await fetch('http://localhost:4000/api/user/get-profile', {
-            method: 'GET',
-            credentials: 'include',
-        });
 
-        if (res.status === 401 || res.status === 403) {
-            throw new Error('Session expired');
-        }
-
-        const data = await res.json();
-        if (data.success) return data.user;
-        throw new Error(data.message || 'Failed to fetch user');
-    } catch (err) {
-        console.error('Auth error:', err.message);
-        localStorage.clear();
-        window.location.href = '/login';
-        return null;
-    }
-}
 
 export default function GardenLayout() {
     const [activeSection, setActiveSection] = useState('garden');
@@ -58,28 +39,47 @@ export default function GardenLayout() {
             .catch(err => console.error('Save failed:', err));
     };
 
+    const enrichGrid = (grid, plantsList) => {
+        return grid.map(row =>
+            row.map(cell => {
+                if (!cell) return null;
+                if (typeof cell === 'object') return cell;
+                const matched = plantsList.find(p => p.name === cell);
+                return matched ? { name: matched.name, iconData: matched.iconData } : null;
+            })
+        );
+    };
+
     useEffect(() => {
         const loadGrids = async () => {
             const user = await fetchCurrentUser();
             if (!user) return;
 
-            setUserId(user._id); // Save for future calls
+            setUserId(user._id);
 
             try {
-                const res = await fetch('http://localhost:4000/api/gardenLayout/load-layout', {
-                    credentials: 'include',
-                });
+                const [plantRes, layoutRes] = await Promise.all([
+                    fetch('http://localhost:4000/api/plants/all', { credentials: 'include' }),
+                    fetch('http://localhost:4000/api/gardenLayout/load-layout', { credentials: 'include' }),
+                ]);
 
-                const data = await res.json();
-                console.log('Fetched layout:', data);
-                if (data?.zones?.length && data?.grids?.length) {
-                    setZones(data.zones);
-                    setGrids(data.grids);
+                const plantData = await plantRes.json();
+                const layoutData = await layoutRes.json();
+
+                if (layoutData.success && plantData.success) {
+                    const enrichedGrids = layoutData.grids.map(grid =>
+                        enrichGrid(grid, plantData.plants)
+                    );
+                    setZones(layoutData.zones);
+                    setGrids(enrichedGrids);
+                } else {
+                    console.error('Failed to load layout or plants.');
                 }
             } catch (err) {
                 console.error('Load failed:', err);
             }
         };
+
         loadGrids();
     }, []);
 
@@ -105,7 +105,6 @@ export default function GardenLayout() {
         const updatedGrids = [...grids];
         updatedZones.splice(index, 1);
         updatedGrids.splice(index, 1);
-
         setZones(updatedZones);
         setGrids(updatedGrids);
         setCurrentZone(prev => (prev === index ? 0 : prev > index ? prev - 1 : prev));
@@ -114,7 +113,6 @@ export default function GardenLayout() {
 
     return (
         <div className="bg-cream min-h-screen">
-            {/* Header */}
             <div className="bg-gradient-to-b from-[#c7b89e] to-cream shadow-sm">
                 <DashboardHeader />
                 <div className="text-center mt-2 pb-4 text-forest font-medium">Garden Layout</div>
@@ -123,7 +121,6 @@ export default function GardenLayout() {
                 </div>
             </div>
 
-            {/* Garden Section */}
             {activeSection === 'garden' && (
                 <main className="p-4 md:p-8 flex flex-col md:flex-row gap-6 justify-center max-w-7xl mx-auto">
                     <div className="flex flex-col items-center">
@@ -148,7 +145,6 @@ export default function GardenLayout() {
                 </main>
             )}
 
-            {/* Save Layout Button */}
             <div className="flex justify-center mt-6">
                 <button
                     onClick={() => saveToBackend(grids, zones, userId, true)}
@@ -159,7 +155,6 @@ export default function GardenLayout() {
                 <ToastContainer />
             </div>
 
-            {/* Other Sections */}
             {activeSection === 'calendar' && (
                 <div className="p-8 text-center text-forest">Calendar coming soon...</div>
             )}

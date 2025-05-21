@@ -10,7 +10,8 @@ import VerifyReset from './pages/VerifyReset';
 import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import GardenLayout from './pages/GardenLayout'
-import Weather from './pages/Weather.jsx';
+import Weather from './pages/Weather';
+import Calendar from './pages/Calendar';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -27,6 +28,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/profile" element={<Profile />} />
         <Route path="/garden-layout" element={<GardenLayout />} />
         <Route path="/weather" element={<Weather />} />
+        <Route path="/calendar" element={<Calendar />} />
 
 
       </Routes>
