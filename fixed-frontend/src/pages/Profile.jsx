@@ -15,6 +15,9 @@ export default function Profile() {
     const [email, setEmail] = useState('');
     const [location, setLocation] = useState('');
     const [locationSuggestions, setLocationSuggestions] = useState([]);
+    const [userImage, setUserImage] = useState(null);
+    const [allPlants, setAllPlants] = useState([]);
+    const [favoritePlants, setFavoritePlants] = useState([]);
 
 
 
@@ -30,11 +33,42 @@ export default function Profile() {
             if (data.success) {
                 setName(data.userData.name);
                 setEmail(data.userData.email);
-                setLocation(data.userData.location || '');;
+                setLocation(data.userData.location || '');
+                setUserImage(data.userData.profileImage);
             }
         };
         fetchName();
     }, [userId]);
+    useEffect(() => {
+        if (active === 'Garden Settings') {
+            fetch('http://localhost:4000/api/plants/all')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) setAllPlants(data.plants);
+                });
+
+            // Load user favorites
+            fetch('http://localhost:4000/api/user/get-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.userData.favoritePlants) {
+                        setFavoritePlants(data.userData.favoritePlants);
+                    }
+                });
+        }
+    }, [active]);
+
+    const toggleFavorite = (plantName) => {
+        setFavoritePlants(prev =>
+            prev.includes(plantName)
+                ? prev.filter(p => p !== plantName)
+                : [...prev, plantName]
+        );
+    };
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -46,17 +80,20 @@ export default function Profile() {
 
         try {
             const formData = new FormData();
-            formData.append('userId', userId);
+
             if (name) formData.append('name', name);
             if (email) formData.append('email', email);
             if (selectedFile) formData.append('profileImage', selectedFile);
             if (newPassword) formData.append('newPassword', newPassword);
             if (location) formData.append('location', location);
+            formData.append('favoritePlants', JSON.stringify(favoritePlants));
+
 
 
             const res = await fetch('http://localhost:4000/api/user/update-profile', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include'
             });
 
             const data = await res.json();
@@ -67,6 +104,9 @@ export default function Profile() {
                 setSelectedFile(null);
                 if (data.updatedUser?.location) {
                     setLocation(data.updatedUser.location);
+                }
+                if (data.updatedUser?.profileImage) {
+                    setUserImage(data.updatedUser.profileImage);
                 }
                 setTimeout(() => setNotification(''), 3000);
             } else {
@@ -133,10 +173,16 @@ export default function Profile() {
                                 )}
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Profile Photo</label>
-                                    {preview && (
+                                    {preview ? (
                                         <img
                                             src={preview}
                                             alt="Preview"
+                                            className="w-20 h-20 object-cover rounded-full mb-2"
+                                        />
+                                    ) : userImage && (
+                                        <img
+                                            src={`http://localhost:4000${userImage}`}
+                                            alt="Profile"
                                             className="w-20 h-20 object-cover rounded-full mb-2"
                                         />
                                     )}
@@ -229,7 +275,37 @@ export default function Profile() {
 
                             </form>
                         </div>
+                    )},
+
+                    {active === 'Garden Settings' && (
+                        <div>
+                            <h3 className="text-xl font-bold mb-4 text-forest">Garden Settings</h3>
+                            <h4 className="text-md font-semibold mb-2">Your Most Used Plants</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                                {allPlants.map((plant) => (
+                                    <button
+                                        key={plant.name}
+                                        onClick={() => toggleFavorite(plant.name)}
+                                        className={`border px-3 py-2 rounded text-sm ${favoritePlants.includes(plant.name)
+                                            ? 'bg-forest text-white'
+                                            : 'bg-white'
+                                            }`}
+                                    >
+                                        {plant.name}
+                                    </button>
+                                ))}
+
+                                <button
+                                    type="submit" // ✅ so the form submission is triggered
+                                    className="bg-forest text-white px-6 py-2 rounded hover:bg-green-800"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
                     )}
+
+
 
 
                     {/* Other sections remain unchanged */}

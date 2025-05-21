@@ -5,7 +5,8 @@ const plantSchema = new mongoose.Schema({
     sunlight: String,
     season: String,
     note: String,
-    iconData: String, // filename or URL for the icon (e.g. 'basil.svg')
+    iconData: String,
+    featured: { type: Boolean, default: false }
 });
 
 export default mongoose.models.Plant || mongoose.model('Plant', plantSchema);

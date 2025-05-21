@@ -20,6 +20,7 @@ export const getUserData = async (req, res) => {
                 isAccountVerified: user.isAccountVerified,
                 profileImage: user.profileImage,
                 location: user.location,
+                favoritePlants: user.favoritePlants || []
             }
         });
 
@@ -29,14 +30,14 @@ export const getUserData = async (req, res) => {
 };
 
 export const getProfile = async (req, res) => {
-  try {
-    const user = await userModel.findById(req.user.id).select('-password');
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    try {
+        const user = await userModel.findById(req.user.id).select('-password');
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    res.json({ success: true, user });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+        res.json({ success: true, user });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 
@@ -65,7 +66,8 @@ export const uploadProfileImage = async (req, res) => {
 };
 
 export const updateProfile = async (req, res) => {
-    const { userId, newPassword, name, email, location } = req.body;
+    const userId = req.user?.id;
+    const { newPassword, name, email, location } = req.body;
 
     try {
         const user = await userModel.findById(userId);
@@ -78,10 +80,25 @@ export const updateProfile = async (req, res) => {
         if (name) user.name = name;
         if (email) user.email = email;
         if (location) user.location = location;
+        if (req.file) {
+            user.profileImage = `/uploads/${req.file.filename}`;
+        }
+        if (req.body.favoritePlants) {
+            user.favoritePlants = JSON.parse(req.body.favoritePlants); // handle FormData
+        }
 
 
         await user.save();
-        res.json({ success: true, message: "Profile updated." });
+        res.json({
+            success: true,
+            message: "Profile updated.",
+            updatedUser: {
+                name: user.name,
+                email: user.email,
+                location: user.location,
+                profileImage: user.profileImage,
+            },
+        });
     } catch (error) {
         res.json({ success: false, message: error.message });
     }

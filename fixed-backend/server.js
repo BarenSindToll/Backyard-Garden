@@ -29,6 +29,7 @@ app.use('/uploads', express.static('uploads'));
 app.get('/', (req, res) => res.send("API Working"));
 app.use('/api/auth', authRouter)
 app.use('/api/user', userRouter);
+app.use('/uploads', express.static('uploads'));
 app.use('/api/gardenLayout', gardenLayoutRouter);
 app.use('/api/plants', plantRouter);
 app.use('/api/calendar', calendarRouter);

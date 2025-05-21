@@ -21,19 +21,27 @@ export default function GardenGrid({ grid, updateGrid }) {
 
     const handleDrop = (e, rowIndex, colIndex) => {
         e.preventDefault();
-        const plantName = e.dataTransfer.getData('plant');
-        const plantIconData = e.dataTransfer.getData('iconData');
-        if (!plantName || !plantIconData) return;
+
+        const dropped = e.dataTransfer.getData('plant');
+        if (!dropped) return;
+
+        let plant;
+        try {
+            plant = JSON.parse(dropped); // ✅ decode it
+        } catch (err) {
+            console.error('Invalid plant drop data:', err);
+            return;
+        }
 
         const newGrid = grid.map((row, rIdx) =>
             row.map((cell, cIdx) =>
-                rIdx === rowIndex && cIdx === colIndex
-                    ? { name: plantName, iconData: plantIconData }
-                    : cell
+                rIdx === rowIndex && cIdx === colIndex ? plant : cell
             )
         );
+
         updateGrid(newGrid);
     };
+
 
     const handleDoubleClick = (rowIndex, colIndex) => {
         const newGrid = grid.map((row, rIdx) =>

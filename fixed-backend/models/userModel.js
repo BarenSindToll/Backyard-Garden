@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
     resetOtpExpireAt: { type: Number, default: 0 },
     profileImage: { type: String, default: '' },
     location: { type: String, default: '' },
-
+    favoritePlants: { type: [String], default: '' },
 
 })
 

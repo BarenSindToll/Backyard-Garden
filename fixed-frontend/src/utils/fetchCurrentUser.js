@@ -15,7 +15,7 @@ export async function fetchCurrentUser() {
     } catch (err) {
         console.error('Auth error:', err.message);
         localStorage.clear();
-        window.location.href = '/login';
+        window.location.href = '/signin';
         return null;
     }
 }
