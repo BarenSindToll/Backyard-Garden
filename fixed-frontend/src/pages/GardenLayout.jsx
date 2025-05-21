@@ -3,54 +3,81 @@ import DashboardHeader from '../components/DashboardHeader';
 import ZoneTabs from '../components/garden-layout/ZoneTabs';
 import GardenGrid from '../components/garden-layout/GardenGrid';
 import PlantSidebar from '../components/garden-layout/PlantSidebar';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const createEmptyGrid = (rows = 10, cols = 10) => {
     return Array.from({ length: rows }, () => Array(cols).fill(null));
 };
+
+export async function fetchCurrentUser() {
+    try {
+        const res = await fetch('http://localhost:4000/api/user/get-profile', {
+            method: 'GET',
+            credentials: 'include',
+        });
+
+        if (res.status === 401 || res.status === 403) {
+            throw new Error('Session expired');
+        }
+
+        const data = await res.json();
+        if (data.success) return data.user;
+        throw new Error(data.message || 'Failed to fetch user');
+    } catch (err) {
+        console.error('Auth error:', err.message);
+        localStorage.clear();
+        window.location.href = '/login';
+        return null;
+    }
+}
 
 export default function GardenLayout() {
     const [activeSection, setActiveSection] = useState('garden');
     const [zones, setZones] = useState(['Zone 1']);
     const [currentZone, setCurrentZone] = useState(0);
     const [grids, setGrids] = useState([createEmptyGrid()]);
-    const [saveMessage, setSaveMessage] = useState('');
+    const [userId, setUserId] = useState(null);
 
-    // ✅ Save grids/zones to backend
-    const saveToBackend = (grids, zones) => {
-        fetch('http://localhost:4000/api/user/save-grid', {
+    const saveToBackend = (grids, zones, userId, showToast = false) => {
+        fetch('http://localhost:4000/api/gardenLayout/save-layout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({
-                userId: localStorage.getItem('userId'),
-                grids,
-                zones,
-            }),
+            body: JSON.stringify({ grids, zones }),
         })
             .then(res => res.json())
             .then(data => {
-                if (data.success) {
-                    setSaveMessage('Layout saved!');
-                    setTimeout(() => setSaveMessage(''), 3000);
+                if (showToast) {
+                    toast.success('Layout saved!', {
+                        position: 'top-center',
+                        autoClose: 2000,
+                    });
                 }
             })
             .catch(err => console.error('Save failed:', err));
     };
 
-    // ✅ Load grids/zones on mount
     useEffect(() => {
         const loadGrids = async () => {
-            const res = await fetch('http://localhost:4000/api/user/load-grid', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ userId: localStorage.getItem('userId') }),
-            });
+            const user = await fetchCurrentUser();
+            if (!user) return;
 
-            const data = await res.json();
-            if (data.success && data.grids.length) {
-                setGrids(data.grids);
-                setZones(data.zones);
+            setUserId(user._id); // Save for future calls
+
+            try {
+                const res = await fetch('http://localhost:4000/api/gardenLayout/load-layout', {
+                    credentials: 'include',
+                });
+
+                const data = await res.json();
+                console.log('Fetched layout:', data);
+                if (data?.zones?.length && data?.grids?.length) {
+                    setZones(data.zones);
+                    setGrids(data.grids);
+                }
+            } catch (err) {
+                console.error('Load failed:', err);
             }
         };
         loadGrids();
@@ -63,14 +90,14 @@ export default function GardenLayout() {
         setZones(updatedZones);
         setGrids(updatedGrids);
         setCurrentZone(updatedZones.length - 1);
-        saveToBackend(updatedGrids, updatedZones);
+        if (userId) saveToBackend(updatedGrids, updatedZones, userId);
     };
 
     const updateGrid = (zoneIndex, newGrid) => {
         const updated = [...grids];
         updated[zoneIndex] = newGrid;
         setGrids(updated);
-        saveToBackend(updated, zones);
+        if (userId) saveToBackend(updated, zones, userId);
     };
 
     const handleDeleteZone = (index) => {
@@ -82,7 +109,7 @@ export default function GardenLayout() {
         setZones(updatedZones);
         setGrids(updatedGrids);
         setCurrentZone(prev => (prev === index ? 0 : prev > index ? prev - 1 : prev));
-        saveToBackend(updatedGrids, updatedZones);
+        if (userId) saveToBackend(updatedGrids, updatedZones, userId);
     };
 
     return (
@@ -91,10 +118,10 @@ export default function GardenLayout() {
             <div className="bg-gradient-to-b from-[#c7b89e] to-cream shadow-sm">
                 <DashboardHeader />
                 <div className="text-center mt-2 pb-4 text-forest font-medium">Garden Layout</div>
-                <div className="text-center pb-4 text-forest text-sm">You can create and save your own garden designs!</div>
+                <div className="text-center pb-4 text-forest text-sm">
+                    You can create and save your own garden designs!
+                </div>
             </div>
-
-            ...
 
             {/* Garden Section */}
             {activeSection === 'garden' && (
@@ -108,10 +135,12 @@ export default function GardenLayout() {
                             onAddZone={handleAddZone}
                             onDeleteZone={handleDeleteZone}
                         />
-                        <GardenGrid
-                            grid={grids[currentZone]}
-                            updateGrid={(newGrid) => updateGrid(currentZone, newGrid)}
-                        />
+                        {grids[currentZone] && (
+                            <GardenGrid
+                                grid={grids[currentZone]}
+                                updateGrid={(newGrid) => updateGrid(currentZone, newGrid)}
+                            />
+                        )}
                     </div>
                     <div className="w-full md:w-64">
                         <PlantSidebar />
@@ -122,21 +151,13 @@ export default function GardenLayout() {
             {/* Save Layout Button */}
             <div className="flex justify-center mt-6">
                 <button
-                    onClick={() => saveToBackend(grids, zones)}
+                    onClick={() => saveToBackend(grids, zones, userId, true)}
                     className="bg-forest text-white px-6 py-2 rounded hover:bg-green-800"
                 >
                     Save Layout
                 </button>
-                {/*{saveMessage && (
-                    <div className="mt-2 text-green-700 bg-green-100 px-4 py-2 rounded text-sm">
-                        {saveMessage}
-                    </div>
-                )}*/}
-
+                <ToastContainer />
             </div>
-
-
-
 
             {/* Other Sections */}
             {activeSection === 'calendar' && (

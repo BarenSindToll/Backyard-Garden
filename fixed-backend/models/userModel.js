@@ -12,15 +12,6 @@ const userSchema = new mongoose.Schema({
     profileImage: { type: String, default: '' },
     location: { type: String, default: '' },
 
-    zones: {
-        type: [String],
-        default: ['Zone 1'],
-    },
-    grids: {
-        type: [[[String]]], // 3D array: array of 2D grid arrays
-        default: [],
-    },
-
 
 })
 

@@ -4,13 +4,17 @@ import { upload } from '../middleware/uploadMiddleware.js';
 import { uploadProfileImage } from '../controllers/userController.js';
 import { getUserData } from '../controllers/userController.js';
 import userModel from '../models/userModel.js';
-import { updateProfile } from '../controllers/userController.js';
+import { getProfile } from '../controllers/userController.js';
 import bcrypt from 'bcryptjs';
-import { saveGrid, loadGrid } from '../controllers/userController.js';
+import { verify } from 'crypto';
+import verifyToken from '../middleware/verifyToken.js';
+import { get } from 'http';
+
 
 const userRouter = express.Router();
 
 userRouter.post('/get-data', userAuth, getUserData); // Change from `.get('/data'...)`
+userRouter.get('/get-profile', verifyToken, getProfile);
 userRouter.post('/upload-profile-image', upload.single('profileImage'), uploadProfileImage);
 userRouter.post('/update-profile', upload.single('profileImage'), async (req, res) => {
     const { userId, name, newPassword, email, location } = req.body;
@@ -37,12 +41,11 @@ userRouter.post('/update-profile', upload.single('profileImage'), async (req, re
             name: user.name,
             email: user.email,
             location: user.location,
-            // ...any others
+            // 
         }
     });
 });
-userRouter.post('/save-grid', saveGrid);
-userRouter.post('/load-grid', loadGrid);
+
 
 
 

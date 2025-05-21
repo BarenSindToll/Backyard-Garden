@@ -28,42 +28,18 @@ export const getUserData = async (req, res) => {
     }
 };
 
-export const saveGrid = async (req, res) => {
-    const { userId } = req.body;
-    const { grids, zones } = req.body;
+export const getProfile = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user.id).select('-password');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    try {
-        const user = await userModel.findById(userId);
-        if (!user) return res.json({ success: false, message: 'User not found' });
-
-        user.grids = grids;
-        user.zones = zones;
-        await user.save();
-
-        res.json({ success: true });
-    } catch (err) {
-        res.json({ success: false, message: err.message });
-    }
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 
-// ✅ Load garden grid
-export const loadGrid = async (req, res) => {
-    const { userId } = req.body;
-
-    try {
-        const user = await userModel.findById(userId);
-        if (!user) return res.json({ success: false, message: 'User not found' });
-
-        res.json({
-            success: true,
-            grids: user.grids || [],
-            zones: user.zones || [],
-        });
-    } catch (err) {
-        res.json({ success: false, message: err.message });
-    }
-};
 
 
 
