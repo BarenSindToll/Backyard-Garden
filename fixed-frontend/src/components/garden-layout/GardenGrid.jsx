@@ -27,7 +27,7 @@ export default function GardenGrid({ grid, updateGrid }) {
 
         let plant;
         try {
-            plant = JSON.parse(dropped); // ✅ decode it
+            plant = JSON.parse(dropped); //  decode it
         } catch (err) {
             console.error('Invalid plant drop data:', err);
             return;

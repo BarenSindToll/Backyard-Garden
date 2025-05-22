@@ -1,8 +1,8 @@
 import gardenLayoutModel from "../models/gardenLayoutModel.js";
 
 export const loadLayout = async (req, res) => {
- const userId = req.user.id;
-const layout = await gardenLayoutModel.findOne({ userId });
+  const userId = req.user.id;
+  const layout = await gardenLayoutModel.findOne({ userId });
 
   try {
     const layout = await gardenLayoutModel.findOne({ userId });
@@ -23,12 +23,16 @@ export const saveLayout = async (req, res) => {
   const { grids, zones } = req.body;
   const userId = req.user.id;
 
+
   try {
     const layout = await gardenLayoutModel.findOneAndUpdate(
       { userId },
       { grids, zones },
       { new: true, upsert: true }
     );
+    console.log('🔄 Saving layout for user:', req.user.id);
+    console.log('Zones:', zones);
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

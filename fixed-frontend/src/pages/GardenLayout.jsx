@@ -20,12 +20,38 @@ export default function GardenLayout() {
     const [grids, setGrids] = useState([createEmptyGrid()]);
     const [userId, setUserId] = useState(null);
 
-    const saveToBackend = (grids, zones, userId, showToast = false) => {
+
+
+    const cleanGridData = (grids) =>
+        grids.map(row =>
+            row.map(cell => {
+                if (!cell) return null;
+                if (typeof cell === 'object' && cell.name) return cell.name;
+                return cell;
+            })
+        );
+
+
+
+
+    const saveToBackend = (originalGrids, zones, userId, showToast = false) => {
+        const cleanedGrids = originalGrids.map(grid =>
+            grid.map(row =>
+                row.map(cell => {
+                    if (!cell) return null;
+                    if (typeof cell === 'object' && cell.name) return cell.name;
+                    return cell;
+                })
+            )
+        );
+
+
+
         fetch('http://localhost:4000/api/gardenLayout/save-layout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ grids, zones }),
+            body: JSON.stringify({ grids: cleanedGrids, zones }),
         })
             .then(res => res.json())
             .then(data => {
@@ -36,8 +62,12 @@ export default function GardenLayout() {
                     });
                 }
             })
-            .catch(err => console.error('Save failed:', err));
+            .catch(err => console.error(' Save failed:', err));
     };
+
+
+
+
 
     const enrichGrid = (grid, plantsList) => {
         return grid.map(row =>
@@ -91,13 +121,16 @@ export default function GardenLayout() {
         setGrids(updatedGrids);
         setCurrentZone(updatedZones.length - 1);
         if (userId) saveToBackend(updatedGrids, updatedZones, userId);
+
     };
 
     const updateGrid = (zoneIndex, newGrid) => {
+        d
         const updated = [...grids];
         updated[zoneIndex] = newGrid;
         setGrids(updated);
         if (userId) saveToBackend(updated, zones, userId);
+
     };
 
     const handleDeleteZone = (index) => {
@@ -109,7 +142,21 @@ export default function GardenLayout() {
         setGrids(updatedGrids);
         setCurrentZone(prev => (prev === index ? 0 : prev > index ? prev - 1 : prev));
         if (userId) saveToBackend(updatedGrids, updatedZones, userId);
+
     };
+
+
+    const handleRenameZone = (updatedZones) => {
+        setZones(updatedZones);
+        setTimeout(() => {
+            if (userId) {
+                const cleanedGrids = cleanGridData(grids); // grids AFTER zone change
+                saveToBackend(cleanedGrids, updatedZones, userId);
+            }
+        }, 0);
+
+    };
+
 
     return (
         <div className="bg-cream min-h-screen">
@@ -131,7 +178,9 @@ export default function GardenLayout() {
                             setCurrentZone={setCurrentZone}
                             onAddZone={handleAddZone}
                             onDeleteZone={handleDeleteZone}
+                            onRenameZone={handleRenameZone}
                         />
+
                         {grids[currentZone] && (
                             <GardenGrid
                                 grid={grids[currentZone]}
@@ -147,7 +196,8 @@ export default function GardenLayout() {
 
             <div className="flex justify-center mt-6">
                 <button
-                    onClick={() => saveToBackend(grids, zones, userId, true)}
+                    onClick={() => saveToBackend(cleanGridData(grids), zones, userId, true)}
+
                     className="bg-forest text-white px-6 py-2 rounded hover:bg-green-800"
                 >
                     Save Layout

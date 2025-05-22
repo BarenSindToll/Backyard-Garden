@@ -23,6 +23,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Good with tomatoes; repels mosquitoes and flies.',
+        category: 'herb',
         iconData: getIconBase64('basil.svg'),
         featured: true,
     },
@@ -31,6 +32,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Good with basil, carrots, and marigolds. Avoid planting near corn or potatoes.',
+        category: 'vegetable',
         iconData: getIconBase64('tomato.svg'),
         featured: true,
     },
@@ -39,6 +41,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Does well with tomatoes, onions, and lettuce. Avoid dill and parsnips.',
+        category: 'vegetable',
         iconData: getIconBase64('carrot.svg'),
         featured: true,
     },
@@ -47,6 +50,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Good with tomatoes, asparagus, and corn. Keep away from lettuce.',
+        category: 'herb',
         iconData: getIconBase64('parsley.svg'),
     },
     {
@@ -54,6 +58,7 @@ const plants = [
         sunlight: 'Partial Shade',
         season: 'Spring–Fall',
         note: 'Companion to carrots, radishes, and strawberries. Avoid planting near parsley.',
+        category: 'vegetable',
         iconData: getIconBase64('lettuce.svg'),
     },
     {
@@ -61,6 +66,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Attracts pollinators. Can be allelopathic — avoid near potatoes or beans.',
+        category: 'flower',
         iconData: getIconBase64('sunflower.svg'),
     },
     {
@@ -68,6 +74,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Likes beans, corn, and nasturtiums. Avoid potatoes.',
+        category: 'vegetable',
         iconData: getIconBase64('zucchini.svg'),
     },
     {
@@ -75,6 +82,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Grows well with beans, peas, and radishes. Avoid aromatic herbs.',
+        category: 'vegetable',
         iconData: getIconBase64('cucumber.svg'),
     },
     {
@@ -82,6 +90,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Good with carrots, beets, and lettuce. Avoid peas and beans.',
+        category: 'vegetable',
         iconData: getIconBase64('onion.svg'),
         featured: true,
     },
@@ -90,6 +99,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Good with lettuce, carrots, and cucumbers. Helps deter pests.',
+        category: 'vegetable',
         iconData: getIconBase64('radish.svg'),
     },
     {
@@ -97,6 +107,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Summer',
         note: 'Plant with lettuce and spinach; avoid cabbage.',
+        category: 'fruit',
         iconData: getIconBase64('strawberry.svg'),
 
     },
@@ -105,6 +116,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Not known for companions but repels pests and thrives near most plants.',
+        category: 'herb',
         iconData: getIconBase64('tarragon.svg'),
     },
     {
@@ -112,6 +124,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Good with cabbage and tomatoes. Repels pests.',
+        category: 'herb',
         iconData: getIconBase64('thyme.svg'),
     },
     {
@@ -119,6 +132,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring',
         note: 'Ornamental bulb. Avoid near edibles due to potential allelopathy.',
+        category: 'flower',
         iconData: getIconBase64('tulip.svg'),
     },
     {
@@ -126,6 +140,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Fall',
         note: 'Allelopathic: avoid planting near most vegetables and fruits.',
+        category: 'tree',
         iconData: getIconBase64('walnut.svg'),
     },
     {
@@ -133,6 +148,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Companions: corn and nasturtium. Needs space and pollinators.',
+        category: 'fruit',
         iconData: getIconBase64('watermelon.svg'),
     },
     {
@@ -140,6 +156,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Can be grown with legumes to enrich soil nitrogen.',
+        category: 'vegetable',
         iconData: getIconBase64('wheat.svg'),
     },
     {
@@ -147,6 +164,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer–Fall',
         note: 'Attracts pollinators; excellent near vegetables.',
+        category: 'flower',
         iconData: getIconBase64('zinnia.svg'),
     },
     {
@@ -154,6 +172,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Fall',
         note: 'Avoid near walnut trees. Companion: garlic and chives to deter pests.',
+        category: 'tree',
         iconData: getIconBase64('apple.svg'),
     },
     {
@@ -161,6 +180,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Plant away from shade; companions include lavender and chives.',
+        category: 'tree',
         iconData: getIconBase64('apricot.svg'),
     },
     {
@@ -168,6 +188,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring',
         note: 'Likes tomatoes and parsley. Avoid onions and garlic.',
+        category: 'vegetable',
         iconData: getIconBase64('asparagus.svg'),
     },
     {
@@ -175,6 +196,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Likes corn and cucumbers. Avoid onions and garlic.',
+        category: 'vegetable',
         iconData: getIconBase64('beans.svg'),
     },
     {
@@ -182,6 +204,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Good with onions and lettuce. Avoid pole beans.',
+        category: 'vegetable',
         iconData: getIconBase64('beetroot.svg'),
     },
     {
@@ -189,6 +212,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Good with basil and onions. Avoid beans.',
+        category: 'vegetable',
         iconData: getIconBase64('bell-pepper.svg'),
         featured: true,
     },
@@ -197,6 +221,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Avoid nightshades nearby. Requires spacing.',
+        category: 'fruit',
         iconData: getIconBase64('blackberry.svg'),
     },
     {
@@ -204,6 +229,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Prefers acidic soil. Good with thyme and strawberries.',
+        category: 'fruit',
         iconData: getIconBase64('blueberry.svg'),
     },
     {
@@ -211,6 +237,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Cool season',
         note: 'Good with dill, onion, and celery. Avoid strawberries.',
+        category: 'vegetable',
         iconData: getIconBase64('broccoli.svg'),
     },
     {
@@ -218,6 +245,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring or Fall',
         note: 'Companions: dill, onion, chamomile. Avoid strawberries and tomatoes.',
+        category: 'vegetable',
         iconData: getIconBase64('cabbage.svg'),
     },
     {
@@ -225,6 +253,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Attracts pollinators. Good with almost all vegetables.',
+        category: 'flower',
         iconData: getIconBase64('calendula.svg'),
     },
     {
@@ -232,6 +261,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Likes dill and sage. Avoid strawberries.',
+        category: 'vegetable',
         iconData: getIconBase64('cauliflower.svg'),
     },
     {
@@ -239,6 +269,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Cool season',
         note: 'Good with cabbage, onions, and tomatoes.',
+        category: 'vegetable',
         iconData: getIconBase64('celery.svg'),
     },
     {
@@ -246,6 +277,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Summer',
         note: 'Avoid black walnut. Good with chives and garlic for pest deterrence.',
+        category: 'tree',
         iconData: getIconBase64('cherry-svgrepo-com.svg'),
     },
     {
@@ -253,6 +285,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Same companions as standard tomatoes: basil, marigold.',
+        category: 'fruit',
         iconData: getIconBase64('cherry-tomatoes.svg'),
     },
     {
@@ -260,6 +293,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Likes spinach and basil. Deters aphids.',
+        category: 'herb',
         iconData: getIconBase64('coriander.svg'),
     },
     {
@@ -267,6 +301,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Great with beans and squash (Three Sisters). Avoid tomatoes.',
+        category: 'vegetable',
         iconData: getIconBase64('corn.svg'),
     },
     {
@@ -274,6 +309,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Fall',
         note: 'Acid-loving groundcover. Avoid heavy feeders nearby.',
+        category: 'fruit',
         iconData: getIconBase64('cranberry.svg'),
     },
     {
@@ -281,6 +317,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Great with cabbage and cucumbers. Avoid carrots.',
+        category: 'herb',
         iconData: getIconBase64('dill.svg'),
     },
     {
@@ -288,6 +325,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Likes beans, thyme, and marigold. Avoid fennel.',
+        category: 'vegetable',
         iconData: getIconBase64('eggplant.svg'),
 
     },
@@ -296,6 +334,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Late Summer',
         note: 'Avoid near onions or garlic. Attracts birds.',
+        category: 'fruit',
         iconData: getIconBase64('elderberry.svg'),
     },
     {
@@ -303,6 +342,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer–Fall',
         note: 'Avoid deep-rooted plants nearby. Likes herbs like oregano.',
+        category: 'tree',
         iconData: getIconBase64('fig-svgrepo-com.svg'),
     },
     {
@@ -310,6 +350,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Fall–Spring',
         note: 'Deter pests. Good with roses, carrots, and apple trees.',
+        category: 'vegetable',
         iconData: getIconBase64('garlic.svg'),
 
     },
@@ -318,6 +359,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Late Summer',
         note: 'Avoid cabbage family nearby. Plant with chives or garlic.',
+        category: 'fruit',
         iconData: getIconBase64('grape.svg'),
     },
     {
@@ -325,6 +367,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Fall',
         note: 'Best planted away from vegetables. Needs companion tree.',
+        category: 'tree',
         iconData: getIconBase64('hazelnut.svg'),
     },
     {
@@ -332,6 +375,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Likes basil and carrots. Avoid beans.',
+        category: 'vegetable',
         iconData: getIconBase64('hot-pepper.svg'),
     },
     {
@@ -339,6 +383,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Good with rosemary and thyme. Repels pests.',
+        category: 'flower',
         iconData: getIconBase64('lavender.svg'),
     },
     {
@@ -346,6 +391,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Cool season',
         note: 'Plant with carrots, celery, and beets.',
+        category: 'vegetable',
         iconData: getIconBase64('leek.svg'),
     },
     {
@@ -353,6 +399,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Improves growth of nearby plants. Attracts beneficial insects.',
+        category: 'herb',
         iconData: getIconBase64('lovage.svg'),
     },
     {
@@ -360,6 +407,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Great trap crop. Plant near cucumbers, squash, and tomatoes.',
+        category: 'flower',
         iconData: getIconBase64('nasturium.svg'),
     },
     {
@@ -367,6 +415,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Good with garlic and chives. Prone to aphids without companions.',
+        category: 'vegetable',
         iconData: getIconBase64('nectarin.svg'),
     },
     {
@@ -374,6 +423,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Repels pests. Good under tomatoes and peppers.',
+        category: 'herb',
         iconData: getIconBase64('oregano.svg'),
     },
     {
@@ -381,6 +431,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Fall–Winter',
         note: 'Avoid planting near carrots. Likes onions and legumes.',
+        category: 'vegetable',
         iconData: getIconBase64('parsnip.svg'),
     },
     {
@@ -388,6 +439,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Avoid planting near tomatoes. Likes garlic nearby.',
+        category: 'tree',
         iconData: getIconBase64('peach.svg'),
     },
     {
@@ -395,6 +447,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Fall',
         note: 'Plant with chives and comfrey. Avoid walnut trees.',
+        category: 'vegetable',
         iconData: getIconBase64('pear.svg'),
     },
     {
@@ -402,6 +455,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring',
         note: 'Likes carrots and turnips. Avoid onions and garlic.',
+        category: 'vegetable',
         iconData: getIconBase64('peas.svg'),
     },
     {
@@ -409,6 +463,7 @@ const plants = [
         sunlight: 'Partial Shade',
         season: 'Spring–Fall',
         note: 'Repels pests. Contain its spread when near vegetables.',
+        category: 'herb',
         iconData: getIconBase64('peppermint.svg'),
     },
     {
@@ -416,6 +471,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Repels aphids and asparagus beetles. Good ornamental near crops.',
+        category: 'flower',
         iconData: getIconBase64('petunia.svg'),
     },
     {
@@ -423,6 +479,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Likes garlic and onions nearby to deter borers.',
+        category: 'tree',
         iconData: getIconBase64('plum.svg'),
     },
     {
@@ -430,6 +487,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Summer',
         note: 'Avoid tomatoes and cucumbers. Good with beans and cabbage.',
+        category: 'vegetable',
         iconData: getIconBase64('potatoes.svg'),
     },
     {
@@ -437,6 +495,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Fall',
         note: 'Plant with corn and beans. Needs space to sprawl.',
+        category: 'vegetable',
         iconData: getIconBase64('pumpkin.svg'),
     },
     {
@@ -444,6 +503,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Fall',
         note: 'Not picky. Likes most herbs around its base.',
+        category: 'tree',
         iconData: getIconBase64('quince.svg'),
     },
     {
@@ -451,6 +511,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Avoid potatoes and tomatoes. Likes garlic and chives.',
+        category: 'fruit',
         iconData: getIconBase64('raspberry.svg'),
     },
     {
@@ -458,6 +519,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Plant with garlic and chives to deter aphids.',
+        category: 'flower',
         iconData: getIconBase64('rose.svg'),
     },
     {
@@ -465,6 +527,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Year-round (mild climates)',
         note: 'Repels pests. Great near cabbage and beans.',
+        category: 'herb',
         iconData: getIconBase64('rosemary.svg'),
     },
     {
@@ -472,6 +535,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Spring–Fall',
         note: 'Good with rosemary and carrots. Avoid cucumbers.',
+        category: 'herb',
         iconData: getIconBase64('sage.svg'),
     },
     {
@@ -479,6 +543,7 @@ const plants = [
         sunlight: 'Full Sun',
         season: 'Summer',
         note: 'Plant with garlic and nasturtiums for pest control.',
+        category: 'tree',
         iconData: getIconBase64('sourcherry.svg'),
     },
 ];

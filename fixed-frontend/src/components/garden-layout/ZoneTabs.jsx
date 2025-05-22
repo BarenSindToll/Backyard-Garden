@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function ZoneTabs({ zones, currentZone, setZones, setCurrentZone, onAddZone, onDeleteZone }) {
+export default function ZoneTabs({ zones, currentZone, setZones, setCurrentZone, onAddZone, onDeleteZone, onRenameZone }) {
     const [editingIndex, setEditingIndex] = useState(null);
     const [zoneName, setZoneName] = useState('');
 
@@ -9,6 +9,7 @@ export default function ZoneTabs({ zones, currentZone, setZones, setCurrentZone,
             const updated = [...zones];
             updated[editingIndex] = zoneName.trim();
             setZones(updated);
+            if (onRenameZone) onRenameZone(updated);
         }
         setEditingIndex(null);
     };

@@ -12,26 +12,39 @@ import Profile from './pages/Profile';
 import GardenLayout from './pages/GardenLayout'
 import Weather from './pages/Weather';
 import Calendar from './pages/Calendar';
+import Blog from './pages/Blog';
+import AdminBlogPost from './pages/admin/AdminBlog.jsx';
+import AdminProfile from './pages/admin/AdminProfile.jsx';
+import NewBlogPost from './pages/admin/NewBlogPost.jsx';
+import EditBlogPost from './pages/admin/EditBlogPost.jsx';
+import { UserProvider } from './utils/userContext.jsx';
+
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<App />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/signin" element={<Signin />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/verify-reset" element={<VerifyReset />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/garden-layout" element={<GardenLayout />} />
-        <Route path="/weather" element={<Weather />} />
-        <Route path="/calendar" element={<Calendar />} />
+      <UserProvider>
+        <Routes>
+          <Route path="/" element={<App />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/signin" element={<Signin />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/verify-reset" element={<VerifyReset />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/garden-layout" element={<GardenLayout />} />
+          <Route path="/weather" element={<Weather />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/admin/blog" element={<AdminBlogPost />} />
+          <Route path="/admin/profile" element={<AdminProfile />} />
+          <Route path="/admin/blog/new" element={<NewBlogPost />} />
+          <Route path="/admin/blog/edit/:slug" element={<EditBlogPost />} />
 
-
-      </Routes>
+        </Routes>
+      </UserProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

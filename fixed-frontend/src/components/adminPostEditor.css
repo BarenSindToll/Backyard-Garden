@@ -1,0 +1,28 @@
+.tiptap-editor .btn {
+    padding: 0.3rem 0.7rem;
+    background: #4b6f44;
+    color: white;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    transition: background 0.2s;
+}
+
+.tiptap-editor .btn:hover {
+    background: #355d32;
+}
+
+.ProseMirror {
+    min-height: 200px;
+    padding: 1rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    outline: none;
+    cursor: text;
+}
+
+.ProseMirror img {
+    max-width: 100%;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+}

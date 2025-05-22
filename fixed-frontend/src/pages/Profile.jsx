@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import DashboardHeader from '../components/DashboardHeader';
+import { fetchCurrentUser } from '../utils/fetchCurrentUser';
 
-const sections = ['Account Settings', 'Garden Settings', 'Help', 'Log Out'];
+const sections = ['Account Settings', 'Garden Settings', 'Help'];
 
 export default function Profile() {
-    const [active, setActive] = useState('Account Settings');
+    const [active, setActive] = useState(() => {
+        return localStorage.getItem('profileTab') || 'Account Settings';
+    });
+    //this saves the last viewed section to show on refresh
     const [selectedFile, setSelectedFile] = useState(null);
     const [preview, setPreview] = useState(null);
     const [name, setName] = useState('');
@@ -19,26 +23,38 @@ export default function Profile() {
     const [allPlants, setAllPlants] = useState([]);
     const [favoritePlants, setFavoritePlants] = useState([]);
 
+    const grouped = {
+        fruit: [],
+        vegetable: [],
+        herb: [],
+        flower: [],
+        tree: [],
+    };
+
+    allPlants.forEach(p => {
+        if (grouped[p.category]) {
+            grouped[p.category].push(p);
+        }
+    });
+
+    Object.keys(grouped).forEach((key) => {
+        grouped[key].sort((a, b) => a.name.localeCompare(b.name));
+    });
 
 
     useEffect(() => {
-        const fetchName = async () => {
-            const res = await fetch('http://localhost:4000/api/user/get-data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ userId })
-            });
-            const data = await res.json();
-            if (data.success) {
-                setName(data.userData.name);
-                setEmail(data.userData.email);
-                setLocation(data.userData.location || '');
-                setUserImage(data.userData.profileImage);
+        const fetchUser = async () => {
+            const user = await fetchCurrentUser();
+            if (user) {
+                setName(user.name);
+                setEmail(user.email);
+                setLocation(user.location || '');
+                setUserImage(user.profileImage);
+                setFavoritePlants(user.favoritePlants || []);
             }
         };
-        fetchName();
-    }, [userId]);
+        fetchUser();
+    }, []);
     useEffect(() => {
         if (active === 'Garden Settings') {
             fetch('http://localhost:4000/api/plants/all')
@@ -98,7 +114,7 @@ export default function Profile() {
 
             const data = await res.json();
             if (data.success) {
-                setNotification('Profile updated successfully!');
+                setNotification('Settings updated successfully!');
                 setNewPassword('');
                 setConfirmPassword('');
                 setSelectedFile(null);
@@ -152,7 +168,10 @@ export default function Profile() {
                     {sections.map((sec) => (
                         <button
                             key={sec}
-                            onClick={() => setActive(sec)}
+                            onClick={() => {
+                                setActive(sec);
+                                localStorage.setItem('profileTab', sec);
+                            }}
                             className={`block w-full text-left px-3 py-2 rounded hover:bg-forest hover:text-white transition ${active === sec ? 'bg-forest text-white' : ''
                                 }`}
                         >
@@ -166,11 +185,7 @@ export default function Profile() {
                         <div>
                             <h3 className="text-xl font-bold mb-4 text-forest">Profile Information</h3>
                             <form onSubmit={handleSave} className="space-y-4">
-                                {notification && (
-                                    <div className="bg-green-100 text-green-800 px-4 py-2 rounded text-sm mb-4">
-                                        {notification}
-                                    </div>
-                                )}
+
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Profile Photo</label>
                                     {preview ? (
@@ -265,13 +280,19 @@ export default function Profile() {
                                 </div>
 
 
-
-                                <button
-                                    type="submit" // ✅ so the form submission is triggered
-                                    className="bg-forest text-white px-6 py-2 rounded hover:bg-green-800"
-                                >
-                                    Save Changes
-                                </button>
+                                <div className="flex justify-center mt-8">
+                                    <button
+                                        type="submit" // so the form submission is triggered
+                                        className="bg-forest text-white px-6 py-2 rounded hover:bg-green-800"
+                                    >
+                                        Save Changes
+                                    </button>
+                                </div>
+                                {notification && (
+                                    <div className="bg-green-100 text-green-800 px-4 py-2 rounded text-sm mb-4">
+                                        {notification}
+                                    </div>
+                                )}
 
                             </form>
                         </div>
@@ -280,28 +301,47 @@ export default function Profile() {
                     {active === 'Garden Settings' && (
                         <div>
                             <h3 className="text-xl font-bold mb-4 text-forest">Garden Settings</h3>
-                            <h4 className="text-md font-semibold mb-2">Your Most Used Plants</h4>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-                                {allPlants.map((plant) => (
-                                    <button
-                                        key={plant.name}
-                                        onClick={() => toggleFavorite(plant.name)}
-                                        className={`border px-3 py-2 rounded text-sm ${favoritePlants.includes(plant.name)
-                                            ? 'bg-forest text-white'
-                                            : 'bg-white'
-                                            }`}
-                                    >
-                                        {plant.name}
-                                    </button>
-                                ))}
+                            <h4 className="text-md text-gray-700 mb-4">Select your most used plants</h4>
 
+
+                            {Object.entries(grouped).map(([category, plants]) => (
+                                <div key={category} className="mb-6">
+                                    <h5 className="text-lg font-semibold capitalize mb-2">{category}s</h5>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        {plants.map(plant => (
+                                            <button
+                                                key={plant.name}
+                                                onClick={() => toggleFavorite(plant.name)}
+                                                className={`border p-3 rounded flex items-center gap-2 text-sm transition
+            ${favoritePlants.includes(plant.name)
+                                                        ? 'bg-forest text-white'
+                                                        : 'bg-white hover:bg-cream'}`}
+                                            >
+                                                <img
+                                                    src={`data:image/svg+xml;base64,${plant.iconData}`}
+                                                    alt={plant.name}
+                                                    className="w-6 h-6"
+                                                />
+                                                <span>{plant.name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                            <div className="flex justify-center mt-8">
                                 <button
-                                    type="submit" // ✅ so the form submission is triggered
+                                    type="button"
+                                    onClick={handleSave}
                                     className="bg-forest text-white px-6 py-2 rounded hover:bg-green-800"
                                 >
-                                    Save Changes
+                                    Save Garden Settings
                                 </button>
                             </div>
+                            {notification && (
+                                <div className="bg-green-100 text-green-800 px-4 py-2 rounded text-sm mb-4">
+                                    {notification}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -310,7 +350,7 @@ export default function Profile() {
 
                     {/* Other sections remain unchanged */}
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

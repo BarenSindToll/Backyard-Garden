@@ -20,7 +20,8 @@ export const getUserData = async (req, res) => {
                 isAccountVerified: user.isAccountVerified,
                 profileImage: user.profileImage,
                 location: user.location,
-                favoritePlants: user.favoritePlants || []
+                favoritePlants: user.favoritePlants || [],
+                isAdmin: user.isAdmin
             }
         });
 

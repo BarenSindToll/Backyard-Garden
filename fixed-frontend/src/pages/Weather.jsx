@@ -20,8 +20,9 @@ export default function Weather() {
     const [forecast, setForecast] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [todaySnapshot, setToday] = useState(null);
 
-    // 🧠 Extract weather using saved location
+    //  Extract weather using saved location
     const fetchForecast = async (cityName) => {
         setLoading(true);
         setError('');
@@ -29,11 +30,12 @@ export default function Weather() {
             const response = await fetch(
                 `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${encodeURIComponent(
                     cityName
-                )}?unitGroup=metric&include=days&key=${API_KEY}&contentType=json`
+                )}?unitGroup=metric&include=days,current&key=${API_KEY}&contentType=json`
             );
             const data = await response.json();
-            if (data.days) {
+            if (data.days && data.currentConditions) {
                 setForecast(data.days.slice(0, 7));
+                setToday(data.currentConditions);
             } else {
                 setError('No forecast data available.');
             }
@@ -45,7 +47,7 @@ export default function Weather() {
         }
     };
 
-    // ⛅ Load user location from backend
+    //  Load user location from backend
     useEffect(() => {
         const fetchUserLocation = async () => {
             try {
@@ -87,8 +89,8 @@ export default function Weather() {
         }
         return 'default.svg';
     }
-
-    const today = forecast[0];
+    const todayDate = forecast[0]?.datetime;
+    const today = todaySnapshot || forecast[0];
 
     return (
         <div className="bg-cream min-h-screen">
@@ -109,11 +111,12 @@ export default function Weather() {
                             {/* Date & Condition */}
                             <div className="text-left space-y-1 mb-4 md:mb-0">
                                 <h2 className="text-2xl font-semibold tracking-wide">
-                                    {new Date(today.datetime).toLocaleDateString('en-US', { weekday: 'long' })}
+                                    {todayDate ? new Date(todayDate).toLocaleDateString('en-US', { weekday: 'long' }) : ''}
                                 </h2>
                                 <p className="text-sm text-gray-700">
-                                    {new Date(today.datetime).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                                    {todayDate ? new Date(todayDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : ''}
                                 </p>
+
                                 <p className="text-sm text-gray-700 italic pt-24">{today.conditions}</p>
                             </div>
 
