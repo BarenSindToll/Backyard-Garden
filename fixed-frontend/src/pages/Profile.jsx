@@ -160,10 +160,10 @@ export default function Profile() {
 
 
     return (
-        <div className="bg-cream min-h-screen">
+        <div className="bg-white min-h-screen">
             <DashboardHeader />
             <div className="max-w-6xl mx-auto mt-10 flex border rounded shadow bg-white overflow-hidden">
-                <div className="w-60 bg-[#f9f7f3] border-r p-4 space-y-4 text-forest">
+                <div className="w-60 bg-cream border-r p-4 space-y-4 text-forest">
                     <h2 className="text-lg font-bold mb-4">Settings</h2>
                     {sections.map((sec) => (
                         <button
@@ -283,9 +283,9 @@ export default function Profile() {
                                 <div className="flex justify-center mt-8">
                                     <button
                                         type="submit" // so the form submission is triggered
-                                        className="bg-forest text-white px-6 py-2 rounded hover:bg-green-800"
+                                        className="bg-forest text-white mt-6 px-6 py-2 rounded hover:bg-green-800"
                                     >
-                                        Save Changes
+                                        Save Account Settings
                                     </button>
                                 </div>
                                 {notification && (
@@ -314,7 +314,7 @@ export default function Profile() {
                                                 onClick={() => toggleFavorite(plant.name)}
                                                 className={`border p-3 rounded flex items-center gap-2 text-sm transition
             ${favoritePlants.includes(plant.name)
-                                                        ? 'bg-forest text-white'
+                                                        ? 'bg-cream text-forest'
                                                         : 'bg-white hover:bg-cream'}`}
                                             >
                                                 <img

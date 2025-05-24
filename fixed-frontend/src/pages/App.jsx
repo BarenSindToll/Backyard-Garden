@@ -1,6 +1,7 @@
-import Header from './components/Header';
-import FeatureCard from './components/FeatureCard';
-import gardenImg from './assets/garden-photo.jpg';
+
+import Header from '../components/Header';
+import FeatureCard from '../components/FeatureCard'
+import gardenImg from '../assets/garden-photo.jpg'
 import { Link } from 'react-router-dom';
 
 const features = [
@@ -10,11 +11,11 @@ const features = [
   },
   {
     title: 'Task Planning',
-    description: 'Schedule and manage gardening tasks'
+    description: 'Schedule and manage daily tasks'
   },
   {
-    title: 'Plant Recommendations',
-    description: 'Learn what to grow and where to plant it'
+    title: 'Recommendations',
+    description: 'Read articles to learn gardening tricks'
   }
 ];
 
@@ -30,7 +31,7 @@ export default function App() {
           </h1>
           <p className="max-w-xl mx-auto mb-6 text-lg">
             A gardening assistant to help you grow! Organize your garden layout,
-            track and schedule tasks, get plant suggestions, and view the local
+            track and schedule tasks, check blog posts for tips and tricks and view the local
             weather forecast.
           </p>
           <Link to="/signup">

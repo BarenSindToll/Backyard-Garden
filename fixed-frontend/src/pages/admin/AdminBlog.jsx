@@ -6,15 +6,22 @@ export default function AdminBlog() {
     const [posts, setPosts] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [viewArchived, setViewArchived] = useState(false);
     const navigate = useNavigate();
 
+    const categoryOptions = ['All', 'Garden', 'Landscaping', 'Vegetables', 'Fruits', 'Trees', 'Permaculture'];
+
     useEffect(() => {
-        fetch('http://localhost:4000/api/blog/all')
+        const endpoint = viewArchived
+            ? 'http://localhost:4000/api/blog/archived'
+            : 'http://localhost:4000/api/blog/all';
+
+        fetch(endpoint)
             .then(res => res.json())
             .then(data => {
                 if (data.success) setPosts(data.posts);
             });
-    }, []);
+    }, [viewArchived]);
 
     const handleDelete = async (slug) => {
         if (!window.confirm(`Delete "${slug}"?`)) return;
@@ -32,17 +39,31 @@ export default function AdminBlog() {
         }
     };
 
-    const categoryOptions = ['All', 'Garden', 'Landscaping', 'Vegetables', 'Fruits', 'Trees', 'Permaculture'];
+    const handleRestore = async (slug) => {
+        const res = await fetch(`http://localhost:4000/api/blog/restore/${slug}`, {
+            method: 'PUT',
+            credentials: 'include',
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            setPosts(prev => prev.filter(post => post.slug !== slug));
+        } else {
+            alert(data.message || 'Failed to restore post.');
+        }
+    };
 
     const filteredPosts = posts.filter(post => {
-        const matchesCategory = selectedCategory === '' || selectedCategory === 'All' || post.category === selectedCategory;
-        const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        const matchesCategory =
+            selectedCategory === '' || selectedCategory === 'All' || post.category === selectedCategory;
+        const matchesSearch =
+            post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             post.excerpt?.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesCategory && matchesSearch;
     });
 
     return (
-        <div className="bg-cream min-h-screen text-forest">
+        <div className="bg-white min-h-screen text-forest">
             <DashboardHeader />
 
             <div className="max-w-6xl mx-auto p-6">
@@ -56,6 +77,23 @@ export default function AdminBlog() {
                     </Link>
                 </div>
 
+                {/* View toggle */}
+                <div className="flex gap-4 mb-4">
+                    <button
+                        onClick={() => setViewArchived(false)}
+                        className={`px-4 py-2 rounded ${!viewArchived ? 'bg-forest text-white' : 'bg-gray-100'}`}
+                    >
+                        Published
+                    </button>
+                    <button
+                        onClick={() => setViewArchived(true)}
+                        className={`px-4 py-2 rounded ${viewArchived ? 'bg-forest text-white' : 'bg-gray-100'}`}
+                    >
+                        Archived
+                    </button>
+                </div>
+
+                {/* Filters */}
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
                     <input
                         type="text"
@@ -91,18 +129,29 @@ export default function AdminBlog() {
 
                                 {/* Hover controls */}
                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-4 transition-opacity">
-                                    <button
-                                        onClick={() => navigate(`/admin/blog/edit/${post.slug}`)}
-                                        className="bg-yellow-400 text-white px-4 py-1 rounded hover:bg-yellow-500"
-                                    >
-                                        Edit
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(post.slug)}
-                                        className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700"
-                                    >
-                                        Delete
-                                    </button>
+                                    {viewArchived ? (
+                                        <button
+                                            onClick={() => handleRestore(post.slug)}
+                                            className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700"
+                                        >
+                                            Restore
+                                        </button>
+                                    ) : (
+                                        <>
+                                            <button
+                                                onClick={() => navigate(`/admin/blog/edit/${post.slug}`)}
+                                                className="bg-yellow-400 text-white px-4 py-1 rounded hover:bg-yellow-500"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(post.slug)}
+                                                className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700"
+                                            >
+                                                Delete
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         ))}

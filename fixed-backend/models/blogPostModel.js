@@ -8,6 +8,8 @@ const blogPostSchema = new mongoose.Schema({
     content: { type: String }, // full HTML or markdown
     category: { type: String },
     createdAt: { type: Date, default: Date.now },
+    isDeleted: { type: Boolean, default: false },
+
 });
 
 export default mongoose.models.blogPost || mongoose.model('BlogPost', blogPostSchema);

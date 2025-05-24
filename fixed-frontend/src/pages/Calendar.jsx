@@ -107,7 +107,7 @@ export default function Calendar() {
                     return (
                         <div
                             key={i}
-                            className={`min-h-[100px] border rounded bg-white p-2 cursor-pointer 
+                            className={`min-h-[100px] border rounded bg-cream p-2 cursor-pointer 
     ${isToday ? 'ring-2 ring-forest ' : ''}`
                             }
                             onClick={() => date && handleDayClick(date)}
@@ -142,7 +142,7 @@ export default function Calendar() {
                         <div
                             key={i}
                             onClick={() => handleDayClick(date)}
-                            className={`min-h-[200px] border rounded p-2 bg-white cursor-pointer transition 
+                            className={`min-h-[200px] border rounded p-2 bg-cream cursor-pointer transition 
     ${isToday ? 'ring-2 ring-forest' : ''}`}
                         >
 
@@ -194,7 +194,7 @@ export default function Calendar() {
         };
 
         return (
-            <div className="bg-white p-4 border rounded min-h-[300px]">
+            <div className="bg-cream p-4 border rounded min-h-[300px]">
                 <div className="font-semibold mb-4 text-lg">{selectedDate.format('dddd, MMMM D, YYYY')}</div>
                 {tasks.map((app, i) => (
                     <div key={i} className={`text-sm p-3 mb-3 rounded ${app.color} relative`}>
@@ -237,7 +237,7 @@ export default function Calendar() {
                                 'header', 'bold', 'italic', 'underline',
                                 'color', 'background', 'list', 'bullet'
                             ]}
-                            className="bg-white rounded border mb-2"
+                            className="bg-cream rounded border mb-2"
                         />
                         <select value={color} onChange={e => setColor(e.target.value)} className="border px-2 py-1 mb-2 rounded">
                             <option value="bg-blue-100">Blue</option>
@@ -257,23 +257,23 @@ export default function Calendar() {
     };
 
     return (
-        <div className="bg-cream min-h-screen">
+        <div className="bg-white min-h-screen">
             <DashboardHeader />
             <div className="max-w-7xl mx-auto p-6 text-forest">
                 <div className="flex justify-between items-center mb-4">
                     <div className="space-x-2">
                         {['MONTH', 'WEEK', 'DAY'].map(v => (
-                            <button key={v} onClick={() => setView(v)} className={`px-3 py-1 rounded border ${view === v ? 'bg-forest text-white' : 'bg-white'}`}>{v}</button>
+                            <button key={v} onClick={() => setView(v)} className={`px-3 py-1 rounded border ${view === v ? 'bg-forest text-white' : 'bg-cream'}`}>{v}</button>
                         ))}
                     </div>
                     <h2 className="text-xl font-semibold">{current.format('MMMM YYYY')}</h2>
                     <div className="space-x-2">
-                        <button onClick={goToPrev} className="px-2 py-1 bg-white border rounded">←</button>
-                        <button onClick={goToNext} className="px-2 py-1 bg-white border rounded">→</button>
+                        <button onClick={goToPrev} className="px-2 py-1 bg-cream border rounded">←</button>
+                        <button onClick={goToNext} className="px-2 py-1 bg-cream border rounded">→</button>
                     </div>
                 </div>
                 <div className="flex gap-6">
-                    <div className="w-64 bg-white border rounded p-4 shadow-sm overflow-y-auto max-h-[90vh]">
+                    <div className="w-64 bg-cream border rounded p-4 shadow-sm overflow-y-auto max-h-[90vh]">
                         {renderMonthSidebar()}
                     </div>
                     <div className="flex-1">

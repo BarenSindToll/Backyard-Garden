@@ -4,12 +4,14 @@ import slugify from 'slugify';
 // GET /api/blog/all
 export const getAllPosts = async (req, res) => {
     try {
-        const posts = await BlogPost.find().sort({ createdAt: -1 });
+        const posts = await BlogPost.find({ isDeleted: false }).sort({ createdAt: -1 }); // ✅ must filter
         res.json({ success: true, posts });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 };
+
+
 
 // GET /api/blog/:slug
 export const getPostBySlug = async (req, res) => {
@@ -56,18 +58,48 @@ export const updatePost = async (req, res) => {
     }
 };
 
-
 export const deletePost = async (req, res) => {
     try {
-        const post = await BlogPost.findOneAndDelete({ slug: req.params.slug });
+        const post = await BlogPost.findOneAndUpdate(
+            { slug: req.params.slug },
+            { isDeleted: true },
+            { new: true }
+        );
 
         if (!post) {
             return res.status(404).json({ success: false, message: 'Post not found' });
         }
 
-        res.json({ success: true, message: 'Post deleted successfully' });
+        res.json({ success: true, message: 'Post soft-deleted' });
     } catch (err) {
-        console.error('Delete error:', err);
+        console.error('Soft delete error:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+export const getArchivedPosts = async (req, res) => {
+    try {
+        const posts = await BlogPost.find({ isDeleted: true }).sort({ createdAt: -1 }); // ✅ must filter
+        res.json({ success: true, posts });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+export const restorePost = async (req, res) => {
+    try {
+        const post = await BlogPost.findOneAndUpdate(
+            { slug: req.params.slug },
+            { isDeleted: false },
+            { new: true }
+        );
+
+        if (!post) {
+            return res.status(404).json({ success: false, message: 'Post not found' });
+        }
+
+        res.json({ success: true, message: 'Post restored' });
+    } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 };

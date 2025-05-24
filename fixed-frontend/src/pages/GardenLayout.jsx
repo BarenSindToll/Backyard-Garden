@@ -159,11 +159,11 @@ export default function GardenLayout() {
 
 
     return (
-        <div className="bg-cream min-h-screen">
-            <div className="bg-gradient-to-b from-[#c7b89e] to-cream shadow-sm">
+        <div className="bg-white min-h-screen">
+            <div className="bg-white">
                 <DashboardHeader />
-                <div className="text-center mt-2 pb-4 text-forest font-medium">Garden Layout</div>
-                <div className="text-center pb-4 text-forest text-sm">
+
+                <div className="text-center mt-8 pb-4 text-forest font-medium">
                     You can create and save your own garden designs!
                 </div>
             </div>

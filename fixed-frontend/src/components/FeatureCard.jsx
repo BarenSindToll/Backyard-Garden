@@ -6,7 +6,7 @@ const icons = {
 
   'Task Planning': layout,
   'Garden Layout': calendar,
-  'Plant Recommendations': leaf
+  'Recommendations': leaf
 };
 
 export default function FeatureCard({ title, description }) {

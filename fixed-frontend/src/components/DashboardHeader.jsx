@@ -47,7 +47,7 @@ export default function DashboardHeader() {
             if (data.success) {
                 localStorage.removeItem('userId');
                 localStorage.removeItem('profileTab'); //  Clear the saved tab
-                navigate('/signin');
+                navigate('/');
             }
         } catch (error) {
             console.error('Logout failed:', error);
@@ -87,29 +87,9 @@ export default function DashboardHeader() {
                                     onClick={() => setBlogOpen(false)}
                                     className="hover:underline focus:outline-none"
                                 >
-                                    Blog ▾
+                                    Blog
                                 </Link>
-                                {blogOpen && (
-                                    <div className="absolute left-0 mt-2 w-56 bg-white shadow-lg rounded-lg border p-2 z-10">
-                                        {[
-                                            'Vegetable garden',
-                                            'Flower garden',
-                                            'Fruit plants',
-                                            'Herb garden',
-                                            'Indoor plants',
-                                            'Landscaping',
-                                            'Companions',
-                                        ].map((cat) => (
-                                            <Link
-                                                key={cat}
-                                                to={`/blog/${cat.toLowerCase().replace(/ /g, '-')}`}
-                                                className="block px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
-                                            >
-                                                {cat}
-                                            </Link>
-                                        ))}
-                                    </div>
-                                )}
+
                             </div>
 
                             <Link to="/garden-layout" className="hover:underline">Garden Layout</Link>

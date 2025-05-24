@@ -5,7 +5,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        cream: "#fef8eb",
+        cream: "#ECEBE3",
         forest: "#1b3b2f"
       },
       fontFamily: {
@@ -13,5 +13,6 @@ export default {
       }
     }
   },
-  plugins: [typography]
+  plugins: [require('@tailwindcss/typography')],
+
 }

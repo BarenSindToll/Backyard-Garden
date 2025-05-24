@@ -10,7 +10,7 @@ authRouter.post('/register', register); //these will actually look like /api/aut
 authRouter.post('/login', login);
 authRouter.post('/logout', logout);
 authRouter.post('/send-verify-otp', userAuth, sendVerifyOtp);
-authRouter.post('/verify-account', userAuth, verifyEmail);
+authRouter.post('/verify-account', verifyEmail);
 authRouter.post('/is-auth', userAuth, isAuthenticated);
 authRouter.post('/send-reset-otp', sendResetOtp);
 authRouter.post('/reset-password', resetPassword);

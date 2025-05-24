@@ -93,7 +93,7 @@ export default function Weather() {
     const today = todaySnapshot || forecast[0];
 
     return (
-        <div className="bg-cream min-h-screen">
+        <div className="bg-white min-h-screen">
             <DashboardHeader />
             <div className="max-w-4xl mx-auto p-6 text-forest">
                 <h2 className="text-2xl font-bold mb-4">7-Day Weather Forecast</h2>
@@ -165,7 +165,7 @@ export default function Weather() {
                 {/* Weekly Forecast */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-7xl mx-auto mt-6">
                     {forecast.slice(1).map((day, i) => (
-                        <div key={i} className="bg-white rounded-lg shadow p-4 text-center">
+                        <div key={i} className="bg-cream rounded-lg shadow p-4 text-center">
                             <p className="font-semibold text-lg">
                                 {new Date(day.datetime).toLocaleDateString('en-US', { weekday: 'long' })}
                             </p>

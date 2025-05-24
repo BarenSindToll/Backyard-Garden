@@ -18,8 +18,7 @@ export default function Header({ textColor = 'forest' }) {
 
       {/* Desktop nav */}
       <nav className={`hidden md:flex gap-6 font-semibold text-sm ${textClass}`}>
-        <a href="#">Features</a>
-        <a href="#">Layout</a>
+        <Link to="/signup" className={textClass}>New account</Link>
         <Link to="/signin" className={textClass}>Sign In</Link>
       </nav>
 
@@ -31,8 +30,7 @@ export default function Header({ textColor = 'forest' }) {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="absolute top-full right-6 bg-white shadow-md border rounded-md p-4 flex flex-col gap-2 md:hidden z-10 text-sm font-semibold text-forest">
-          <a href="#">Features</a>
-          <a href="#">Layout</a>
+          <Link to="/signup">New account</Link>
           <Link to="/signin">Sign In</Link>
         </div>
       )}

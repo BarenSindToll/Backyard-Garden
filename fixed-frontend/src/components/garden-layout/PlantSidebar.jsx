@@ -64,7 +64,7 @@ export default function PlantSidebar() {
     };
 
     return (
-        <aside className="bg-[#f7f3ec] p-5 rounded-lg border border-gray-200 text-forest w-full">
+        <aside className="bg-cream p-5 rounded-lg border border-gray-200 text-forest w-full">
             <h2 className="text-lg font-bold mb-4">Choose Your Plants</h2>
 
             <input

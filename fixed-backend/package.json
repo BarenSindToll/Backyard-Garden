@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@tailwindcss/typography": "^0.5.16",
     "@tiptap/extension-image": "^2.12.0",
     "@tiptap/extension-link": "^2.12.0",
     "@tiptap/extension-underline": "^2.12.0",

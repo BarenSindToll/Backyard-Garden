@@ -22,6 +22,19 @@ export default function Profile() {
     const [userImage, setUserImage] = useState(null);
     const [allPlants, setAllPlants] = useState([]);
     const [favoritePlants, setFavoritePlants] = useState([]);
+    const [editedPlants, setEditedPlants] = useState({});
+    const [plantIconFiles, setPlantIconFiles] = useState({});
+    const [searchTerm, setSearchTerm] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('All');
+    const [plantIconPreviews, setPlantIconPreviews] = useState({});
+
+    const [newPlantName, setNewPlantName] = useState('');
+    const [newPlantCategory, setNewPlantCategory] = useState('vegetable');
+    const [newPlantIcon, setNewPlantIcon] = useState(null);
+    const [showAllPlants, setShowAllPlants] = useState(false);
+
+
+
 
     const grouped = {
         fruit: [],
@@ -78,13 +91,7 @@ export default function Profile() {
         }
     }, [active]);
 
-    const toggleFavorite = (plantName) => {
-        setFavoritePlants(prev =>
-            prev.includes(plantName)
-                ? prev.filter(p => p !== plantName)
-                : [...prev, plantName]
-        );
-    };
+
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -157,6 +164,130 @@ export default function Profile() {
         }
     };
 
+    //editing plants
+    const handleEditName = (id, newName) => {
+        setEditedPlants(prev => ({ ...prev, [id]: { ...(prev[id] || {}), name: newName } }));
+    };
+
+    const handleEditIcon = (id, file) => {
+        setPlantIconFiles(prev => ({ ...prev, [id]: file }));
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setPlantIconPreviews(prev => ({ ...prev, [id]: reader.result }));
+        };
+        if (file) reader.readAsDataURL(file);
+
+        // Optional: clear file input (if you re-render it dynamically)
+        const input = document.querySelector(`#plant-icon-input-${id}`);
+        if (input) input.value = '';
+    };
+
+    const handleEditCategory = (id, newCategory) => {
+        setEditedPlants(prev => ({
+            ...prev,
+            [id]: { ...(prev[id] || {}), category: newCategory }
+        }));
+    };
+
+
+    const handleAddPlant = async () => {
+        if (!newPlantName || !newPlantIcon) {
+            alert("Please provide a name and SVG icon.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('name', newPlantName);
+        formData.append('category', newPlantCategory);
+        formData.append('icon', newPlantIcon);
+
+        const res = await fetch('http://localhost:4000/api/plants/create', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            setAllPlants(prev => [...prev, data.plant]);
+            setNewPlantName('');
+            setNewPlantCategory('vegetable');
+            setNewPlantIcon(null);
+            alert('Plant added successfully!');
+        } else {
+            alert(data.message || 'Failed to add plant.');
+        }
+    };
+
+
+    const handleDeletePlant = async (id) => {
+        if (!window.confirm('Delete this plant?')) return;
+        const res = await fetch(`http://localhost:4000/api/plants/delete/${id}`, {
+            method: 'DELETE',
+            credentials: 'include',
+        });
+        const data = await res.json();
+        if (data.success) {
+            setAllPlants(prev => prev.filter(p => p._id !== id));
+        } else {
+            alert(data.message || 'Failed to delete plant.');
+        }
+    };
+
+
+    const handleSavePlantEdits = async () => {
+        const updateIds = new Set([
+            ...Object.keys(editedPlants),
+            ...Object.keys(plantIconFiles),
+        ]);
+
+        if (updateIds.size === 0) {
+            alert("No changes to save.");
+            return;
+        }
+
+        for (const id of updateIds) {
+            const formData = new FormData();
+
+            if (editedPlants[id]?.name) {
+                formData.append('name', editedPlants[id].name);
+            }
+            if (editedPlants[id]?.category) {
+                formData.append('category', editedPlants[id].category);
+            }
+            if (plantIconFiles[id]) {
+                formData.append('icon', plantIconFiles[id]);
+            }
+
+            console.log(`⬆️ Updating plant: ${id}`);
+            const res = await fetch(`http://localhost:4000/api/plants/update/${id}`, {
+                method: 'PUT',
+                body: formData,
+                credentials: 'include',
+            });
+
+            const data = await res.json();
+            if (!data.success) {
+                console.error(`❌ Failed to update plant ${id}`, data.message);
+            } else {
+                console.log(`✅ Updated plant ${id}`);
+            }
+        }
+
+        // Refresh UI
+        setEditedPlants({});
+        setPlantIconFiles({});
+        setPlantIconPreviews({});
+
+        const refreshed = await fetch('http://localhost:4000/api/plants/all');
+        const data = await refreshed.json();
+        if (data.success) {
+            setAllPlants(data.plants);
+        }
+    };
+
+
 
 
     return (
@@ -180,7 +311,7 @@ export default function Profile() {
                     ))}
                 </div>
 
-                <div className="flex-1 p-6">
+                <div className="flex-1 p-4">
                     {active === 'Account Settings' && (
                         <div>
                             <h3 className="text-xl font-bold mb-4 text-forest">Profile Information</h3>
@@ -300,50 +431,168 @@ export default function Profile() {
 
                     {active === 'Garden Settings' && (
                         <div>
-                            <h3 className="text-xl font-bold mb-4 text-forest">Garden Settings</h3>
-                            <h4 className="text-md text-gray-700 mb-4">Add or delete plants</h4>
+                            <h3 className="text-xl font-bold mb-6 text-forest">Manage All Plants</h3>
 
-
-                            {Object.entries(grouped).map(([category, plants]) => (
-                                <div key={category} className="mb-6">
-                                    <h5 className="text-lg font-semibold capitalize mb-2">{category}s</h5>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                        {plants.map(plant => (
-                                            <button
-                                                key={plant.name}
-                                                onClick={() => toggleFavorite(plant.name)}
-                                                className={`border p-3 rounded flex items-center gap-2 text-sm transition
-            ${favoritePlants.includes(plant.name)
-                                                        ? 'bg-forest text-white'
-                                                        : 'bg-white hover:bg-cream'}`}
-                                            >
-                                                <img
-                                                    src={`data:image/svg+xml;base64,${plant.iconData}`}
-                                                    alt={plant.name}
-                                                    className="w-6 h-6"
-                                                />
-                                                <span>{plant.name}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                            <div className="flex justify-center mt-8">
-                                <button
-                                    type="button"
-                                    onClick={handleSave}
-                                    className="bg-forest text-white px-6 py-2 rounded hover:bg-green-800"
+                            {/* Search and Filter at Top */}
+                            <div className="mb-6 flex flex-col sm:flex-row gap-4">
+                                <input
+                                    type="text"
+                                    placeholder="Search plant name..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="flex-1 border px-3 py-2 rounded text-sm"
+                                />
+                                <select
+                                    value={categoryFilter}
+                                    onChange={(e) => setCategoryFilter(e.target.value)}
+                                    className="border px-3 py-2 rounded text-sm bg-white"
                                 >
-                                    Save Garden Settings
+                                    <option value="All">All Categories</option>
+                                    <option value="vegetable">Vegetables</option>
+                                    <option value="fruit">Fruits</option>
+                                    <option value="herb">Herbs</option>
+                                    <option value="flower">Flowers</option>
+                                    <option value="tree">Trees</option>
+                                </select>
+                            </div>
+
+                            {/* Add New Plant Below Filters */}
+                            <div className="mb-10 border rounded p-4 bg-white shadow-sm">
+                                <h4 className="text-md font-semibold text-forest mb-3">Add New Plant</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <input
+                                        type="text"
+                                        value={newPlantName}
+                                        onChange={(e) => setNewPlantName(e.target.value)}
+                                        placeholder="Plant name"
+                                        className="border px-3 py-2 rounded text-sm"
+                                    />
+                                    <select
+                                        value={newPlantCategory}
+                                        onChange={(e) => setNewPlantCategory(e.target.value)}
+                                        className="border px-3 py-2 rounded text-sm bg-white"
+                                    >
+                                        <option value="vegetable">Vegetable</option>
+                                        <option value="fruit">Fruit</option>
+                                        <option value="herb">Herb</option>
+                                        <option value="flower">Flower</option>
+                                        <option value="tree">Tree</option>
+                                    </select>
+                                    <input
+                                        type="file"
+                                        accept="image/svg+xml"
+                                        onChange={(e) => setNewPlantIcon(e.target.files[0])}
+                                        className="text-sm"
+                                    />
+                                </div>
+
+                                <div className="mt-4">
+                                    <button
+                                        onClick={handleAddPlant}
+                                        className="bg-forest text-white px-6 py-2 rounded hover:bg-green-800 text-sm"
+                                    >
+                                        Save New Plant
+                                    </button>
+                                </div>
+
+                            </div>
+
+
+                            <div
+                                className={`space-y-6 transition-all ${showAllPlants ? 'max-h-[500px] overflow-y-auto pr-2' : ''}`}
+                            >
+
+                                {allPlants
+                                    .filter(p =>
+                                        p.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                                        (categoryFilter === 'All' || p.category === categoryFilter)
+                                    )
+                                    .sort((a, b) => a.name.localeCompare(b.name))
+                                    .slice(0, showAllPlants ? allPlants.length : 4)
+                                    .map(plant => (
+
+                                        <div
+                                            key={`${plant._id}-${plant.iconData?.slice(0, 6)}`} // triggers refresh
+                                            className="p-4 bg-white border rounded shadow-sm flex flex-col sm:flex-row gap-6 sm:items-start"
+                                        >
+                                            {/* Icon Preview */}
+                                            <div className="flex-shrink-0 flex justify-center sm:block">
+                                                <img
+                                                    src={plantIconPreviews[plant._id] ? plantIconPreviews[plant._id] :
+                                                        `data:image/svg+xml;base64,${plant.iconData}`}
+
+                                                    alt={plant.name}
+                                                    className="w-14 h-14 mx-auto sm:mx-0"
+                                                />
+                                            </div>
+
+                                            {/* Editable Fields */}
+                                            <div className="flex-1 space-y-2">
+                                                <input
+                                                    type="text"
+                                                    value={plant.name}
+                                                    onChange={(e) => handleEditName(plant._id, e.target.value)}
+                                                    placeholder="Plant name"
+                                                    className="w-full border px-3 py-2 rounded text-sm"
+                                                />
+                                                <select
+                                                    value={editedPlants[plant._id]?.category || plant.category}
+                                                    onChange={(e) => handleEditCategory(plant._id, e.target.value)}
+                                                    className="w-full border px-3 py-2 rounded text-sm bg-white"
+                                                >
+                                                    <option value="vegetable">Vegetable</option>
+                                                    <option value="fruit">Fruit</option>
+                                                    <option value="herb">Herb</option>
+                                                    <option value="flower">Flower</option>
+                                                    <option value="tree">Tree</option>
+                                                </select>
+                                            </div>
+
+                                            {/* Controls */}
+                                            <div className="flex flex-col gap-2 items-end sm:items-start">
+                                                <label className="text-sm font-medium text-forest">Change Icon</label>
+                                                <input
+                                                    id={`plant-icon-input-${plant._id}`}
+                                                    type="file"
+                                                    accept="image/svg+xml"
+                                                    onChange={(e) => handleEditIcon(plant._id, e.target.files[0])}
+                                                    className="text-sm"
+                                                />
+                                                <button
+                                                    onClick={() => handleDeletePlant(plant._id)}
+                                                    className="text-red-600 text-sm hover:underline mt-2"
+                                                >
+                                                    Delete plant
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                    ))
+                                }
+                            </div>
+                            <div className="mt-4 text-center">
+                                <button
+                                    onClick={() => setShowAllPlants(prev => !prev)}
+                                    className="text-sm text-forest underline hover:text-green-800"
+                                    type="button"
+                                >
+                                    {showAllPlants ? 'Show less' : 'Show more'}
                                 </button>
                             </div>
-                            {notification && (
-                                <div className="bg-green-100 text-green-800 px-4 py-2 rounded text-sm mb-4">
-                                    {notification}
-                                </div>
-                            )}
+
+
+                            <div className="mt-8 text-center">
+                                <button
+                                    type="button"
+                                    onClick={handleSavePlantEdits}
+                                    className="bg-forest text-white px-6 py-2 rounded hover:bg-green-800"
+                                >
+                                    Save Plant Changes
+                                </button>
+                            </div>
                         </div>
                     )}
+
 
 
 

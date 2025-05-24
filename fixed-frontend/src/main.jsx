@@ -1,12 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import App from './App.jsx';
+import App from './pages/App.jsx';
 import Home from './pages/Home';
 import Signup from './pages/Signup.jsx';
 import Signin from './pages/Signin.jsx';
 import ForgotPassword from './pages/ForgotPassword';
-import VerifyReset from './pages/VerifyReset';
 import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import GardenLayout from './pages/GardenLayout'
@@ -17,7 +16,9 @@ import AdminBlogPost from './pages/admin/AdminBlog.jsx';
 import AdminProfile from './pages/admin/AdminProfile.jsx';
 import NewBlogPost from './pages/admin/NewBlogPost.jsx';
 import EditBlogPost from './pages/admin/EditBlogPost.jsx';
+import SinglePost from './pages/SinglePost.jsx';
 import { UserProvider } from './utils/userContext.jsx';
+import VerifyEmail from './pages/VerifyEmail.jsx';
 
 import './index.css';
 
@@ -30,7 +31,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/signup" element={<Signup />} />
           <Route path="/signin" element={<Signin />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/verify-reset" element={<VerifyReset />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/home" element={<Home />} />
           <Route path="/profile" element={<Profile />} />
@@ -42,6 +42,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/admin/profile" element={<AdminProfile />} />
           <Route path="/admin/blog/new" element={<NewBlogPost />} />
           <Route path="/admin/blog/edit/:slug" element={<EditBlogPost />} />
+          <Route path="/blog/:slug" element={<SinglePost />} />
+          <Route path="/verify" element={<VerifyEmail />} />
 
         </Routes>
       </UserProvider>

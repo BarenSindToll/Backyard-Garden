@@ -82,7 +82,7 @@ export default function EditBlogPost() {
     };
 
     return (
-        <div className="bg-cream min-h-screen text-forest">
+        <div className="bg-white min-h-screen text-forest">
             <DashboardHeader />
             <div className="max-w-4xl mx-auto p-6">
                 <h1 className="text-2xl font-bold mb-4">Edit Blog Post</h1>

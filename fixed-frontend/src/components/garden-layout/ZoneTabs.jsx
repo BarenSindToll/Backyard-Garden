@@ -20,8 +20,8 @@ export default function ZoneTabs({ zones, currentZone, setZones, setCurrentZone,
     };
 
     return (
-        <div className="w-full bg-gray-100 border  p-2">{
-            <div className="flex items-center space-x-2 bg-gray-100 p-2 rounded-md max-w-full md:max-w-3xl mx-auto">
+        <div className="w-full bg-cream border  p-2">{
+            <div className="flex items-center space-x-2 bg-cream p-2 rounded-md max-w-full md:max-w-3xl mx-auto">
                 {zones.map((zone, index) => (
                     <div
                         key={index}
