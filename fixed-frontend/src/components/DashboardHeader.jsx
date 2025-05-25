@@ -67,18 +67,58 @@ export default function DashboardHeader() {
                 <div className="flex items-center gap-6 text-sm text-forest">
                     {/* here the nav is changed based on isAdmin */}
 
-                    {user?.isAdmin ? (
+                    {user?.role === 'admin' ? (
                         <>
-                            <Link to="/admin/blog" className="hover:underline">Blog</Link>
-                            <Link
-                                to="/admin/profile"
-                                onClick={() => localStorage.setItem('profileTab', 'Garden Settings')}
-                                className="hover:underline"
-                            >
-                                Profile
-                            </Link>
+                            <Link to="/blog" className="hover:underline">Blog</Link>
+                            <Link to="/garden-layout" className="hover:underline">Garden Layout</Link>
+                            <Link to="/calendar" className="hover:underline">Calendar</Link>
+                            <Link to="/weather" className="hover:underline">Weather Forecast</Link>
+
+                            <div className="relative" ref={menuRef}>
+                                <button
+                                    onClick={() => setMenuOpen(!menuOpen)}
+                                    className="focus:outline-none"
+                                >
+                                    {user?.profileImage ? (
+                                        <img
+                                            src={`http://localhost:4000${user.profileImage}`}
+                                            alt="Profile"
+                                            className="w-10 h-10 rounded-full object-cover border-2 border-forest"
+                                        />
+                                    ) : (
+                                        <div className="w-10 h-10 bg-forest text-white flex items-center justify-center rounded-full text-sm">
+                                            {user?.name ? user.name[0] : '?'}
+                                        </div>
+                                    )}
+                                </button>
+
+                                {menuOpen && (
+                                    <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg border p-2 z-10">
+                                        <div className="px-4 py-2 text-xs text-gray-500 border-b mb-2">
+                                            {user?.name ? `Hello, ${user.name}` : `ID: ${localStorage.getItem('userId')}`}
+                                        </div>
+                                        <Link
+                                            to="/admin/profile"
+                                            onClick={() => localStorage.setItem('profileTab', 'Account Settings')}
+                                            className="block px-4 py-2 hover:bg-gray-100 text-forest"
+                                        >
+                                            Admin Panel
+                                        </Link>
+                                        <Link to="/help" className="block px-4 py-2 hover:bg-gray-100 text-forest">
+                                            Help
+                                        </Link>
+                                        <button
+                                            onClick={handleLogout}
+                                            className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                                        >
+                                            Log out
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </>
                     ) : (
+
                         <>
                             <div className="relative" ref={blogRef}>
                                 <Link

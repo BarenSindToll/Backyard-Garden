@@ -8,8 +8,9 @@ import userRouter from "./routes/userRoutes.js";
 import gardenLayoutRouter from "./routes/gardenLayoutRoutes.js";
 import plantRouter from './routes/plantRoutes.js';
 import calendarRouter from './routes/calendarRoutes.js';
-import blogPostRoutes from './routes/blogPostRoutes.js'
-import uploadRoutes from './routes/uploadRoutes.js';
+import blogPostRouter from './routes/blogPostRoutes.js'
+import uploadRouter from './routes/uploadRoutes.js';
+import adminRouter from './routes/adminRoutes.js';
 
 const app = express();
 const port = process.env.PORT || 4000
@@ -24,7 +25,7 @@ app.use(express.json());
 app.use(cookieParser());
 //app.use(cors({ credentials: true })); //send the cookies in the response from express app
 app.use('/uploads', express.static('uploads'));
-app.use('/api/upload', uploadRoutes);
+app.use('/api/upload', uploadRouter);
 
 //API Endpoints
 app.get('/', (req, res) => res.send("API Working"));
@@ -33,7 +34,8 @@ app.use('/api/user', userRouter);
 app.use('/api/gardenLayout', gardenLayoutRouter);
 app.use('/api/plants', plantRouter);
 app.use('/api/calendar', calendarRouter);
-app.use('/api/blog', blogPostRoutes);
+app.use('/api/blog', blogPostRouter);
+app.use('/api/admin', adminRouter);
 
 
 app.listen(port, () => console.log(`Server started on PORT: ${port}`));

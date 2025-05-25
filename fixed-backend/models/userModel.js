@@ -12,7 +12,8 @@ const userSchema = new mongoose.Schema({
     profileImage: { type: String, default: '' },
     location: { type: String, default: '' },
     favoritePlants: { type: [String], default: '' },
-    isAdmin: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
 
 
 })

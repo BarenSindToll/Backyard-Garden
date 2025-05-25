@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import DashboardHeader from '../../components/DashboardHeader';
 import { fetchCurrentUser } from '../../utils/fetchCurrentUser';
+import { useNavigate } from 'react-router-dom';
 
-const sections = ['Account Settings', 'Garden Settings', 'Help'];
+const sections = ['Account Settings', 'Blog Management', 'Garden Settings', 'Users Settings', 'Help'];
+
 
 export default function Profile() {
     const [active, setActive] = useState(() => {
@@ -32,6 +34,15 @@ export default function Profile() {
     const [newPlantCategory, setNewPlantCategory] = useState('vegetable');
     const [newPlantIcon, setNewPlantIcon] = useState(null);
     const [showAllPlants, setShowAllPlants] = useState(false);
+
+    const [userList, setUserList] = useState([]);
+    const [userSearch, setUserSearch] = useState('');
+    const [userFilter, setUserFilter] = useState('active'); // 'active' | 'inactive' | 'deleted'
+
+
+    const [editingUserId, setEditingUserId] = useState(null);
+    const [editedUsers, setEditedUsers] = useState({});
+    const navigate = useNavigate();
 
 
 
@@ -69,6 +80,7 @@ export default function Profile() {
         fetchUser();
     }, []);
     useEffect(() => {
+
         if (active === 'Garden Settings') {
             fetch('http://localhost:4000/api/plants/all')
                 .then(res => res.json())
@@ -89,7 +101,16 @@ export default function Profile() {
                     }
                 });
         }
-    }, [active]);
+        if (active === 'Users Settings') {
+            fetch(`http://localhost:4000/api/admin/users?search=${userSearch}&filter=${userFilter}`, {
+                credentials: 'include'
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) setUserList(data.users);
+                });
+        }
+    }, [active, userSearch, userFilter]);
 
 
 
@@ -286,6 +307,61 @@ export default function Profile() {
             setAllPlants(data.plants);
         }
     };
+
+    const handleSaveUser = async (id) => {
+        const updated = editedUsers[id];
+        if (!updated) return;
+
+        const res = await fetch(`http://localhost:4000/api/admin/users/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(updated),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            setUserList(prev =>
+                prev.map(u => u._id === id ? { ...u, ...updated } : u)
+            );
+            setEditingUserId(null);
+            setEditedUsers(prev => {
+                const copy = { ...prev };
+                delete copy[id];
+                return copy;
+            });
+        } else {
+            alert(data.message || 'Failed to update user');
+        }
+    };
+
+
+    const handleDeleteUser = async (user) => {
+        const confirm = window.confirm(`Permanently delete user "${user.name || user.email}"?`);
+        if (!confirm) return;
+
+        const res = await fetch(`http://localhost:4000/api/admin/users/${user._id}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            setUserList(prev => prev.filter(u => u._id !== user._id));
+        } else {
+            alert(data.message || 'Failed to delete user');
+        }
+    };
+
+    const cancelEdit = (id) => {
+        setEditingUserId(null);
+        setEditedUsers(prev => {
+            const copy = { ...prev };
+            delete copy[id];
+            return copy;
+        });
+    };
+
 
 
 
@@ -592,6 +668,146 @@ export default function Profile() {
                             </div>
                         </div>
                     )}
+                    {active === 'Users Settings' && (
+                        <div>
+                            <h3 className="text-xl font-bold mb-4 text-forest">Users Management</h3>
+
+                            {/* Controls */}
+                            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                                <input
+                                    type="text"
+                                    value={userSearch}
+                                    onChange={(e) => setUserSearch(e.target.value)}
+                                    placeholder="Search name or email"
+                                    className="flex-1 border px-3 py-2 rounded text-sm"
+                                />
+                                <select
+                                    value={userFilter}
+                                    onChange={(e) => setUserFilter(e.target.value)}
+                                    className="border px-3 py-2 rounded text-sm bg-white"
+                                >
+                                    <option value="active">Active Users</option>
+                                    <option value="inactive">Inactive Users</option>
+                                    <option value="deleted">Deleted Users</option>
+                                </select>
+
+
+                            </div>
+
+                            {/* User List */}
+                            <div className="space-y-4">
+                                {userList.map(user => (
+                                    <div
+                                        key={user._id}
+                                        className="p-4 bg-white border rounded shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center"
+                                    >
+                                        <div className="flex-1 space-y-1">
+                                            {editingUserId === user._id ? (
+                                                <>
+                                                    <input
+                                                        type="text"
+                                                        value={editedUsers[user._id]?.name || user.name}
+                                                        onChange={(e) =>
+                                                            setEditedUsers(prev => ({
+                                                                ...prev,
+                                                                [user._id]: { ...prev[user._id], name: e.target.value }
+                                                            }))
+                                                        }
+                                                        className="w-full border px-2 py-1 rounded text-sm"
+                                                    />
+                                                    <input
+                                                        type="email"
+                                                        value={editedUsers[user._id]?.email || user.email}
+                                                        onChange={(e) =>
+                                                            setEditedUsers(prev => ({
+                                                                ...prev,
+                                                                [user._id]: { ...prev[user._id], email: e.target.value }
+                                                            }))
+                                                        }
+                                                        className="w-full border px-2 py-1 rounded text-sm"
+                                                    />
+                                                    <select
+                                                        value={editedUsers[user._id]?.role || user.role}
+                                                        onChange={(e) =>
+                                                            setEditedUsers(prev => ({
+                                                                ...prev,
+                                                                [user._id]: { ...prev[user._id], role: e.target.value }
+                                                            }))
+                                                        }
+                                                        className="w-full border px-2 py-1 rounded text-sm bg-white"
+                                                    >
+                                                        <option value="user">user</option>
+                                                        <option value="admin">admin</option>
+                                                    </select>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <p className="font-semibold text-forest">{user.name}</p>
+                                                    <p className="text-sm text-gray-600">{user.email}</p>
+                                                    <p className="text-sm text-gray-500">
+                                                        Role: {user.role} | Status: {user.isActive ? 'Active' : 'Inactive'}
+                                                    </p>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        <div className="flex gap-4 mt-2 sm:mt-0">
+                                            {editingUserId === user._id ? (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleSaveUser(user._id)}
+                                                        className="text-green-700 text-sm underline"
+                                                    >
+                                                        Save
+                                                    </button>
+                                                    <button
+                                                        onClick={() => cancelEdit(user._id)}
+                                                        className="text-gray-500 text-sm underline"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        onClick={() => setEditingUserId(user._id)}
+                                                        className="text-sm text-blue-600 underline"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    {user.role !== 'admin' && (
+                                                        <button
+                                                            onClick={() => handleDeleteUser(user)}
+                                                            className="text-sm text-red-600 underline"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+
+                            </div>
+                        </div>
+                    )}
+                    {active === 'Blog Management' && (
+                        <div>
+                            <h3 className="text-xl font-bold mb-4 text-forest">Blog Management</h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Use the button below to access all admin blog tools.
+                            </p>
+                            <button
+                                onClick={() => navigate('/admin/blog')}
+                                className="inline-block px-6 py-2 border bg-forest text-white rounded hover:bg-green-800"
+                            >
+                                Go to Blog Dashboard →
+                            </button>
+                        </div>
+                    )}
+
+
 
 
 

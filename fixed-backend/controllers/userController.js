@@ -21,7 +21,7 @@ export const getUserData = async (req, res) => {
                 profileImage: user.profileImage,
                 location: user.location,
                 favoritePlants: user.favoritePlants || [],
-                isAdmin: user.isAdmin
+                role: user.role,
             }
         });
 
