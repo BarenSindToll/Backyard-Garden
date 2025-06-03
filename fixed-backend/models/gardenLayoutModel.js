@@ -1,4 +1,13 @@
+
 import mongoose from "mongoose";
+
+const gridCellSchema = new mongoose.Schema({
+  plant: String,               // plant name or ID
+  plantedDate: String,         // ISO date string
+  expectedHarvest: String,    // ISO date string
+  notes: String,               // optional user notes
+  warnings: [String],          // computed warnings
+}, { _id: false });
 
 const gardenLayoutSchema = new mongoose.Schema({
   userId: {
@@ -7,13 +16,13 @@ const gardenLayoutSchema = new mongoose.Schema({
     required: true,
   },
   zones: {
-        type: [String],
-        default: ['Zone 1'],
-    },
-    grids: {
-        type: [[[String]]], // 3D array: array of 2D grid arrays
-        default: [],
-    },
+    type: [String],
+    default: ['Zone 1'],
+  },
+  grids: {
+    type: [[[gridCellSchema]]], // 3D array: zones → rows → columns → gridCell
+    default: [],
+  },
 });
 
 const gardenLayoutModel = mongoose.models.gardenLayout || mongoose.model('gardenLayout', gardenLayoutSchema);

@@ -19,6 +19,7 @@ import EditBlogPost from './pages/admin/EditBlogPost.jsx';
 import SinglePost from './pages/SinglePost.jsx';
 import { UserProvider } from './utils/userContext.jsx';
 import VerifyEmail from './pages/VerifyEmail.jsx';
+import PermacultureLayout from './pages/PermacultureLayout.jsx';
 
 import './index.css';
 
@@ -44,6 +45,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/admin/blog/edit/:slug" element={<EditBlogPost />} />
           <Route path="/blog/:slug" element={<SinglePost />} />
           <Route path="/verify" element={<VerifyEmail />} />
+          <Route path="/perma" element={<PermacultureLayout />} />
 
         </Routes>
       </UserProvider>

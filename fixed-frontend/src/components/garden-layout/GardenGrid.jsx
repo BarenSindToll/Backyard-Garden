@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
-export default function GardenGrid({ grid, updateGrid }) {
+export default function GardenGrid({ grid, updateGrid, plantList = [] }) {
+
     const [hoveredCol, setHoveredCol] = useState(null);
     const [hoveredRow, setHoveredRow] = useState(null);
 
@@ -19,28 +20,65 @@ export default function GardenGrid({ grid, updateGrid }) {
         }
     };
 
+
     const handleDrop = (e, rowIndex, colIndex) => {
         e.preventDefault();
-
         const dropped = e.dataTransfer.getData('plant');
         if (!dropped) return;
 
         let plant;
         try {
-            plant = JSON.parse(dropped); //  decode it
+            plant = JSON.parse(dropped);
         } catch (err) {
             console.error('Invalid plant drop data:', err);
             return;
         }
 
+        const fullPlant = plantList.find(p => p.name === plant.name);
+        const zone = '7a'; // This can be made dynamic later
+
+        // Try to get suggested date from plant data
+        const zoneData = fullPlant?.planting?.zoneTimes?.get?.(zone) || fullPlant?.planting?.zoneTimes?.[zone];
+        const suggestedDate = zoneData?.directSow || zoneData?.transplant || new Date().toISOString().split('T')[0];
+
+        const plantingInput = prompt(
+            `Select planting date for ${plant.name} (YYYY-MM-DD):`,
+            suggestedDate
+        );
+        if (!plantingInput) return;
+
+        const plantedDate = new Date(plantingInput);
+        if (isNaN(plantedDate)) {
+            alert('Invalid date format. Use YYYY-MM-DD.');
+            return;
+        }
+
+        let expectedHarvest = null;
+        if (fullPlant?.planting?.daysToMaturity) {
+            const harvestDate = new Date(plantedDate);
+            harvestDate.setDate(harvestDate.getDate() + fullPlant.planting.daysToMaturity);
+            expectedHarvest = harvestDate.toISOString().split('T')[0];
+        }
+
+        const newCell = {
+            plant: plant.name,
+            plantedDate: plantedDate.toISOString().split('T')[0],
+            expectedHarvest,
+            notes: '',
+            warnings: [],
+            iconData: plant.iconData
+        };
+
         const newGrid = grid.map((row, rIdx) =>
             row.map((cell, cIdx) =>
-                rIdx === rowIndex && cIdx === colIndex ? plant : cell
+                rIdx === rowIndex && cIdx === colIndex ? newCell : cell
             )
         );
 
         updateGrid(newGrid);
     };
+
+
 
 
     const handleDoubleClick = (rowIndex, colIndex) => {
@@ -114,16 +152,19 @@ export default function GardenGrid({ grid, updateGrid }) {
                                     {item?.iconData && (
                                         <img
                                             src={`data:image/svg+xml;base64,${item.iconData}`}
-                                            alt={item.name}
+                                            alt={item.plant}
                                             className="w-5 h-5 cursor-move"
                                             draggable
-                                            onDragStart={(e) => {
-                                                e.dataTransfer.setData('plant', item.name);
-                                                e.dataTransfer.setData('iconData', item.iconData);
-                                            }}
+                                            onDragStart={(e) =>
+                                                e.dataTransfer.setData(
+                                                    'plant',
+                                                    JSON.stringify({ name: item.plant, iconData: item.iconData })
+                                                )
+                                            }
                                         />
                                     )}
                                 </div>
+
                             ))}
                         </div>
                     ))}

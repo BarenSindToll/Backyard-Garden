@@ -11,6 +11,7 @@ import calendarRouter from './routes/calendarRoutes.js';
 import blogPostRouter from './routes/blogPostRoutes.js'
 import uploadRouter from './routes/uploadRoutes.js';
 import adminRouter from './routes/adminRoutes.js';
+import gardenStructureRouter from "./models/gardenStructureModel.js";
 
 const app = express();
 const port = process.env.PORT || 4000
@@ -36,6 +37,7 @@ app.use('/api/plants', plantRouter);
 app.use('/api/calendar', calendarRouter);
 app.use('/api/blog', blogPostRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/gardenStructure', gardenStructureRouter);
 
 
 app.listen(port, () => console.log(`Server started on PORT: ${port}`));

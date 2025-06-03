@@ -19,15 +19,27 @@ export default function ZoneTabs({ zones, currentZone, setZones, setCurrentZone,
         if (confirm) onDeleteZone(index);
     };
 
+    const getZoneColor = (zone) => {
+        if (zone.toLowerCase().includes('guild')) return 'bg-green-200';
+        if (zone.toLowerCase().includes('bed')) return 'bg-yellow-200';
+        if (zone.toLowerCase().includes('pond')) return 'bg-blue-200';
+        if (zone.toLowerCase().includes('compost')) return 'bg-amber-300';
+        if (zone.toLowerCase().includes('greenhouse')) return 'bg-lime-200';
+        if (zone === 'Main Garden') return 'bg-white';
+        return 'bg-gray-100';
+    };
+
+    const displayZones = ['Main Garden', ...zones.filter(z => z !== 'Main Garden')];
+
     return (
-        <div className="w-full bg-cream border  p-2">{
-            <div className="flex items-center space-x-2 bg-cream p-2 rounded-md max-w-full md:max-w-3xl mx-auto">
-                {zones.map((zone, index) => (
+        <div className="w-full bg-cream border p-2">
+            <div className="flex items-center space-x-2 bg-cream p-2 rounded-md max-w-full md:max-w-3xl mx-auto overflow-x-auto">
+                {displayZones.map((zone, index) => (
                     <div
                         key={index}
-                        className={`relative px-4 py-2 rounded cursor-pointer flex items-center group
-            ${currentZone === index ? 'bg-white font-semibold' : 'text-gray-600'}`}
-                        onClick={() => setCurrentZone(index)}
+                        className={`relative px-4 py-2 rounded cursor-pointer flex items-center group ${currentZone === zone ? 'ring-2 ring-forest font-semibold' : 'text-gray-600'
+                            } ${getZoneColor(zone)}`}
+                        onClick={() => setCurrentZone(zone)}
                         onDoubleClick={() => {
                             setEditingIndex(index);
                             setZoneName(zone);
@@ -46,12 +58,11 @@ export default function ZoneTabs({ zones, currentZone, setZones, setCurrentZone,
                             <span>{zone}</span>
                         )}
 
-                        {/* Delete icon - show only if >1 zones */}
-                        {zones.length > 1 && (
+                        {displayZones.length > 1 && zone !== 'Main Garden' && (
                             <button
                                 className="absolute -right-2 -top-2 text-xs text-red-500 bg-white rounded-full shadow group-hover:block hidden"
                                 onClick={(e) => {
-                                    e.stopPropagation(); // prevent zone switch
+                                    e.stopPropagation();
                                     confirmDelete(index);
                                 }}
                                 title="Delete Zone"
@@ -70,7 +81,6 @@ export default function ZoneTabs({ zones, currentZone, setZones, setCurrentZone,
                     ＋
                 </button>
             </div>
-        }
         </div>
     );
-}
+} 

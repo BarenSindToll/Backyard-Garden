@@ -4,6 +4,19 @@ import { fetchCurrentUser } from '../utils/fetchCurrentUser';
 
 const sections = ['Account Settings', 'Garden Settings', 'Help'];
 
+export function detectZoneFromLatLon(lat, lon) {
+    if (!lat || !lon) return '7a'; // fallback
+
+    if (lat < 44.5) return '7b';
+    if (lat >= 44.5 && lat < 45.5 && lon > 25) return '7a';
+    if (lat >= 45.5 && lat < 47 && lon < 25) return '6b';
+    if (lat >= 46.5 && lat < 48) return '6a';
+    if (lat >= 47 || (lat < 45 && lon < 24)) return '5b';
+
+    return '6b';
+}
+
+
 export default function Profile() {
     const [active, setActive] = useState(() => {
         return localStorage.getItem('profileTab') || 'Account Settings';
@@ -156,6 +169,7 @@ export default function Profile() {
             console.error("Failed to fetch locations", err);
         }
     };
+
 
 
 

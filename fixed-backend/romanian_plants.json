@@ -1,0 +1,4202 @@
+[
+  {
+    "name": "Tomato",
+    "romanianName": "Ro\u0219ie",
+    "botanicalName": "Tomato botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5Ub21hdG88L3N2Zz4=",
+    "note": "Standard note for Ro\u0219ie",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Carrot",
+    "romanianName": "Morcov",
+    "botanicalName": "Carrot botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5DYXJyb3Q8L3N2Zz4=",
+    "note": "Standard note for Morcov",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Cabbage",
+    "romanianName": "Varz\u0103",
+    "botanicalName": "Cabbage botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5DYWJiYWdlPC9zdmc+",
+    "note": "Standard note for Varz\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Onion",
+    "romanianName": "Ceap\u0103",
+    "botanicalName": "Onion botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5Pbmlvbjwvc3ZnPg==",
+    "note": "Standard note for Ceap\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Lettuce",
+    "romanianName": "Salat\u0103",
+    "botanicalName": "Lettuce botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5MZXR0dWNlPC9zdmc+",
+    "note": "Standard note for Salat\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Garlic",
+    "romanianName": "Usturoi",
+    "botanicalName": "Garlic botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5HYXJsaWM8L3N2Zz4=",
+    "note": "Standard note for Usturoi",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Radish",
+    "romanianName": "Ridiche",
+    "botanicalName": "Radish botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5SYWRpc2g8L3N2Zz4=",
+    "note": "Standard note for Ridiche",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Parsley",
+    "romanianName": "P\u0103trunjel",
+    "botanicalName": "Parsley botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5QYXJzbGV5PC9zdmc+",
+    "note": "Standard note for P\u0103trunjel",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Dill",
+    "romanianName": "M\u0103rar",
+    "botanicalName": "Dill botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5EaWxsPC9zdmc+",
+    "note": "Standard note for M\u0103rar",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Bean",
+    "romanianName": "Fasole",
+    "botanicalName": "Bean botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5CZWFuPC9zdmc+",
+    "note": "Standard note for Fasole",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Celery",
+    "romanianName": "\u021aelin\u0103",
+    "botanicalName": "Celery botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5DZWxlcnk8L3N2Zz4=",
+    "note": "Standard note for \u021aelin\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Leek",
+    "romanianName": "Praz",
+    "botanicalName": "Leek botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5MZWVrPC9zdmc+",
+    "note": "Standard note for Praz",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Pumpkin",
+    "romanianName": "Dovleac",
+    "botanicalName": "Pumpkin botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5QdW1wa2luPC9zdmc+",
+    "note": "Standard note for Dovleac",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Cucumber",
+    "romanianName": "Castravete",
+    "botanicalName": "Cucumber botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5DdWN1bWJlcjwvc3ZnPg==",
+    "note": "Standard note for Castravete",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Zucchini",
+    "romanianName": "Dovlecel",
+    "botanicalName": "Zucchini botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5adWNjaGluaTwvc3ZnPg==",
+    "note": "Standard note for Dovlecel",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Broccoli",
+    "romanianName": "Broccoli",
+    "botanicalName": "Broccoli botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5Ccm9jY29saTwvc3ZnPg==",
+    "note": "Standard note for Broccoli",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Cauliflower",
+    "romanianName": "Conopid\u0103",
+    "botanicalName": "Cauliflower botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5DYXVsaWZsb3dlcjwvc3ZnPg==",
+    "note": "Standard note for Conopid\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Beetroot",
+    "romanianName": "Sfecl\u0103",
+    "botanicalName": "Beetroot botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5CZWV0cm9vdDwvc3ZnPg==",
+    "note": "Standard note for Sfecl\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Basil",
+    "romanianName": "Busuioc",
+    "botanicalName": "Basil botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5CYXNpbDwvc3ZnPg==",
+    "note": "Standard note for Busuioc",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Oregano",
+    "romanianName": "Oregano",
+    "botanicalName": "Oregano botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5PcmVnYW5vPC9zdmc+",
+    "note": "Standard note for Oregano",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Thyme",
+    "romanianName": "Cimbru",
+    "botanicalName": "Thyme botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5UaHltZTwvc3ZnPg==",
+    "note": "Standard note for Cimbru",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Rosemary",
+    "romanianName": "Rozmarin",
+    "botanicalName": "Rosemary botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5Sb3NlbWFyeTwvc3ZnPg==",
+    "note": "Standard note for Rozmarin",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Sage",
+    "romanianName": "Salvie",
+    "botanicalName": "Sage botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5TYWdlPC9zdmc+",
+    "note": "Standard note for Salvie",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Coriander",
+    "romanianName": "Coriandru",
+    "botanicalName": "Coriander botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5Db3JpYW5kZXI8L3N2Zz4=",
+    "note": "Standard note for Coriandru",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Lovage",
+    "romanianName": "Leu\u0219tean",
+    "botanicalName": "Lovage botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5Mb3ZhZ2U8L3N2Zz4=",
+    "note": "Standard note for Leu\u0219tean",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Strawberry",
+    "romanianName": "C\u0103p\u0219un\u0103",
+    "botanicalName": "Strawberry botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5TdHJhd2JlcnJ5PC9zdmc+",
+    "note": "Standard note for C\u0103p\u0219un\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Blueberry",
+    "romanianName": "Afin",
+    "botanicalName": "Blueberry botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5CbHVlYmVycnk8L3N2Zz4=",
+    "note": "Standard note for Afin",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Raspberry",
+    "romanianName": "Zmeur\u0103",
+    "botanicalName": "Raspberry botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5SYXNwYmVycnk8L3N2Zz4=",
+    "note": "Standard note for Zmeur\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Blackberry",
+    "romanianName": "Mur\u0103",
+    "botanicalName": "Blackberry botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5CbGFja2JlcnJ5PC9zdmc+",
+    "note": "Standard note for Mur\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Cherry",
+    "romanianName": "Cirea\u0219\u0103",
+    "botanicalName": "Cherry botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5DaGVycnk8L3N2Zz4=",
+    "note": "Standard note for Cirea\u0219\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Apple",
+    "romanianName": "M\u0103r",
+    "botanicalName": "Apple botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5BcHBsZTwvc3ZnPg==",
+    "note": "Standard note for M\u0103r",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Pear",
+    "romanianName": "P\u0103r",
+    "botanicalName": "Pear botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5QZWFyPC9zdmc+",
+    "note": "Standard note for P\u0103r",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Plum",
+    "romanianName": "Prun",
+    "botanicalName": "Plum botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5QbHVtPC9zdmc+",
+    "note": "Standard note for Prun",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Quince",
+    "romanianName": "Gutuie",
+    "botanicalName": "Quince botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5RdWluY2U8L3N2Zz4=",
+    "note": "Standard note for Gutuie",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Grape",
+    "romanianName": "Strugure",
+    "botanicalName": "Grape botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5HcmFwZTwvc3ZnPg==",
+    "note": "Standard note for Strugure",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Watermelon",
+    "romanianName": "Pepene ro\u0219u",
+    "botanicalName": "Watermelon botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5XYXRlcm1lbG9uPC9zdmc+",
+    "note": "Standard note for Pepene ro\u0219u",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Nasturtium",
+    "romanianName": "Condurul doamnei",
+    "botanicalName": "Nasturtium botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5OYXN0dXJ0aXVtPC9zdmc+",
+    "note": "Standard note for Condurul doamnei",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Calendula",
+    "romanianName": "G\u0103lbenele",
+    "botanicalName": "Calendula botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5DYWxlbmR1bGE8L3N2Zz4=",
+    "note": "Standard note for G\u0103lbenele",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Sunflower",
+    "romanianName": "Floarea-soarelui",
+    "botanicalName": "Sunflower botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5TdW5mbG93ZXI8L3N2Zz4=",
+    "note": "Standard note for Floarea-soarelui",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Corn",
+    "romanianName": "Porumb",
+    "botanicalName": "Corn botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5Db3JuPC9zdmc+",
+    "note": "Standard note for Porumb",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Wheat",
+    "romanianName": "Gr\u00e2u",
+    "botanicalName": "Wheat botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5XaGVhdDwvc3ZnPg==",
+    "note": "Standard note for Gr\u00e2u",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Tarragon",
+    "romanianName": "Tarhon",
+    "botanicalName": "Tarragon botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5UYXJyYWdvbjwvc3ZnPg==",
+    "note": "Standard note for Tarhon",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Asparagus",
+    "romanianName": "Sparanghel",
+    "botanicalName": "Asparagus botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5Bc3BhcmFndXM8L3N2Zz4=",
+    "note": "Standard note for Sparanghel",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Eggplant",
+    "romanianName": "V\u00e2n\u0103t\u0103",
+    "botanicalName": "Eggplant botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5FZ2dwbGFudDwvc3ZnPg==",
+    "note": "Standard note for V\u00e2n\u0103t\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Bell pepper",
+    "romanianName": "Ardei gras",
+    "botanicalName": "Bell pepper botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5CZWxsIHBlcHBlcjwvc3ZnPg==",
+    "note": "Standard note for Ardei gras",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Hot pepper",
+    "romanianName": "Ardei iute",
+    "botanicalName": "Hot pepper botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5Ib3QgcGVwcGVyPC9zdmc+",
+    "note": "Standard note for Ardei iute",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Elderberry",
+    "romanianName": "Soc",
+    "botanicalName": "Elderberry botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5FbGRlcmJlcnJ5PC9zdmc+",
+    "note": "Standard note for Soc",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Walnut",
+    "romanianName": "Nuc",
+    "botanicalName": "Walnut botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5XYWxudXQ8L3N2Zz4=",
+    "note": "Standard note for Nuc",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Hazelnut",
+    "romanianName": "Alun",
+    "botanicalName": "Hazelnut botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "PHN2Zz5IYXplbG51dDwvc3ZnPg==",
+    "note": "Standard note for Alun",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Spinach",
+    "romanianName": "Spanac",
+    "botanicalName": "Spinach botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Spanac",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Pea",
+    "romanianName": "Maz\u0103re",
+    "botanicalName": "Pea botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Maz\u0103re",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Chard",
+    "romanianName": "Mangold",
+    "botanicalName": "Chard botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Mangold",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Kale",
+    "romanianName": "Varz\u0103 crea\u021b\u0103",
+    "botanicalName": "Kale botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Varz\u0103 crea\u021b\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Turnip",
+    "romanianName": "Nap",
+    "botanicalName": "Turnip botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Nap",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Fennel",
+    "romanianName": "Fenicul",
+    "botanicalName": "Fennel botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Fenicul",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Mint",
+    "romanianName": "Ment\u0103",
+    "botanicalName": "Mint botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Ment\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Marjoram",
+    "romanianName": "Maghiran",
+    "botanicalName": "Marjoram botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Maghiran",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Chives",
+    "romanianName": "Arpagic",
+    "botanicalName": "Chives botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Arpagic",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Melon",
+    "romanianName": "Pepene galben",
+    "botanicalName": "Melon botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Pepene galben",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Horseradish",
+    "romanianName": "Hrean",
+    "botanicalName": "Horseradish botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Hrean",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Mustard",
+    "romanianName": "Mu\u0219tar",
+    "botanicalName": "Mustard botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Mu\u0219tar",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Chamomile",
+    "romanianName": "Mu\u0219e\u021bel",
+    "botanicalName": "Chamomile botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Mu\u0219e\u021bel",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Echinacea",
+    "romanianName": "Echinacea",
+    "botanicalName": "Echinacea botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Echinacea",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Borage",
+    "romanianName": "Limba mielului",
+    "botanicalName": "Borage botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Limba mielului",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Yarrow",
+    "romanianName": "Coada \u0219oricelului",
+    "botanicalName": "Yarrow botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Coada \u0219oricelului",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Comfrey",
+    "romanianName": "T\u0103t\u0103neas\u0103",
+    "botanicalName": "Comfrey botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for T\u0103t\u0103neas\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Dandelion",
+    "romanianName": "P\u0103p\u0103die",
+    "botanicalName": "Dandelion botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for P\u0103p\u0103die",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Sorrel",
+    "romanianName": "\u0218tevie",
+    "botanicalName": "Sorrel botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for \u0218tevie",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Endive",
+    "romanianName": "Andiv\u0103",
+    "botanicalName": "Endive botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Andiv\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Chicory",
+    "romanianName": "Cicoare",
+    "botanicalName": "Chicory botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Cicoare",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Arugula",
+    "romanianName": "Rucola",
+    "botanicalName": "Arugula botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Rucola",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Mustard greens",
+    "romanianName": "Frunze de mu\u0219tar",
+    "botanicalName": "Mustard greens botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Frunze de mu\u0219tar",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Barley",
+    "romanianName": "Orz",
+    "botanicalName": "Barley botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Orz",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Rye",
+    "romanianName": "Secar\u0103",
+    "botanicalName": "Rye botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Secar\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Buckwheat",
+    "romanianName": "Hri\u0219c\u0103",
+    "botanicalName": "Buckwheat botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Hri\u0219c\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Amaranth",
+    "romanianName": "Amarant",
+    "botanicalName": "Amaranth botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Amarant",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Cress",
+    "romanianName": "Creson",
+    "botanicalName": "Cress botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Creson",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Savory",
+    "romanianName": "Cimbri\u0219or",
+    "botanicalName": "Savory botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Cimbri\u0219or",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Hyssop",
+    "romanianName": "Isop",
+    "botanicalName": "Hyssop botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Isop",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Perilla",
+    "romanianName": "Perilla",
+    "botanicalName": "Perilla botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Perilla",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Lemon balm",
+    "romanianName": "Roini\u021b\u0103",
+    "botanicalName": "Lemon balm botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Roini\u021b\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Feverfew",
+    "romanianName": "Spilcu\u021b\u0103",
+    "botanicalName": "Feverfew botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Spilcu\u021b\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Valerian",
+    "romanianName": "Valerian\u0103",
+    "botanicalName": "Valerian botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Valerian\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Stinging nettle",
+    "romanianName": "Urzic\u0103",
+    "botanicalName": "Stinging nettle botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Urzic\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Purslane",
+    "romanianName": "Gras\u0103",
+    "botanicalName": "Purslane botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Gras\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Lovage root",
+    "romanianName": "R\u0103d\u0103cin\u0103 de leu\u0219tean",
+    "botanicalName": "Lovage root botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for R\u0103d\u0103cin\u0103 de leu\u0219tean",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Jerusalem artichoke",
+    "romanianName": "Topinambur",
+    "botanicalName": "Jerusalem artichoke botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Topinambur",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Chervil",
+    "romanianName": "Hasma\u021buchi",
+    "botanicalName": "Chervil botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Hasma\u021buchi",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Watercress",
+    "romanianName": "N\u0103sturel",
+    "botanicalName": "Watercress botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for N\u0103sturel",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Salsify",
+    "romanianName": "Scorzonera",
+    "botanicalName": "Salsify botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Scorzonera",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Okra",
+    "romanianName": "Bame",
+    "botanicalName": "Okra botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Bame",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Tomatillo",
+    "romanianName": "Tomatillo",
+    "botanicalName": "Tomatillo botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Tomatillo",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Ground cherry",
+    "romanianName": "Cire\u0219 de p\u0103m\u00e2nt",
+    "botanicalName": "Ground cherry botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Cire\u0219 de p\u0103m\u00e2nt",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Cape gooseberry",
+    "romanianName": "Aguaymanto",
+    "botanicalName": "Cape gooseberry botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Aguaymanto",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Currant",
+    "romanianName": "Coac\u0103z",
+    "botanicalName": "Currant botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Coac\u0103z",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Gooseberry",
+    "romanianName": "Agri\u0219",
+    "botanicalName": "Gooseberry botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Agri\u0219",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Hops",
+    "romanianName": "Hamei",
+    "botanicalName": "Hops botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Hamei",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Mulberry",
+    "romanianName": "Dud",
+    "botanicalName": "Mulberry botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Dud",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Alfalfa",
+    "romanianName": "Lucern\u0103",
+    "botanicalName": "Alfalfa botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Lucern\u0103",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  },
+  {
+    "name": "Clover",
+    "romanianName": "Trifoi",
+    "botanicalName": "Clover botanical",
+    "sunlight": "Full Sun",
+    "season": "Spring\u2013Fall",
+    "perennial": false,
+    "category": "vegetable",
+    "iconData": "",
+    "note": "Standard note for Trifoi",
+    "guildRole": [
+      "Producer"
+    ],
+    "ecologicalFunctions": [],
+    "companions": [],
+    "antagonists": [],
+    "rotationGroup": "",
+    "rootDepth": "Medium",
+    "soilNeeds": [
+      "Loamy",
+      "Well-drained"
+    ],
+    "waterNeeds": "Medium",
+    "pH": "6.0\u20137.0",
+    "spacingCm": 30,
+    "succession": {
+      "previous": [],
+      "next": []
+    },
+    "planting": {
+      "daysToMaturity": 75,
+      "zoneTimes": {
+        "7a": {
+          "directSow": "March 15",
+          "transplant": "April 20",
+          "indoorStart": "February 20",
+          "harvestStart": "July 1",
+          "harvestEnd": "September 15"
+        }
+      }
+    }
+  }
+]

@@ -11,16 +11,13 @@ const createEmptyGrid = (rows = 10, cols = 10) => {
     return Array.from({ length: rows }, () => Array(cols).fill(null));
 };
 
-
-
 export default function GardenLayout() {
     const [activeSection, setActiveSection] = useState('garden');
     const [zones, setZones] = useState(['Zone 1']);
     const [currentZone, setCurrentZone] = useState(0);
     const [grids, setGrids] = useState([createEmptyGrid()]);
     const [userId, setUserId] = useState(null);
-
-
+    const [plantList, setPlantList] = useState([]);
 
     const cleanGridData = (grids) =>
         grids.map(row =>
@@ -30,9 +27,6 @@ export default function GardenLayout() {
                 return cell;
             })
         );
-
-
-
 
     const saveToBackend = (originalGrids, zones, userId, showToast = false) => {
         const cleanedGrids = originalGrids.map(grid =>
@@ -44,8 +38,6 @@ export default function GardenLayout() {
                 })
             )
         );
-
-
 
         fetch('http://localhost:4000/api/gardenLayout/save-layout', {
             method: 'POST',
@@ -64,10 +56,6 @@ export default function GardenLayout() {
             })
             .catch(err => console.error(' Save failed:', err));
     };
-
-
-
-
 
     const enrichGrid = (grid, plantsList) => {
         return grid.map(row =>
@@ -97,6 +85,7 @@ export default function GardenLayout() {
                 const layoutData = await layoutRes.json();
 
                 if (layoutData.success && plantData.success) {
+                    setPlantList(plantData.plants);
                     const enrichedGrids = layoutData.grids.map(grid =>
                         enrichGrid(grid, plantData.plants)
                     );
@@ -121,16 +110,13 @@ export default function GardenLayout() {
         setGrids(updatedGrids);
         setCurrentZone(updatedZones.length - 1);
         if (userId) saveToBackend(updatedGrids, updatedZones, userId);
-
     };
 
     const updateGrid = (zoneIndex, newGrid) => {
-        d
         const updated = [...grids];
         updated[zoneIndex] = newGrid;
         setGrids(updated);
         if (userId) saveToBackend(updated, zones, userId);
-
     };
 
     const handleDeleteZone = (index) => {
@@ -142,27 +128,22 @@ export default function GardenLayout() {
         setGrids(updatedGrids);
         setCurrentZone(prev => (prev === index ? 0 : prev > index ? prev - 1 : prev));
         if (userId) saveToBackend(updatedGrids, updatedZones, userId);
-
     };
-
 
     const handleRenameZone = (updatedZones) => {
         setZones(updatedZones);
         setTimeout(() => {
             if (userId) {
-                const cleanedGrids = cleanGridData(grids); // grids AFTER zone change
+                const cleanedGrids = cleanGridData(grids);
                 saveToBackend(cleanedGrids, updatedZones, userId);
             }
         }, 0);
-
     };
-
 
     return (
         <div className="bg-white min-h-screen">
             <div className="bg-white">
                 <DashboardHeader />
-
                 <div className="text-center mt-8 pb-4 text-forest font-medium">
                     You can create and save your own garden designs!
                 </div>
@@ -180,11 +161,11 @@ export default function GardenLayout() {
                             onDeleteZone={handleDeleteZone}
                             onRenameZone={handleRenameZone}
                         />
-
                         {grids[currentZone] && (
                             <GardenGrid
                                 grid={grids[currentZone]}
                                 updateGrid={(newGrid) => updateGrid(currentZone, newGrid)}
+                                plantList={plantList}
                             />
                         )}
                     </div>
@@ -197,7 +178,6 @@ export default function GardenLayout() {
             <div className="flex justify-center mt-6">
                 <button
                     onClick={() => saveToBackend(cleanGridData(grids), zones, userId, true)}
-
                     className="bg-forest text-white px-6 py-2 rounded hover:bg-green-800"
                 >
                     Save Layout

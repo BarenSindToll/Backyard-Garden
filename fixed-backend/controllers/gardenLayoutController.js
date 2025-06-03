@@ -30,8 +30,6 @@ export const saveLayout = async (req, res) => {
       { grids, zones },
       { new: true, upsert: true }
     );
-    console.log('🔄 Saving layout for user:', req.user.id);
-    console.log('Zones:', zones);
 
     res.json({ success: true });
   } catch (error) {

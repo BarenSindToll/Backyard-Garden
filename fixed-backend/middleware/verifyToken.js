@@ -1,5 +1,3 @@
-// to check the userId for GardenLayouts loading and saving
-
 import jwt from "jsonwebtoken";
 
 export default function verifyToken(req, res, next) {
