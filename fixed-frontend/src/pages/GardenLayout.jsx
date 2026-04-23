@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import DashboardHeader from '../components/DashboardHeader';
-import ZoneCanvas from '../components/garden-layout/ZoneCanvas';
-import GardenGrid from '../components/garden-layout/GardenGrid';
+import GardenCanvas from '../components/garden-layout/GardenCanvas';
 import PlantSidebar from '../components/garden-layout/PlantSidebar';
 import SetupPanel from '../components/garden-layout/SetupPanel';
 import GuildHealthBar from '../components/garden-layout/GuildHealthBar';
@@ -27,7 +26,6 @@ const STRUCTURE_MAP = Object.fromEntries(STRUCTURES.map(s => [s.name, s]));
 const createEmptyGrid = (rows = 10, cols = 10) =>
     Array.from({ length: rows }, () => Array(cols).fill(null));
 
-// Resize a single grid to newRows × newCols, preserving existing cells
 const resizeGrid = (grid, newRows, newCols) => {
     const result = [];
     for (let r = 0; r < newRows; r++) {
@@ -40,7 +38,6 @@ const resizeGrid = (grid, newRows, newCols) => {
     return result;
 };
 
-// Check if resizing would lose any placed cells
 const wouldLoseCells = (grids, newRows, newCols) =>
     grids.some(grid =>
         grid.some((row, r) =>
@@ -56,14 +53,10 @@ const enrichGrid = (grid, plants) =>
             const name = typeof cell === 'string' ? cell : cell.plant;
             if (!name) return null;
             const base = typeof cell === 'object' ? cell : { plant: name };
-
-            // Structure cell
             if (base.isStructure || STRUCTURE_MAP[name]) {
                 const def = STRUCTURE_MAP[name];
                 return { ...base, plant: name, isStructure: true, iconData: def?.icon ?? base.iconData, structureColor: def?.color ?? base.structureColor };
             }
-
-            // Plant cell
             const matched = plants.find(p => p.name === name);
             return { ...base, plant: name, iconData: matched?.iconData ?? base.iconData };
         })
@@ -80,22 +73,27 @@ const cleanForSave = (grids) =>
         )
     );
 
+const defaultPositions = (count) =>
+    Array.from({ length: count }, (_, i) => ({
+        x: (i % 3) * 340 + 20,
+        y: Math.floor(i / 3) * 300 + 20,
+    }));
+
 export default function GardenLayout() {
     const [setup, setSetup] = useState(DEFAULT_SETUP);
     const [zones, setZones] = useState(['Zone 1']);
     const [currentZone, setCurrentZone] = useState(0);
     const [grids, setGrids] = useState([createEmptyGrid()]);
+    const [positions, setPositions] = useState(defaultPositions(1));
     const [userId, setUserId] = useState(null);
     const [allPlants, setAllPlants] = useState([]);
-
-    const currentGrid = grids[currentZone] ?? createEmptyGrid();
 
     const placedPlantNames = useMemo(
         () => grids.flat(2).map(c => c?.plant).filter(Boolean),
         [grids]
     );
 
-    const saveToBackend = async (gridsToSave, zonesToSave, setupToSave, showToast = false) => {
+    const saveToBackend = async (gridsToSave, zonesToSave, setupToSave, positionsToSave, showToast = false) => {
         try {
             await fetch('http://localhost:4000/api/gardenLayout/save-layout', {
                 method: 'POST',
@@ -105,6 +103,7 @@ export default function GardenLayout() {
                     grids: cleanForSave(gridsToSave),
                     zones: zonesToSave,
                     setup: setupToSave,
+                    positions: positionsToSave,
                 }),
             }).then(r => r.json());
             if (showToast) toast.success('Layout saved!', { position: 'top-center', autoClose: 2000 });
@@ -118,7 +117,6 @@ export default function GardenLayout() {
             const user = await fetchCurrentUser();
             if (!user) return;
             setUserId(user._id);
-
             try {
                 const [plantRes, layoutRes] = await Promise.all([
                     fetch('http://localhost:4000/api/plants/all', { credentials: 'include' }),
@@ -126,14 +124,20 @@ export default function GardenLayout() {
                 ]);
                 const plantData = await plantRes.json();
                 const layoutData = await layoutRes.json();
-
                 const plants = plantData.success ? plantData.plants : [];
                 setAllPlants(plants);
 
                 if (layoutData.success) {
+                    const loadedZones = layoutData.zones?.length ? layoutData.zones : ['Zone 1'];
                     const enriched = (layoutData.grids || []).map(g => enrichGrid(g, plants));
-                    setZones(layoutData.zones?.length ? layoutData.zones : ['Zone 1']);
-                    setGrids(enriched.length ? enriched : [createEmptyGrid()]);
+                    const loadedGrids = enriched.length ? enriched : [createEmptyGrid()];
+                    setZones(loadedZones);
+                    setGrids(loadedGrids);
+                    setPositions(
+                        layoutData.positions?.length === loadedZones.length
+                            ? layoutData.positions
+                            : defaultPositions(loadedZones.length)
+                    );
                     if (layoutData.setup && Object.keys(layoutData.setup).length > 0) {
                         setSetup({ ...DEFAULT_SETUP, ...layoutData.setup });
                     } else if (user.zone) {
@@ -151,25 +155,24 @@ export default function GardenLayout() {
 
     const handleSetupSave = (newSetup) => {
         setSetup(newSetup);
-
         const cellSize = newSetup.cellSizeM || 1;
         const newCols = Math.max(1, Math.round(newSetup.widthM / cellSize));
         const newRows = Math.max(1, Math.round(newSetup.heightM / cellSize));
-        const oldCols = currentGrid[0]?.length || 10;
-        const oldRows = currentGrid.length || 10;
-
+        const curGrid = grids[0] || [];
+        const oldCols = curGrid[0]?.length || 10;
+        const oldRows = curGrid.length || 10;
         if (newCols !== oldCols || newRows !== oldRows) {
             if (wouldLoseCells(grids, newRows, newCols)) {
                 if (!window.confirm(`Resizing to ${newCols}×${newRows} will remove some placed items. Continue?`)) {
-                    if (userId) saveToBackend(grids, zones, newSetup);
+                    if (userId) saveToBackend(grids, zones, newSetup, positions);
                     return;
                 }
             }
             const resized = grids.map(g => resizeGrid(g, newRows, newCols));
             setGrids(resized);
-            if (userId) saveToBackend(resized, zones, newSetup);
+            if (userId) saveToBackend(resized, zones, newSetup, positions);
         } else {
-            if (userId) saveToBackend(grids, zones, newSetup);
+            if (userId) saveToBackend(grids, zones, newSetup, positions);
         }
     };
 
@@ -180,107 +183,110 @@ export default function GardenLayout() {
         const rows = Math.max(1, Math.round(setup.heightM / cellSize));
         const updatedZones = [...zones, name];
         const updatedGrids = [...grids, createEmptyGrid(rows, cols)];
+        const lastPos = positions[positions.length - 1] || { x: 20, y: 20 };
+        const updatedPositions = [...positions, { x: lastPos.x + 340, y: lastPos.y }];
         setZones(updatedZones);
         setGrids(updatedGrids);
+        setPositions(updatedPositions);
         setCurrentZone(updatedZones.length - 1);
-        if (userId) saveToBackend(updatedGrids, updatedZones, setup);
+        if (userId) saveToBackend(updatedGrids, updatedZones, setup, updatedPositions);
     };
 
     const updateGrid = (zoneIndex, newGrid) => {
         const updated = [...grids];
         updated[zoneIndex] = newGrid;
         setGrids(updated);
-        if (userId) saveToBackend(updated, zones, setup);
+        if (userId) saveToBackend(updated, zones, setup, positions);
     };
 
     const handleDeleteZone = (index) => {
         if (zones.length <= 1) return;
         const updatedZones = zones.filter((_, i) => i !== index);
         const updatedGrids = grids.filter((_, i) => i !== index);
+        const updatedPositions = positions.filter((_, i) => i !== index);
         setZones(updatedZones);
         setGrids(updatedGrids);
-        setCurrentZone(prev => (prev >= updatedZones.length ? updatedZones.length - 1 : prev === index ? 0 : prev > index ? prev - 1 : prev));
-        if (userId) saveToBackend(updatedGrids, updatedZones, setup);
+        setPositions(updatedPositions);
+        setCurrentZone(prev =>
+            prev >= updatedZones.length ? updatedZones.length - 1 :
+            prev === index ? 0 :
+            prev > index ? prev - 1 : prev
+        );
+        if (userId) saveToBackend(updatedGrids, updatedZones, setup, updatedPositions);
     };
 
     const handleRenameZone = (updatedZones) => {
         setZones(updatedZones);
-        if (userId) saveToBackend(grids, updatedZones, setup);
+        if (userId) saveToBackend(grids, updatedZones, setup, positions);
     };
 
-    const cellSizeM = setup.cellSizeM || 1;
+    const handleUpdatePositions = (newPositions) => {
+        setPositions(newPositions);
+        if (userId) saveToBackend(grids, zones, setup, newPositions);
+    };
 
     return (
-        <div className="bg-white min-h-screen">
+        /* Full viewport — no outer scroll */
+        <div className="h-screen flex flex-col overflow-hidden bg-gray-100">
             <DashboardHeader />
 
-            <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 space-y-4">
-                {/* Page header */}
-                <div>
-                    <h1 className="text-2xl font-bold text-forest">{setup.gardenName}</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">
-                        Design your permacultural garden — plan areas, drag plants and structures onto each zone's grid
-                    </p>
-                </div>
+            {/* ── Compact app toolbar ── */}
+            <div className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-200 flex-shrink-0">
+                <span className="text-sm font-bold text-forest truncate max-w-[160px]">{setup.gardenName}</span>
+                <span className="text-gray-300 text-xs">|</span>
+                <span className="text-xs text-gray-400 hidden sm:inline">
+                    {setup.widthM}m × {setup.heightM}m · Zone {setup.hardinessZone}
+                </span>
+                <span className="text-gray-300 text-xs hidden sm:inline">|</span>
 
-                {/* Setup panel */}
-                <SetupPanel setup={setup} onSave={handleSetupSave} />
-
-                {/* Guild health bar */}
-                <GuildHealthBar placedPlantNames={placedPlantNames} allPlants={allPlants} />
-
-                {/* Garden canvas — zone overview */}
-                <ZoneCanvas
-                    zones={zones}
-                    grids={grids}
-                    currentZone={currentZone}
-                    onSelect={setCurrentZone}
-                    onAdd={handleAddZone}
-                    onDelete={handleDeleteZone}
-                    onRename={handleRenameZone}
-                    gardenName={setup.gardenName}
-                    widthM={setup.widthM}
-                    heightM={setup.heightM}
+                {/* Guild health — compact dots */}
+                <GuildHealthBar
+                    placedPlantNames={placedPlantNames}
+                    allPlants={allPlants}
+                    compact
                 />
 
-                {/* Active zone grid + sidebar */}
-                <div className="flex flex-col lg:flex-row gap-6 items-start">
-                    {/* Zone grid */}
-                    <div className="flex flex-col gap-2 flex-1 min-w-0">
-                        {zones[currentZone] && (
-                            <div className="text-sm font-semibold text-forest px-1">
-                                Editing: {zones[currentZone]}
-                            </div>
-                        )}
-                        <div className="flex justify-center overflow-x-auto pb-2">
-                            <GardenGrid
-                                grid={currentGrid}
-                                updateGrid={newGrid => updateGrid(currentZone, newGrid)}
-                                plantList={allPlants}
-                                cellSizeM={cellSizeM}
-                                hardinessZone={setup.hardinessZone}
-                            />
-                        </div>
-                    </div>
+                <div className="flex-1" />
 
-                    {/* Smart sidebar */}
-                    <div className="w-full lg:w-72 flex-shrink-0">
-                        <PlantSidebar
-                            setup={setup}
-                            allPlants={allPlants}
-                            placedPlantNames={placedPlantNames}
-                        />
-                    </div>
-                </div>
+                {/* Setup button (opens slide-over) */}
+                <SetupPanel setup={setup} onSave={handleSetupSave} />
 
                 {/* Save */}
-                <div className="flex justify-center pt-2 pb-8">
-                    <button
-                        onClick={() => saveToBackend(grids, zones, setup, true)}
-                        className="bg-forest text-white px-10 py-3 rounded-xl hover:bg-green-800 font-medium text-sm shadow-md transition-colors"
-                    >
-                        Save Layout
-                    </button>
+                <button
+                    onClick={() => saveToBackend(grids, zones, setup, positions, true)}
+                    className="bg-forest text-white text-xs px-4 py-1.5 rounded-lg font-medium hover:bg-green-800 transition-colors flex-shrink-0"
+                >
+                    Save
+                </button>
+            </div>
+
+            {/* ── Main content row ── */}
+            <div className="flex flex-1 overflow-hidden">
+                {/* Garden canvas */}
+                <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
+                    <GardenCanvas
+                        zones={zones}
+                        grids={grids}
+                        positions={positions}
+                        setup={setup}
+                        currentZone={currentZone}
+                        onSelectZone={setCurrentZone}
+                        onUpdateGrid={updateGrid}
+                        onUpdatePositions={handleUpdatePositions}
+                        onAddZone={handleAddZone}
+                        onDeleteZone={handleDeleteZone}
+                        onRenameZone={handleRenameZone}
+                        plantList={allPlants}
+                    />
+                </div>
+
+                {/* Sidebar — fixed width, fills height, internal scroll */}
+                <div className="w-64 border-l border-gray-200 bg-white flex-shrink-0 flex flex-col overflow-hidden">
+                    <PlantSidebar
+                        setup={setup}
+                        allPlants={allPlants}
+                        placedPlantNames={placedPlantNames}
+                    />
                 </div>
             </div>
 

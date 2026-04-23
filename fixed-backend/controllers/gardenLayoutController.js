@@ -7,19 +7,19 @@ export const loadLayout = async (req, res) => {
         if (!layout) {
             return res.json({ success: false, message: 'Layout not found' });
         }
-        res.json({ success: true, grids: layout.grids, zones: layout.zones, setup: layout.setup });
+        res.json({ success: true, grids: layout.grids, zones: layout.zones, setup: layout.setup, positions: layout.positions });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 };
 
 export const saveLayout = async (req, res) => {
-    const { grids, zones, setup } = req.body;
+    const { grids, zones, setup, positions } = req.body;
     const userId = req.user.id;
     try {
         await gardenLayoutModel.findOneAndUpdate(
             { userId },
-            { grids, zones, setup },
+            { grids, zones, setup, positions },
             { new: true, upsert: true }
         );
         res.json({ success: true });

@@ -6,6 +6,9 @@ const gridCellSchema = new mongoose.Schema({
     expectedHarvest: String,
     notes: String,
     warnings: [String],
+    spanCols: { type: Number, default: 1 },
+    spanRows: { type: Number, default: 1 },
+    isStructure: { type: Boolean, default: false },
 }, { _id: false });
 
 const setupSchema = new mongoose.Schema({
@@ -29,6 +32,7 @@ const gardenLayoutSchema = new mongoose.Schema({
     zones: { type: [String], default: ['Zone 1'] },
     grids: { type: [[[gridCellSchema]]], default: [] },
     setup: { type: setupSchema, default: () => ({}) },
+    positions: { type: [Object], default: [] },
 });
 
 export default mongoose.models.gardenLayout || mongoose.model('gardenLayout', gardenLayoutSchema);
