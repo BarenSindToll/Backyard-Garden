@@ -1,30 +1,34 @@
-
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const gridCellSchema = new mongoose.Schema({
-  plant: String,               // plant name or ID
-  plantedDate: String,         // ISO date string
-  expectedHarvest: String,    // ISO date string
-  notes: String,               // optional user notes
-  warnings: [String],          // computed warnings
+    plant: String,
+    plantedDate: String,
+    expectedHarvest: String,
+    notes: String,
+    warnings: [String],
+}, { _id: false });
+
+const setupSchema = new mongoose.Schema({
+    gardenName: { type: String, default: 'My Garden' },
+    widthM: { type: Number, default: 10 },
+    heightM: { type: Number, default: 10 },
+    country: { type: String, default: '' },
+    hardinessZone: { type: String, default: '7b' },
+    climate: { type: String, default: 'Temperate' },
+    cellSizeM: { type: Number, default: 1 },
+    focusAreas: { type: [String], default: [] },
+    goals: { type: [String], default: [] },
 }, { _id: false });
 
 const gardenLayoutSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'user',
-    required: true,
-  },
-  zones: {
-    type: [String],
-    default: ['Zone 1'],
-  },
-  grids: {
-    type: [[[gridCellSchema]]], // 3D array: zones → rows → columns → gridCell
-    default: [],
-  },
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'user',
+        required: true,
+    },
+    zones: { type: [String], default: ['Zone 1'] },
+    grids: { type: [[[gridCellSchema]]], default: [] },
+    setup: { type: setupSchema, default: () => ({}) },
 });
 
-const gardenLayoutModel = mongoose.models.gardenLayout || mongoose.model('gardenLayout', gardenLayoutSchema);
-
-export default gardenLayoutModel;
+export default mongoose.models.gardenLayout || mongoose.model('gardenLayout', gardenLayoutSchema);

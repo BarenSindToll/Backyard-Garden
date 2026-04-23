@@ -1,13 +1,24 @@
 import { useState } from 'react';
 
-export default function ZoneTabs({ zones, currentZone, setZones, setCurrentZone, onAddZone, onDeleteZone, onRenameZone }) {
-    const [editingIndex, setEditingIndex] = useState(null);
-    const [zoneName, setZoneName] = useState('');
+const getZoneColor = (zone = '') => {
+    const z = zone.toLowerCase();
+    if (z.includes('guild')) return 'bg-green-100';
+    if (z.includes('bed')) return 'bg-yellow-100';
+    if (z.includes('pond')) return 'bg-blue-100';
+    if (z.includes('compost')) return 'bg-amber-200';
+    if (z.includes('greenhouse')) return 'bg-lime-100';
+    if (z.includes('forest') || z.includes('food')) return 'bg-emerald-100';
+    return 'bg-gray-100';
+};
 
-    const handleInputBlur = () => {
-        if (zoneName.trim()) {
+export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones, onAddZone, onDeleteZone, onRenameZone }) {
+    const [editingIndex, setEditingIndex] = useState(null);
+    const [editName, setEditName] = useState('');
+
+    const handleBlur = () => {
+        if (editName.trim() && editingIndex !== null) {
             const updated = [...zones];
-            updated[editingIndex] = zoneName.trim();
+            updated[editingIndex] = editName.trim();
             setZones(updated);
             if (onRenameZone) onRenameZone(updated);
         }
@@ -15,59 +26,46 @@ export default function ZoneTabs({ zones, currentZone, setZones, setCurrentZone,
     };
 
     const confirmDelete = (index) => {
-        const confirm = window.confirm(`Delete "${zones[index]}"? This cannot be undone.`);
-        if (confirm) onDeleteZone(index);
+        if (zones.length <= 1) return;
+        if (window.confirm(`Delete "${zones[index]}"? This cannot be undone.`)) {
+            onDeleteZone(index);
+        }
     };
-
-    const getZoneColor = (zone) => {
-        if (zone.toLowerCase().includes('guild')) return 'bg-green-200';
-        if (zone.toLowerCase().includes('bed')) return 'bg-yellow-200';
-        if (zone.toLowerCase().includes('pond')) return 'bg-blue-200';
-        if (zone.toLowerCase().includes('compost')) return 'bg-amber-300';
-        if (zone.toLowerCase().includes('greenhouse')) return 'bg-lime-200';
-        if (zone === 'Main Garden') return 'bg-white';
-        return 'bg-gray-100';
-    };
-
-    const displayZones = ['Main Garden', ...zones.filter(z => z !== 'Main Garden')];
 
     return (
-        <div className="w-full bg-cream border p-2">
-            <div className="flex items-center space-x-2 bg-cream p-2 rounded-md max-w-full md:max-w-3xl mx-auto overflow-x-auto">
-                {displayZones.map((zone, index) => (
+        <div className="w-full bg-cream border border-gray-200 rounded-xl p-2">
+            <div className="flex items-center gap-2 overflow-x-auto">
+                {zones.map((zone, index) => (
                     <div
                         key={index}
-                        className={`relative px-4 py-2 rounded cursor-pointer flex items-center group ${currentZone === zone ? 'ring-2 ring-forest font-semibold' : 'text-gray-600'
-                            } ${getZoneColor(zone)}`}
-                        onClick={() => setCurrentZone(zone)}
-                        onDoubleClick={() => {
-                            setEditingIndex(index);
-                            setZoneName(zone);
-                        }}
+                        className={`relative flex-shrink-0 px-4 py-2 rounded-lg cursor-pointer flex items-center group transition-all ${
+                            currentZone === index
+                                ? 'ring-2 ring-forest font-semibold shadow-sm'
+                                : 'text-gray-600 hover:bg-white/70'
+                        } ${getZoneColor(zone)}`}
+                        onClick={() => setCurrentZone(index)}
+                        onDoubleClick={() => { setEditingIndex(index); setEditName(zone); }}
                     >
                         {editingIndex === index ? (
                             <input
-                                value={zoneName}
-                                onChange={(e) => setZoneName(e.target.value)}
-                                onBlur={handleInputBlur}
-                                onKeyDown={(e) => e.key === 'Enter' && handleInputBlur()}
+                                value={editName}
+                                onChange={e => setEditName(e.target.value)}
+                                onBlur={handleBlur}
+                                onKeyDown={e => e.key === 'Enter' && handleBlur()}
                                 autoFocus
-                                className="bg-white border-b border-gray-400 focus:outline-none text-sm"
+                                className="bg-white border-b border-gray-400 focus:outline-none text-sm w-24"
                             />
                         ) : (
-                            <span>{zone}</span>
+                            <span className="text-sm">{zone}</span>
                         )}
 
-                        {displayZones.length > 1 && zone !== 'Main Garden' && (
+                        {zones.length > 1 && (
                             <button
-                                className="absolute -right-2 -top-2 text-xs text-red-500 bg-white rounded-full shadow group-hover:block hidden"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    confirmDelete(index);
-                                }}
-                                title="Delete Zone"
+                                className="absolute -right-1 -top-1 w-4 h-4 bg-white text-red-400 hover:text-red-600 rounded-full shadow text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={e => { e.stopPropagation(); confirmDelete(index); }}
+                                title="Delete zone"
                             >
-                                🗑️
+                                ×
                             </button>
                         )}
                     </div>
@@ -75,12 +73,12 @@ export default function ZoneTabs({ zones, currentZone, setZones, setCurrentZone,
 
                 <button
                     onClick={onAddZone}
-                    className="px-3 py-2 text-lg text-forest hover:bg-white rounded"
-                    title="Add new zone"
+                    className="flex-shrink-0 px-3 py-2 text-sm text-forest hover:bg-white rounded-lg whitespace-nowrap border border-dashed border-forest/30 hover:border-forest transition-colors"
+                    title="Add zone"
                 >
-                    ＋
+                    + Add Zone
                 </button>
             </div>
         </div>
     );
-} 
+}
