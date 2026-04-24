@@ -26,7 +26,6 @@ export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones,
     };
 
     const confirmDelete = (index) => {
-        if (zones.length <= 1) return;
         if (window.confirm(`Delete "${zones[index]}"? This cannot be undone.`)) {
             onDeleteZone(index);
         }
@@ -35,6 +34,21 @@ export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones,
     return (
         <div className="w-full bg-cream border border-gray-200 rounded-xl p-2">
             <div className="flex items-center gap-2 overflow-x-auto">
+                {/* General overview tab */}
+                <div
+                    className={`relative flex-shrink-0 px-4 py-2 rounded-lg cursor-pointer flex items-center gap-1.5 transition-all ${
+                        currentZone === -1
+                            ? 'ring-2 ring-forest font-semibold shadow-sm bg-forest text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-white/70'
+                    }`}
+                    onClick={() => setCurrentZone(-1)}
+                    title="Overview map of all zones"
+                >
+                    <span className="text-sm">🗺</span>
+                    <span className="text-sm">General</span>
+                </div>
+
+                {/* Zone tabs */}
                 {zones.map((zone, index) => (
                     <div
                         key={index}
@@ -59,15 +73,13 @@ export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones,
                             <span className="text-sm">{zone}</span>
                         )}
 
-                        {zones.length > 1 && (
-                            <button
-                                className="absolute -right-1 -top-1 w-4 h-4 bg-white text-red-400 hover:text-red-600 rounded-full shadow text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={e => { e.stopPropagation(); confirmDelete(index); }}
-                                title="Delete zone"
-                            >
-                                ×
-                            </button>
-                        )}
+                        <button
+                            className="absolute -right-1 -top-1 w-4 h-4 bg-white text-red-400 hover:text-red-600 rounded-full shadow text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={e => { e.stopPropagation(); confirmDelete(index); }}
+                            title="Delete zone"
+                        >
+                            ×
+                        </button>
                     </div>
                 ))}
 

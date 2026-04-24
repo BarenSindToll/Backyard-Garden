@@ -5,8 +5,7 @@ export default function AddZoneModal({ onAdd, onClose }) {
     const [customName, setCustomName] = useState('');
 
     const handlePickType = (typeKey) => {
-        const name = customName.trim() || ZONE_TYPES[typeKey].label;
-        onAdd(name);
+        onAdd(customName.trim() || ZONE_TYPES[typeKey].label);
     };
 
     const handleCustomAdd = () => {
@@ -27,7 +26,6 @@ export default function AddZoneModal({ onAdd, onClose }) {
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
                 </div>
 
-                {/* Custom name input */}
                 <div className="flex gap-2">
                     <input
                         type="text"
@@ -48,7 +46,6 @@ export default function AddZoneModal({ onAdd, onClose }) {
                     )}
                 </div>
 
-                {/* Zone type grid */}
                 <div>
                     <p className="text-xs font-medium text-gray-500 mb-2">Or pick a type:</p>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-64 overflow-y-auto pr-1">

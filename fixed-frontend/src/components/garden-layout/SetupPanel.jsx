@@ -1,12 +1,12 @@
 import { useState } from 'react';
 
 const FOCUS_AREAS = [
-    { key: 'Producer',             label: 'Food Producers',       color: 'bg-green-100 border-green-400 text-green-800' },
-    { key: 'Nitrogen fixer',       label: 'Nitrogen Fixers',      color: 'bg-blue-100 border-blue-400 text-blue-800' },
-    { key: 'Pollinator attractor', label: 'Pollinators',          color: 'bg-yellow-100 border-yellow-400 text-yellow-800' },
-    { key: 'Dynamic accumulator',  label: 'Dynamic Accumulators', color: 'bg-purple-100 border-purple-400 text-purple-800' },
-    { key: 'Pest repellent',       label: 'Pest Controllers',     color: 'bg-orange-100 border-orange-400 text-orange-800' },
-    { key: 'Groundcover',          label: 'Ground Covers',        color: 'bg-teal-100 border-teal-400 text-teal-800' },
+    { key: 'Producer', label: 'Food Producers', color: 'bg-green-100 border-green-400 text-green-800' },
+    { key: 'Nitrogen fixer', label: 'Nitrogen Fixers', color: 'bg-blue-100 border-blue-400 text-blue-800' },
+    { key: 'Pollinator attractor', label: 'Pollinators', color: 'bg-yellow-100 border-yellow-400 text-yellow-800' },
+    { key: 'Dynamic accumulator', label: 'Dynamic Accumulators', color: 'bg-purple-100 border-purple-400 text-purple-800' },
+    { key: 'Pest repellent', label: 'Pest Controllers', color: 'bg-orange-100 border-orange-400 text-orange-800' },
+    { key: 'Groundcover', label: 'Ground Covers', color: 'bg-teal-100 border-teal-400 text-teal-800' },
 ];
 
 const GOALS = ['Food Production', 'Biodiversity', 'Water Retention', 'Pollinator Support', 'Medicinal', 'Aesthetics'];
@@ -14,9 +14,9 @@ const CLIMATES = ['Temperate', 'Mediterranean', 'Continental', 'Oceanic', 'Arid'
 const HARDINESS_ZONES = ['5b', '6a', '6b', '7a', '7b'];
 const CELL_SIZES = [
     { value: 0.25, label: '0.25 m — detailed' },
-    { value: 0.5,  label: '0.5 m — standard' },
-    { value: 1,    label: '1 m — large scale' },
-    { value: 2,    label: '2 m — overview' },
+    { value: 0.5, label: '0.5 m — standard' },
+    { value: 1, label: '1 m — large scale' },
+    { value: 2, label: '2 m — overview' },
 ];
 
 export default function SetupPanel({ setup, onSave }) {
@@ -37,9 +37,6 @@ export default function SetupPanel({ setup, onSave }) {
         const arr = form.goals || [];
         setForm(f => ({ ...f, goals: arr.includes(goal) ? arr.filter(x => x !== goal) : [...arr, goal] }));
     };
-
-    const computedCols = Math.max(1, Math.round((form.widthM || 10) / (form.cellSizeM || 1)));
-    const computedRows = Math.max(1, Math.round((form.heightM || 10) / (form.cellSizeM || 1)));
 
     const handleSave = () => {
         onSave(form);
@@ -86,6 +83,7 @@ export default function SetupPanel({ setup, onSave }) {
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="col-span-2">
                                     <label className="text-xs font-medium text-gray-600 block mb-1">Garden Name</label>
+
                                     <input
                                         type="text"
                                         value={form.gardenName}
@@ -94,20 +92,20 @@ export default function SetupPanel({ setup, onSave }) {
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-medium text-gray-600 block mb-1">Width (m)</label>
+                                    <label className="text-xs font-medium text-gray-600 block mb-1">Width (m) <span className="text-gray-400 font-normal">— General map</span></label>
                                     <input
-                                        type="number" min="1"
+                                        type="number" min="1" step="any"
                                         value={form.widthM}
-                                        onChange={e => setForm(f => ({ ...f, widthM: +e.target.value }))}
+                                        onChange={e => setForm(f => ({ ...f, widthM: Math.max(1, Number(e.target.value)) }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest/20"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-medium text-gray-600 block mb-1">Height (m)</label>
+                                    <label className="text-xs font-medium text-gray-600 block mb-1">Height (m) <span className="text-gray-400 font-normal">— General map</span></label>
                                     <input
-                                        type="number" min="1"
+                                        type="number" min="1" step="any"
                                         value={form.heightM}
-                                        onChange={e => setForm(f => ({ ...f, heightM: +e.target.value }))}
+                                        onChange={e => setForm(f => ({ ...f, heightM: Math.max(1, Number(e.target.value)) }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest/20"
                                     />
                                 </div>
@@ -156,8 +154,8 @@ export default function SetupPanel({ setup, onSave }) {
                                     >
                                         {CELL_SIZES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
                                     </select>
-                                    <p className="text-xs text-forest mt-1 font-medium">
-                                        → Grid: {computedCols} cols × {computedRows} rows per area
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        Sets the cell resolution for new areas. Existing areas are resized by dragging.
                                     </p>
                                 </div>
                             </div>

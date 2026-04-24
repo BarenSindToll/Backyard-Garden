@@ -10,10 +10,6 @@ const GUILD_LABEL_COLOR = {
     'Groundcover':          'bg-teal-100 text-teal-800',
 };
 
-function loadFavorites() {
-    try { return JSON.parse(localStorage.getItem('gardenFavorites') || '[]'); } catch { return []; }
-}
-
 // ── Expandable info panel shown below a plant card ─────────────────────────
 function PlantInfo({ plant }) {
     return (
@@ -64,13 +60,12 @@ function PlantInfo({ plant }) {
     );
 }
 
-export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNames = [] }) {
+export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNames = [], favoritePlants = [], onFavoritesChange }) {
     const [tab, setTab] = useState('plants');
     const [search, setSearch] = useState('');
     const [zoneFilterOn, setZoneFilterOn] = useState(false);
     const [activeRole, setActiveRole] = useState(null);
     const [expandedPlant, setExpandedPlant] = useState(null);
-    const [favorites, setFavorites] = useState(loadFavorites);
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
     const zone = setup.hardinessZone || '7b';
@@ -78,18 +73,17 @@ export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNa
 
     const toggleFavorite = (e, plantName) => {
         e.stopPropagation();
-        const updated = favorites.includes(plantName)
-            ? favorites.filter(f => f !== plantName)
-            : [...favorites, plantName];
-        setFavorites(updated);
-        localStorage.setItem('gardenFavorites', JSON.stringify(updated));
+        const updated = favoritePlants.includes(plantName)
+            ? favoritePlants.filter(f => f !== plantName)
+            : [...favoritePlants, plantName];
+        onFavoritesChange?.(updated);
     };
 
     const filteredPlants = useMemo(() => {
         let plants = [...allPlants];
 
         if (showFavoritesOnly) {
-            plants = plants.filter(p => favorites.includes(p.name));
+            plants = plants.filter(p => favoritePlants.includes(p.name));
         }
 
         if (zoneFilterOn) {
@@ -119,7 +113,7 @@ export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNa
         }
 
         return plants;
-    }, [allPlants, search, zoneFilterOn, zone, focusAreas, activeRole, showFavoritesOnly, favorites]);
+    }, [allPlants, search, zoneFilterOn, zone, focusAreas, activeRole, showFavoritesOnly, favoritePlants]);
 
     return (
         <aside className="bg-cream rounded-xl border border-gray-200 text-forest w-full overflow-hidden flex flex-col">
@@ -183,7 +177,7 @@ export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNa
                                     className={`text-xs px-2 py-0.5 rounded-full border transition-colors flex items-center gap-1 ${showFavoritesOnly ? 'bg-amber-400 text-white border-amber-400' : 'bg-white text-gray-500 border-gray-300 hover:border-amber-300'}`}
                                     title="Show favourites only"
                                 >
-                                    ♥ {showFavoritesOnly ? 'Favs' : favorites.length}
+                                    ♥ {showFavoritesOnly ? 'Favs' : favoritePlants.length}
                                 </button>
                                 <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full border border-green-300 font-medium">
                                     Zone {zone}
@@ -237,7 +231,7 @@ export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNa
                                 const isCompanion = !hasAntagonist && plant.companions?.some(c => placedPlantNames.includes(c));
                                 const primaryRole = plant.guildRole?.[0];
                                 const isFocus = focusAreas.length > 0 && plant.guildRole?.some(r => focusAreas.includes(r));
-                                const isFav = favorites.includes(plant.name);
+                                const isFav = favoritePlants.includes(plant.name);
                                 const isExpanded = expandedPlant === plant.name;
 
                                 const iconSrc = plant.iconData

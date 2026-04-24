@@ -11,8 +11,8 @@ import { fetchCurrentUser } from '../utils/fetchCurrentUser';
 
 const DEFAULT_SETUP = {
     gardenName: 'My Garden',
-    widthM: 10,
-    heightM: 10,
+    widthM: 100,
+    heightM: 60,
     country: '',
     hardinessZone: '7b',
     climate: 'Temperate',
@@ -26,25 +26,6 @@ const STRUCTURE_MAP = Object.fromEntries(STRUCTURES.map(s => [s.name, s]));
 const createEmptyGrid = (rows = 10, cols = 10) =>
     Array.from({ length: rows }, () => Array(cols).fill(null));
 
-const resizeGrid = (grid, newRows, newCols) => {
-    const result = [];
-    for (let r = 0; r < newRows; r++) {
-        const row = [];
-        for (let c = 0; c < newCols; c++) {
-            row.push(grid[r]?.[c] ?? null);
-        }
-        result.push(row);
-    }
-    return result;
-};
-
-const wouldLoseCells = (grids, newRows, newCols) =>
-    grids.some(grid =>
-        grid.some((row, r) =>
-            (r >= newRows && row.some(c => c)) ||
-            row.some((cell, c) => c >= newCols && cell)
-        )
-    );
 
 const enrichGrid = (grid, plants) =>
     grid.map(row =>
@@ -75,25 +56,29 @@ const cleanForSave = (grids) =>
 
 const defaultPositions = (count) =>
     Array.from({ length: count }, (_, i) => ({
-        x: (i % 3) * 340 + 20,
-        y: Math.floor(i / 3) * 300 + 20,
+        x: 200 + (i % 4) * 180,
+        y: 120 + Math.floor(i / 4) * 160,
+        inGeneral: false,
+        shape: 'circle',
     }));
 
 export default function GardenLayout() {
     const [setup, setSetup] = useState(DEFAULT_SETUP);
     const [zones, setZones] = useState(['Zone 1']);
-    const [currentZone, setCurrentZone] = useState(0);
+    const [currentZone, setCurrentZone] = useState(-1);
     const [grids, setGrids] = useState([createEmptyGrid()]);
     const [positions, setPositions] = useState(defaultPositions(1));
     const [userId, setUserId] = useState(null);
     const [allPlants, setAllPlants] = useState([]);
+    const [overlayItems, setOverlayItems] = useState([]);
+    const [favoritePlants, setFavoritePlants] = useState([]);
 
     const placedPlantNames = useMemo(
         () => grids.flat(2).map(c => c?.plant).filter(Boolean),
         [grids]
     );
 
-    const saveToBackend = async (gridsToSave, zonesToSave, setupToSave, positionsToSave, showToast = false) => {
+    const saveToBackend = async (gridsToSave, zonesToSave, setupToSave, positionsToSave, overlayItemsToSave, showToast = false) => {
         try {
             await fetch('http://localhost:4000/api/gardenLayout/save-layout', {
                 method: 'POST',
@@ -104,6 +89,7 @@ export default function GardenLayout() {
                     zones: zonesToSave,
                     setup: setupToSave,
                     positions: positionsToSave,
+                    overlayItems: overlayItemsToSave,
                 }),
             }).then(r => r.json());
             if (showToast) toast.success('Layout saved!', { position: 'top-center', autoClose: 2000 });
@@ -117,6 +103,7 @@ export default function GardenLayout() {
             const user = await fetchCurrentUser();
             if (!user) return;
             setUserId(user._id);
+            setFavoritePlants(user.favoritePlants || []);
             try {
                 const [plantRes, layoutRes] = await Promise.all([
                     fetch('http://localhost:4000/api/plants/all', { credentials: 'include' }),
@@ -135,9 +122,10 @@ export default function GardenLayout() {
                     setGrids(loadedGrids);
                     setPositions(
                         layoutData.positions?.length === loadedZones.length
-                            ? layoutData.positions
+                            ? layoutData.positions.map(p => ({ inGeneral: false, shape: 'circle', ...p }))
                             : defaultPositions(loadedZones.length)
                     );
+                    if (layoutData.overlayItems?.length) setOverlayItems(layoutData.overlayItems);
                     if (layoutData.setup && Object.keys(layoutData.setup).length > 0) {
                         setSetup({ ...DEFAULT_SETUP, ...layoutData.setup });
                     } else if (user.zone) {
@@ -155,74 +143,77 @@ export default function GardenLayout() {
 
     const handleSetupSave = (newSetup) => {
         setSetup(newSetup);
-        const cellSize = newSetup.cellSizeM || 1;
-        const newCols = Math.max(1, Math.round(newSetup.widthM / cellSize));
-        const newRows = Math.max(1, Math.round(newSetup.heightM / cellSize));
-        const curGrid = grids[0] || [];
-        const oldCols = curGrid[0]?.length || 10;
-        const oldRows = curGrid.length || 10;
-        if (newCols !== oldCols || newRows !== oldRows) {
-            if (wouldLoseCells(grids, newRows, newCols)) {
-                if (!window.confirm(`Resizing to ${newCols}×${newRows} will remove some placed items. Continue?`)) {
-                    if (userId) saveToBackend(grids, zones, newSetup, positions);
-                    return;
-                }
-            }
-            const resized = grids.map(g => resizeGrid(g, newRows, newCols));
-            setGrids(resized);
-            if (userId) saveToBackend(resized, zones, newSetup, positions);
-        } else {
-            if (userId) saveToBackend(grids, zones, newSetup, positions);
-        }
+        if (userId) saveToBackend(grids, zones, newSetup, positions, overlayItems);
     };
 
-    const handleAddZone = (zoneName) => {
+    const handleAddZone = (zoneName, inGeneral = false) => {
         const name = zoneName || `Zone ${zones.length + 1}`;
-        const cellSize = setup.cellSizeM || 1;
-        const cols = Math.max(1, Math.round(setup.widthM / cellSize));
-        const rows = Math.max(1, Math.round(setup.heightM / cellSize));
+        const cols = 4;
+        const rows = 4;
         const updatedZones = [...zones, name];
         const updatedGrids = [...grids, createEmptyGrid(rows, cols)];
-        const lastPos = positions[positions.length - 1] || { x: 20, y: 20 };
-        const updatedPositions = [...positions, { x: lastPos.x + 340, y: lastPos.y }];
+        const newIdx = positions.length;
+        const updatedPositions = [
+            ...positions,
+            { x: 200 + (newIdx % 4) * 180, y: 120 + Math.floor(newIdx / 4) * 160, inGeneral },
+        ];
         setZones(updatedZones);
         setGrids(updatedGrids);
         setPositions(updatedPositions);
-        setCurrentZone(updatedZones.length - 1);
-        if (userId) saveToBackend(updatedGrids, updatedZones, setup, updatedPositions);
+        setCurrentZone(inGeneral ? -1 : updatedZones.length - 1);
+        if (userId) saveToBackend(updatedGrids, updatedZones, setup, updatedPositions, overlayItems);
     };
 
     const updateGrid = (zoneIndex, newGrid) => {
         const updated = [...grids];
         updated[zoneIndex] = newGrid;
         setGrids(updated);
-        if (userId) saveToBackend(updated, zones, setup, positions);
+        if (userId) saveToBackend(updated, zones, setup, positions, overlayItems);
     };
 
     const handleDeleteZone = (index) => {
-        if (zones.length <= 1) return;
         const updatedZones = zones.filter((_, i) => i !== index);
         const updatedGrids = grids.filter((_, i) => i !== index);
         const updatedPositions = positions.filter((_, i) => i !== index);
         setZones(updatedZones);
         setGrids(updatedGrids);
         setPositions(updatedPositions);
-        setCurrentZone(prev =>
-            prev >= updatedZones.length ? updatedZones.length - 1 :
-            prev === index ? 0 :
-            prev > index ? prev - 1 : prev
-        );
-        if (userId) saveToBackend(updatedGrids, updatedZones, setup, updatedPositions);
+        setCurrentZone(prev => {
+            if (updatedZones.length === 0 || prev === index) return -1;
+            if (prev > index) return prev - 1;
+            return prev;
+        });
+        if (userId) saveToBackend(updatedGrids, updatedZones, setup, updatedPositions, overlayItems);
     };
 
     const handleRenameZone = (updatedZones) => {
         setZones(updatedZones);
-        if (userId) saveToBackend(grids, updatedZones, setup, positions);
+        if (userId) saveToBackend(grids, updatedZones, setup, positions, overlayItems);
     };
 
     const handleUpdatePositions = (newPositions) => {
         setPositions(newPositions);
-        if (userId) saveToBackend(grids, zones, setup, newPositions);
+        if (userId) saveToBackend(grids, zones, setup, newPositions, overlayItems);
+    };
+
+    const handleFavoritesChange = async (newFavorites) => {
+        setFavoritePlants(newFavorites);
+        try {
+            const formData = new FormData();
+            formData.append('favoritePlants', JSON.stringify(newFavorites));
+            await fetch('http://localhost:4000/api/user/update-profile', {
+                method: 'POST',
+                body: formData,
+                credentials: 'include',
+            });
+        } catch (err) {
+            console.error('Failed to save favourites:', err);
+        }
+    };
+
+    const handleUpdateOverlayItems = (newItems) => {
+        setOverlayItems(newItems);
+        if (userId) saveToBackend(grids, zones, setup, positions, newItems);
     };
 
     return (
@@ -253,7 +244,7 @@ export default function GardenLayout() {
 
                 {/* Save */}
                 <button
-                    onClick={() => saveToBackend(grids, zones, setup, positions, true)}
+                    onClick={() => saveToBackend(grids, zones, setup, positions, overlayItems, true)}
                     className="bg-forest text-white text-xs px-4 py-1.5 rounded-lg font-medium hover:bg-green-800 transition-colors flex-shrink-0"
                 >
                     Save
@@ -277,6 +268,8 @@ export default function GardenLayout() {
                         onDeleteZone={handleDeleteZone}
                         onRenameZone={handleRenameZone}
                         plantList={allPlants}
+                        overlayItems={overlayItems}
+                        onUpdateOverlayItems={handleUpdateOverlayItems}
                     />
                 </div>
 
@@ -286,6 +279,8 @@ export default function GardenLayout() {
                         setup={setup}
                         allPlants={allPlants}
                         placedPlantNames={placedPlantNames}
+                        favoritePlants={favoritePlants}
+                        onFavoritesChange={handleFavoritesChange}
                     />
                 </div>
             </div>
