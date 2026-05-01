@@ -20,20 +20,34 @@ export const ZONE_TYPES = {
 
 export function detectZoneType(name = '') {
     const n = name.toLowerCase();
-    if (n.includes('orchard') || n.includes('fruit tree')) return 'orchard';
-    if (n.includes('greenhouse') || n.includes('glass house')) return 'greenhouse';
-    if (n.includes('veg') || n.includes('kitchen garden') || n.includes('potager')) return 'vegetable';
-    if (n.includes('herb') || n.includes('spice')) return 'herb';
-    if (n.includes('flower') || n.includes('bloom') || n.includes('rose')) return 'flower';
-    if (n.includes('forest') || n.includes('woodland') || n.includes('food forest')) return 'forest';
+    // Orchard — EN + RO (livadă, pomi)
+    if (n.includes('orchard') || n.includes('fruit tree') || n.includes('livad') || n.includes('pomi')) return 'orchard';
+    // Greenhouse — EN + RO (seră)
+    if (n.includes('greenhouse') || n.includes('glass house') || n.includes('ser')) return 'greenhouse';
+    // Vegetable — EN + RO (legume, bucătărie, potager)
+    if (n.includes('veg') || n.includes('kitchen garden') || n.includes('potager') || n.includes('legume')) return 'vegetable';
+    // Herb — EN + RO (ierburi, condimente)
+    if (n.includes('herb') || n.includes('spice') || n.includes('ierb') || n.includes('condiment')) return 'herb';
+    // Flower — EN + RO (flori, trandafiri)
+    if (n.includes('flower') || n.includes('bloom') || n.includes('rose') || n.includes('flori') || n.includes('trandafir')) return 'flower';
+    // Food forest — EN + RO (pădure)
+    if (n.includes('forest') || n.includes('woodland') || n.includes('food forest') || n.includes('pădure')) return 'forest';
+    // Compost — same word
     if (n.includes('compost')) return 'compost';
-    if (n.includes('pond') || n.includes('water') || n.includes('lake') || n.includes('stream')) return 'pond';
-    if (n.includes('kids') || n.includes('play') || n.includes('children') || n.includes('playground')) return 'kids';
-    if (n.includes('path') || n.includes('walk') || n.includes('trail')) return 'path';
-    if (n.includes('raised') || n.includes('raised bed')) return 'raised';
-    if (n.includes('shed') || n.includes('building') || n.includes('house') || n.includes('barn') || n.includes('storage')) return 'building';
-    if (n.includes('guild')) return 'guild';
-    if (n.includes('seat') || n.includes('relax') || n.includes('patio') || n.includes('deck')) return 'seating';
+    // Pond — EN + RO (iaz, apă, lac)
+    if (n.includes('pond') || n.includes('water') || n.includes('lake') || n.includes('stream') || n.includes('iaz') || n.includes('apă') || n.includes('lac')) return 'pond';
+    // Kids — EN + RO (copii, joacă)
+    if (n.includes('kids') || n.includes('play') || n.includes('children') || n.includes('playground') || n.includes('copii') || n.includes('joac')) return 'kids';
+    // Path — EN + RO (cărare, alee, potecă)
+    if (n.includes('path') || n.includes('walk') || n.includes('trail') || n.includes('cărare') || n.includes('alee') || n.includes('potec')) return 'path';
+    // Raised bed — EN + RO (strat înălțat)
+    if (n.includes('raised') || n.includes('raised bed') || n.includes('strat înăl')) return 'raised';
+    // Building — EN + RO (magazie, clădire, depozit)
+    if (n.includes('shed') || n.includes('building') || n.includes('house') || n.includes('barn') || n.includes('storage') || n.includes('magazie') || n.includes('clădire') || n.includes('depozit')) return 'building';
+    // Guild — EN + RO (breaslă)
+    if (n.includes('guild') || n.includes('breasl')) return 'guild';
+    // Seating — EN + RO (odihn, patio, terasă)
+    if (n.includes('seat') || n.includes('relax') || n.includes('patio') || n.includes('deck') || n.includes('odihn') || n.includes('teras')) return 'seating';
     return 'general';
 }
 

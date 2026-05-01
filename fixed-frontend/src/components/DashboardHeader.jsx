@@ -1,5 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
+import { useLanguage } from '../utils/languageContext';
 
 export default function DashboardHeader() {
     const [menuOpen, setMenuOpen] = useState(false);
@@ -9,6 +10,8 @@ export default function DashboardHeader() {
     const blogRef = useRef();
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useLanguage();
+    const n = t.nav;
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -46,7 +49,7 @@ export default function DashboardHeader() {
             const data = await res.json();
             if (data.success) {
                 localStorage.removeItem('userId');
-                localStorage.removeItem('profileTab'); //  Clear the saved tab
+                localStorage.removeItem('profileTab');
                 navigate('/');
             }
         } catch (error) {
@@ -60,31 +63,22 @@ export default function DashboardHeader() {
             <header className="w-full bg-white border-b shadow-sm px-6 py-4 flex justify-between items-center">
                 {/* Brand */}
                 <Link to="/home" className="text-2xl font-semibold text-forest hover:opacity-80">
-                    Backyard Garden
+                    {n.brand}
                 </Link>
 
                 {/* Navigation */}
                 <div className="flex items-center gap-6 text-sm text-forest">
-                    {/* here the nav is changed based on isAdmin */}
-
                     {user?.role === 'admin' ? (
                         <>
-                            <Link to="/blog" className="hover:underline">Blog</Link>
-                            <Link to="/garden-layout" className="hover:underline">Garden Layout</Link>
-                            <Link to="/calendar" className="hover:underline">Calendar</Link>
-                            <Link to="/weather" className="hover:underline">Weather Forecast</Link>
+                            <Link to="/blog" className="hover:underline">{n.blog}</Link>
+                            <Link to="/garden-layout" className="hover:underline">{n.gardenLayout}</Link>
+                            <Link to="/calendar" className="hover:underline">{n.calendar}</Link>
+                            <Link to="/weather" className="hover:underline">{n.weather}</Link>
 
                             <div className="relative" ref={menuRef}>
-                                <button
-                                    onClick={() => setMenuOpen(!menuOpen)}
-                                    className="focus:outline-none"
-                                >
+                                <button onClick={() => setMenuOpen(!menuOpen)} className="focus:outline-none">
                                     {user?.profileImage ? (
-                                        <img
-                                            src={`http://localhost:4000${user.profileImage}`}
-                                            alt="Profile"
-                                            className="w-10 h-10 rounded-full object-cover border-2 border-forest"
-                                        />
+                                        <img src={`http://localhost:4000${user.profileImage}`} alt="Profile" className="w-10 h-10 rounded-full object-cover border-2 border-forest" />
                                     ) : (
                                         <div className="w-10 h-10 bg-forest text-white flex items-center justify-center rounded-full text-sm">
                                             {user?.name ? user.name[0] : '?'}
@@ -95,59 +89,37 @@ export default function DashboardHeader() {
                                 {menuOpen && (
                                     <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg border p-2 z-10">
                                         <div className="px-4 py-2 text-xs text-gray-500 border-b mb-2">
-                                            {user?.name ? `Hello, ${user.name}` : `ID: ${localStorage.getItem('userId')}`}
+                                            {user?.name ? `${n.hello}, ${user.name}` : `ID: ${localStorage.getItem('userId')}`}
                                         </div>
-                                        <Link
-                                            to="/admin/profile"
-                                            onClick={() => localStorage.setItem('profileTab', 'Account Settings')}
-                                            className="block px-4 py-2 hover:bg-gray-100 text-forest"
-                                        >
-                                            Admin Panel
+                                        <Link to="/admin/profile" onClick={() => localStorage.setItem('profileTab', 'accountSettings')} className="block px-4 py-2 hover:bg-gray-100 text-forest">
+                                            {n.adminPanel}
                                         </Link>
                                         <Link to="/help" className="block px-4 py-2 hover:bg-gray-100 text-forest">
-                                            Help
+                                            {n.help}
                                         </Link>
-                                        <button
-                                            onClick={handleLogout}
-                                            className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
-                                        >
-                                            Log out
+                                        <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600">
+                                            {n.logout}
                                         </button>
                                     </div>
                                 )}
                             </div>
                         </>
                     ) : (
-
                         <>
                             <div className="relative" ref={blogRef}>
-                                <Link
-                                    to="/blog"
-                                    onMouseEnter={() => setBlogOpen(true)}
-                                    onClick={() => setBlogOpen(false)}
-                                    className="hover:underline focus:outline-none"
-                                >
-                                    Blog
+                                <Link to="/blog" onMouseEnter={() => setBlogOpen(true)} onClick={() => setBlogOpen(false)} className="hover:underline focus:outline-none">
+                                    {n.blog}
                                 </Link>
-
                             </div>
 
-                            <Link to="/garden-layout" className="hover:underline">Garden Layout</Link>
-                            <Link to="/calendar" className="hover:underline">Calendar</Link>
-                            <Link to="/weather" className="hover:underline">Weather Forecast</Link>
+                            <Link to="/garden-layout" className="hover:underline">{n.gardenLayout}</Link>
+                            <Link to="/calendar" className="hover:underline">{n.calendar}</Link>
+                            <Link to="/weather" className="hover:underline">{n.weather}</Link>
 
-                            {/* Profile Icon and Menu */}
                             <div className="relative" ref={menuRef}>
-                                <button
-                                    onClick={() => setMenuOpen(!menuOpen)}
-                                    className="focus:outline-none"
-                                >
+                                <button onClick={() => setMenuOpen(!menuOpen)} className="focus:outline-none">
                                     {user?.profileImage ? (
-                                        <img
-                                            src={`http://localhost:4000${user.profileImage}`}
-                                            alt="Profile"
-                                            className="w-10 h-10 rounded-full object-cover border-2 border-forest"
-                                        />
+                                        <img src={`http://localhost:4000${user.profileImage}`} alt="Profile" className="w-10 h-10 rounded-full object-cover border-2 border-forest" />
                                     ) : (
                                         <div className="w-10 h-10 bg-forest text-white flex items-center justify-center rounded-full text-sm">
                                             {user?.name ? user.name[0] : '?'}
@@ -158,19 +130,16 @@ export default function DashboardHeader() {
                                 {menuOpen && (
                                     <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg border p-2 z-10">
                                         <div className="px-4 py-2 text-xs text-gray-500 border-b mb-2">
-                                            {user?.name ? `Hello, ${user.name}` : `ID: ${localStorage.getItem('userId')}`}
+                                            {user?.name ? `${n.hello}, ${user.name}` : `ID: ${localStorage.getItem('userId')}`}
                                         </div>
                                         <Link to="/profile" className="block px-4 py-2 hover:bg-gray-100 text-forest">
-                                            Profile Settings
+                                            {n.profileSettings}
                                         </Link>
                                         <Link to="/help" className="block px-4 py-2 hover:bg-gray-100 text-forest">
-                                            Help
+                                            {n.help}
                                         </Link>
-                                        <button
-                                            onClick={handleLogout}
-                                            className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
-                                        >
-                                            Log out
+                                        <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600">
+                                            {n.logout}
                                         </button>
                                     </div>
                                 )}
@@ -178,20 +147,11 @@ export default function DashboardHeader() {
                         </>
                     )}
                 </div>
+            </header>
 
-
-            </header >
-
-            {/* Banner image for homepage only */}
-            {
-                location.pathname === '/home' && (
-                    <img
-                        src="/banner.jpg"
-                        alt="Garden Banner"
-                        className="w-full h-50 object-cover"
-                    />
-                )
-            }
+            {location.pathname === '/home' && (
+                <img src="/banner.jpg" alt="Garden Banner" className="w-full h-50 object-cover" />
+            )}
         </>
     );
 }

@@ -18,6 +18,7 @@ import NewBlogPost from './pages/admin/NewBlogPost.jsx';
 import EditBlogPost from './pages/admin/EditBlogPost.jsx';
 import SinglePost from './pages/SinglePost.jsx';
 import { UserProvider } from './utils/userContext.jsx';
+import { LanguageProvider } from './utils/languageContext.jsx';
 import VerifyEmail from './pages/VerifyEmail.jsx';
 import PermacultureLayout from './pages/PermacultureLayout.jsx';
 
@@ -26,6 +27,7 @@ import './index.css';
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
+      <LanguageProvider>
       <UserProvider>
         <Routes>
           <Route path="/" element={<App />} />
@@ -49,6 +51,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
         </Routes>
       </UserProvider>
+      </LanguageProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

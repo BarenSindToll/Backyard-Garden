@@ -1,19 +1,22 @@
 import { useState } from 'react';
+import { useLanguage } from '../../utils/languageContext';
 
 const getZoneColor = (zone = '') => {
     const z = zone.toLowerCase();
-    if (z.includes('guild')) return 'bg-green-100';
-    if (z.includes('bed')) return 'bg-yellow-100';
-    if (z.includes('pond')) return 'bg-blue-100';
+    if (z.includes('guild') || z.includes('breasl')) return 'bg-green-100';
+    if (z.includes('bed') || z.includes('strat')) return 'bg-yellow-100';
+    if (z.includes('pond') || z.includes('iaz')) return 'bg-blue-100';
     if (z.includes('compost')) return 'bg-amber-200';
-    if (z.includes('greenhouse')) return 'bg-lime-100';
-    if (z.includes('forest') || z.includes('food')) return 'bg-emerald-100';
+    if (z.includes('greenhouse') || z.includes('ser')) return 'bg-lime-100';
+    if (z.includes('forest') || z.includes('food') || z.includes('pădure')) return 'bg-emerald-100';
     return 'bg-gray-100';
 };
 
 export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones, onAddZone, onDeleteZone, onRenameZone }) {
     const [editingIndex, setEditingIndex] = useState(null);
     const [editName, setEditName] = useState('');
+    const { t } = useLanguage();
+    const g = t.garden;
 
     const handleBlur = () => {
         if (editName.trim() && editingIndex !== null) {
@@ -26,7 +29,8 @@ export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones,
     };
 
     const confirmDelete = (index) => {
-        if (window.confirm(`Delete "${zones[index]}"? This cannot be undone.`)) {
+        const msg = g.deleteZoneConfirm.replace('{name}', zones[index]);
+        if (window.confirm(msg)) {
             onDeleteZone(index);
         }
     };
@@ -42,13 +46,12 @@ export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones,
                             : 'bg-gray-100 text-gray-600 hover:bg-white/70'
                     }`}
                     onClick={() => setCurrentZone(-1)}
-                    title="Overview map of all zones"
+                    title={g.overviewTitle}
                 >
                     <span className="text-sm">🗺</span>
-                    <span className="text-sm">General</span>
+                    <span className="text-sm">{g.generalTab}</span>
                 </div>
 
-                {/* Zone tabs */}
                 {zones.map((zone, index) => (
                     <div
                         key={index}
@@ -76,7 +79,7 @@ export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones,
                         <button
                             className="absolute -right-1 -top-1 w-4 h-4 bg-white text-red-400 hover:text-red-600 rounded-full shadow text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={e => { e.stopPropagation(); confirmDelete(index); }}
-                            title="Delete zone"
+                            title={g.deleteZoneConfirm.replace('{name}', zone)}
                         >
                             ×
                         </button>
@@ -86,9 +89,8 @@ export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones,
                 <button
                     onClick={onAddZone}
                     className="flex-shrink-0 px-3 py-2 text-sm text-forest hover:bg-white rounded-lg whitespace-nowrap border border-dashed border-forest/30 hover:border-forest transition-colors"
-                    title="Add zone"
                 >
-                    + Add Zone
+                    {g.addZone}
                 </button>
             </div>
         </div>

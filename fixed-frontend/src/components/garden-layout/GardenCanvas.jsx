@@ -3,6 +3,7 @@ import { STRUCTURES, ZONE_TYPES, detectZoneType } from './gardenZoneConfig';
 import PlantingModal from './PlantingModal';
 import AddZoneModal from './AddZoneModal';
 import ZoneTabs from './ZoneTabs';
+import { useLanguage } from '../../utils/languageContext';
 
 const CELL_PX = 36;
 const MIN_CELL = 28;
@@ -22,51 +23,83 @@ const ZONE_STRUCTURES = new Set(['Greenhouse']);
 
 // Default sizes in metres for each structure when first dropped on General map
 const STRUCTURE_DEFAULTS = {
-    Path:       { wM: 20,  hM: 1   },
-    Fence:      { wM: 10,  hM: 0.5 },
-    Greenhouse: { wM: 5,   hM: 4   },
-    Compost:    { wM: 2,   hM: 2   },
-    Pond:       { wM: 5,   hM: 5   },
-    House:      { wM: 10,  hM: 8   },
-    Shed:       { wM: 4,   hM: 3   },
+    Path: { wM: 20, hM: 1 },
+    Fence: { wM: 10, hM: 0.5 },
+    Greenhouse: { wM: 5, hM: 4 },
+    Compost: { wM: 2, hM: 2 },
+    Pond: { wM: 5, hM: 5 },
+    House: { wM: 10, hM: 8 },
+    Shed: { wM: 4, hM: 3 },
     'Raised Bed': { wM: 3, hM: 1.2 },
 };
 const DEFAULT_PLANT_SIZE = { wM: 1, hM: 1 };
 
 const ZONE_STYLES = {
-    raised:     { border: '#8B5E3C', bg: '#f5ead0', headerBg: '#7a4e2c', gridLine: 'rgba(139,94,60,0.18)',  bw: 5 },
-    vegetable:  { border: '#4a7c3f', bg: '#eef5e4', headerBg: '#3d6b34', gridLine: 'rgba(74,124,63,0.15)',  bw: 3 },
-    orchard:    { border: '#7a5030', bg: '#f5ede0', headerBg: '#6a4020', gridLine: 'rgba(122,80,48,0.15)',  bw: 3 },
-    herb:       { border: '#2d7a5a', bg: '#e4f5ec', headerBg: '#226848', gridLine: 'rgba(45,122,90,0.15)',  bw: 3 },
-    flower:     { border: '#b05878', bg: '#fdf0f5', headerBg: '#904868', gridLine: 'rgba(176,88,120,0.15)', bw: 3 },
-    forest:     { border: '#2d5a30', bg: '#e0f0dc', headerBg: '#245028', gridLine: 'rgba(45,90,48,0.15)',   bw: 3 },
-    greenhouse: { border: '#5aab44', bg: '#f0fae8', headerBg: '#489a34', gridLine: 'rgba(90,171,68,0.18)',  bw: 4 },
-    guild:      { border: '#6040a0', bg: '#f0ecf8', headerBg: '#503090', gridLine: 'rgba(96,64,160,0.15)', bw: 3 },
-    compost:    { border: '#7a4020', bg: '#f5e8dc', headerBg: '#6a3010', gridLine: 'rgba(122,64,32,0.15)',  bw: 3 },
-    pond:       { border: '#1a70c0', bg: '#dceef8', headerBg: '#1060a8', gridLine: 'rgba(26,112,192,0.18)', bw: 4 },
-    kids:       { border: '#b09010', bg: '#fdf8d4', headerBg: '#a08000', gridLine: 'rgba(176,144,16,0.15)', bw: 3 },
-    seating:    { border: '#5060b8', bg: '#eceef8', headerBg: '#4050a0', gridLine: 'rgba(80,96,184,0.15)',  bw: 3 },
-    building:   { border: '#606060', bg: '#f0f0f0', headerBg: '#484848', gridLine: 'rgba(96,96,96,0.15)',   bw: 4 },
-    path:       { border: '#a08050', bg: '#f5f0e4', headerBg: '#887040', gridLine: 'rgba(160,128,80,0.15)', bw: 3 },
-    general:    { border: '#4a7050', bg: '#eaf0e4', headerBg: '#3a6040', gridLine: 'rgba(74,112,80,0.15)',  bw: 3 },
+    raised: { border: '#8B5E3C', bg: '#f5ead0', headerBg: '#7a4e2c', gridLine: 'rgba(139,94,60,0.18)', bw: 5 },
+    vegetable: { border: '#4a7c3f', bg: '#eef5e4', headerBg: '#3d6b34', gridLine: 'rgba(74,124,63,0.15)', bw: 3 },
+    orchard: { border: '#7a5030', bg: '#f5ede0', headerBg: '#6a4020', gridLine: 'rgba(122,80,48,0.15)', bw: 3 },
+    herb: { border: '#2d7a5a', bg: '#e4f5ec', headerBg: '#226848', gridLine: 'rgba(45,122,90,0.15)', bw: 3 },
+    flower: { border: '#b05878', bg: '#fdf0f5', headerBg: '#904868', gridLine: 'rgba(176,88,120,0.15)', bw: 3 },
+    forest: { border: '#2d5a30', bg: '#e0f0dc', headerBg: '#245028', gridLine: 'rgba(45,90,48,0.15)', bw: 3 },
+    greenhouse: { border: '#5aab44', bg: '#f0fae8', headerBg: '#489a34', gridLine: 'rgba(90,171,68,0.18)', bw: 4 },
+    guild: { border: '#6040a0', bg: '#f0ecf8', headerBg: '#503090', gridLine: 'rgba(96,64,160,0.15)', bw: 3 },
+    compost: { border: '#7a4020', bg: '#f5e8dc', headerBg: '#6a3010', gridLine: 'rgba(122,64,32,0.15)', bw: 3 },
+    pond: { border: '#1a70c0', bg: '#dceef8', headerBg: '#1060a8', gridLine: 'rgba(26,112,192,0.18)', bw: 4 },
+    kids: { border: '#b09010', bg: '#fdf8d4', headerBg: '#a08000', gridLine: 'rgba(176,144,16,0.15)', bw: 3 },
+    seating: { border: '#5060b8', bg: '#eceef8', headerBg: '#4050a0', gridLine: 'rgba(80,96,184,0.15)', bw: 3 },
+    building: { border: '#606060', bg: '#f0f0f0', headerBg: '#484848', gridLine: 'rgba(96,96,96,0.15)', bw: 4 },
+    path: { border: '#a08050', bg: '#f5f0e4', headerBg: '#887040', gridLine: 'rgba(160,128,80,0.15)', bw: 3 },
+    general: { border: '#4a7050', bg: '#eaf0e4', headerBg: '#3a6040', gridLine: 'rgba(74,112,80,0.15)', bw: 3 },
 };
 const ROLE_BG = {
-    'Producer':             'rgba(144,220,80,0.35)',
-    'Nitrogen fixer':       'rgba(80,160,240,0.35)',
+    'Producer': 'rgba(144,220,80,0.35)',
+    'Nitrogen fixer': 'rgba(80,160,240,0.35)',
     'Pollinator attractor': 'rgba(248,220,80,0.35)',
-    'Dynamic accumulator':  'rgba(200,140,240,0.35)',
-    'Pest repellent':       'rgba(248,160,80,0.35)',
-    'Groundcover':          'rgba(80,220,200,0.35)',
+    'Dynamic accumulator': 'rgba(200,140,240,0.35)',
+    'Pest repellent': 'rgba(248,160,80,0.35)',
+    'Groundcover': 'rgba(80,220,200,0.35)',
 };
 const ROLE_BORDER = {
-    'Producer':             'rgba(100,180,40,0.7)',
-    'Nitrogen fixer':       'rgba(40,120,200,0.7)',
+    'Producer': 'rgba(100,180,40,0.7)',
+    'Nitrogen fixer': 'rgba(40,120,200,0.7)',
     'Pollinator attractor': 'rgba(200,160,20,0.7)',
-    'Dynamic accumulator':  'rgba(140,80,200,0.7)',
-    'Pest repellent':       'rgba(200,100,20,0.7)',
-    'Groundcover':          'rgba(20,160,140,0.7)',
+    'Dynamic accumulator': 'rgba(140,80,200,0.7)',
+    'Pest repellent': 'rgba(200,100,20,0.7)',
+    'Groundcover': 'rgba(20,160,140,0.7)',
 };
 const STRUCTURE_MAP = Object.fromEntries(STRUCTURES.map(s => [s.name, s]));
+
+// ── Compass labels overlay ────────────────────────────────────────────────────
+function CompassLabels({ labels }) {
+    const style = {
+        position: 'absolute', zIndex: 90, pointerEvents: 'none',
+        background: 'rgba(0,0,0,0.52)', color: '#fff',
+        fontWeight: 700, fontSize: 13, fontFamily: 'monospace',
+        borderRadius: 5, padding: '2px 7px', lineHeight: 1.4,
+        letterSpacing: 1, userSelect: 'none',
+        border: '1px solid rgba(255,255,255,0.18)',
+    };
+    return (
+        <>
+            {/* North */}
+            <div style={{ ...style, top: 8, left: '50%', transform: 'translateX(-50%)' }}>
+                {labels.north}
+            </div>
+            {/* South */}
+            <div style={{ ...style, bottom: 8, left: '50%', transform: 'translateX(-50%)' }}>
+                {labels.south}
+            </div>
+            {/* West */}
+            <div style={{ ...style, left: 8, top: '50%', transform: 'translateY(-50%)' }}>
+                {labels.west}
+            </div>
+            {/* East */}
+            <div style={{ ...style, right: 8, top: '50%', transform: 'translateY(-50%)' }}>
+                {labels.east}
+            </div>
+        </>
+    );
+}
 
 function resizeGridLocal(grid, newRows, newCols) {
     return Array.from({ length: newRows }, (_, r) =>
@@ -218,8 +251,8 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
                         {isLinear
                             ? `${(item.wM ?? 4).toFixed(1)} m · ${Math.round(rotation)}°`
                             : isCircular
-                            ? `⌀ ${(item.wM ?? 4).toFixed(1)} m`
-                            : `${(item.wM ?? 4).toFixed(1)} m × ${(item.hM ?? 4).toFixed(1)} m`}
+                                ? `⌀ ${(item.wM ?? 4).toFixed(1)} m`
+                                : `${(item.wM ?? 4).toFixed(1)} m × ${(item.hM ?? 4).toFixed(1)} m`}
                     </p>
                     <p style={{ fontSize: 9, color: '#ef4444' }}>dbl-click to remove</p>
                 </div>
@@ -385,23 +418,23 @@ function PlantBlock({ cell, row, col, cellW, cellH, cellSizeM, zoneIdx, plantLis
             tiles.push({ x: dc * cellW + cellW / 2, y: dr * cellH + cellH / 2 });
     const HANDLE = 9;
     const corners = [
-        { bottom: -HANDLE/2, right: -HANDLE/2, cursor: 'se-resize' },
-        { bottom: -HANDLE/2, left:  -HANDLE/2, cursor: 'sw-resize' },
-        { top:    -HANDLE/2, right: -HANDLE/2, cursor: 'ne-resize' },
-        { top:    -HANDLE/2, left:  -HANDLE/2, cursor: 'nw-resize' },
+        { bottom: -HANDLE / 2, right: -HANDLE / 2, cursor: 'se-resize' },
+        { bottom: -HANDLE / 2, left: -HANDLE / 2, cursor: 'sw-resize' },
+        { top: -HANDLE / 2, right: -HANDLE / 2, cursor: 'ne-resize' },
+        { top: -HANDLE / 2, left: -HANDLE / 2, cursor: 'nw-resize' },
     ];
     return (
         <div
-            style={{ position: 'absolute', left: col*cellW, top: row*cellH, width: blockW, height: blockH, cursor: 'grab', zIndex: hovered ? 20 : 1 }}
+            style={{ position: 'absolute', left: col * cellW, top: row * cellH, width: blockW, height: blockH, cursor: 'grab', zIndex: hovered ? 20 : 1 }}
             onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
             onDoubleClick={onRemove} draggable
             onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('plant', JSON.stringify({ name: cell.plant, iconData: cell.iconData, fromZone: zoneIdx, fromRow: row, fromCol: col, spanCols, spanRows })); }}
         >
             {isBlock && <div className="absolute inset-0 rounded-sm" style={{ background: blockBg, border: `1px solid ${blockBorder}` }} />}
-            {(isBlock ? tiles : [{ x: blockW/2, y: blockH/2 }]).map(({ x, y }, i) =>
+            {(isBlock ? tiles : [{ x: blockW / 2, y: blockH / 2 }]).map(({ x, y }, i) =>
                 iconSrc
-                    ? <img key={i} src={iconSrc} alt={cell.plant} draggable={false} style={{ position: 'absolute', left: x-iconSize/2, top: y-iconSize/2, width: iconSize, height: iconSize, pointerEvents: 'none' }} className="object-contain" />
-                    : <span key={i} style={{ position: 'absolute', left: x-10, top: y-10, fontSize: 18, pointerEvents: 'none' }}>🌱</span>
+                    ? <img key={i} src={iconSrc} alt={cell.plant} draggable={false} style={{ position: 'absolute', left: x - iconSize / 2, top: y - iconSize / 2, width: iconSize, height: iconSize, pointerEvents: 'none' }} className="object-contain" />
+                    : <span key={i} style={{ position: 'absolute', left: x - 10, top: y - 10, fontSize: 18, pointerEvents: 'none' }}>🌱</span>
             )}
             {hovered && (
                 <>
@@ -411,7 +444,7 @@ function PlantBlock({ cell, row, col, cellW, cellH, cellSizeM, zoneIdx, plantLis
                             <div className="bg-white/85 rounded-md px-2 py-1 text-center shadow-sm">
                                 <p className="font-bold text-forest text-[11px] leading-tight">Block of {cell.plant}</p>
                                 <p className="text-gray-600 text-[10px]">{spanCols} × {spanRows} ({totalCount})</p>
-                                <p className="text-gray-500 text-[9px]">{(spanCols*cellSizeM).toFixed(1)}m × {(spanRows*cellSizeM).toFixed(1)}m</p>
+                                <p className="text-gray-500 text-[9px]">{(spanCols * cellSizeM).toFixed(1)}m × {(spanRows * cellSizeM).toFixed(1)}m</p>
                             </div>
                         </div>
                     ) : (
@@ -448,7 +481,7 @@ function ZoneBlock({ zone, grid, position, zoneIdx, selected, cellSizeM, plantLi
         if (!cell?.plant) return;
         const sc = cell.spanCols || 1; const sr = cell.spanRows || 1;
         for (let dr = 0; dr < sr; dr++) for (let dc = 0; dc < sc; dc++)
-            if (dr !== 0 || dc !== 0) coveredSet.add(`${r+dr},${c+dc}`);
+            if (dr !== 0 || dc !== 0) coveredSet.add(`${r + dr},${c + dc}`);
     }));
     return (
         <div style={{ position: detailView ? 'relative' : 'absolute', left: detailView ? undefined : position.x, top: detailView ? undefined : position.y, width: bodyW, border: `${style.bw}px solid ${style.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: selected ? '0 0 0 3px #a8d870, 0 4px 18px rgba(0,0,0,0.35)' : '0 2px 10px rgba(0,0,0,0.28)', zIndex: 2, userSelect: 'none' }}
@@ -456,7 +489,7 @@ function ZoneBlock({ zone, grid, position, zoneIdx, selected, cellSizeM, plantLi
             <div style={{ background: style.headerBg, height: HEADER_H, cursor: 'default' }} className="flex items-center px-2 gap-1.5 select-none">
                 {isRenaming ? (
                     <input autoFocus value={renameValue} onChange={onRenameChange} onBlur={onRenameConfirm}
-                        onKeyDown={e => { if (e.key==='Enter') onRenameConfirm(); if (e.key==='Escape') onRenameCancel(); }}
+                        onKeyDown={e => { if (e.key === 'Enter') onRenameConfirm(); if (e.key === 'Escape') onRenameCancel(); }}
                         onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}
                         className="flex-1 min-w-0 bg-white/25 text-white text-xs font-bold px-1.5 py-0.5 rounded outline-none" />
                 ) : (
@@ -465,18 +498,18 @@ function ZoneBlock({ zone, grid, position, zoneIdx, selected, cellSizeM, plantLi
                 <button onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onStartRename(zoneIdx, zone); }} className="text-white/50 hover:text-white text-xs">✏</button>
                 <button onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(zoneIdx); }} className="text-white/50 hover:text-white text-sm leading-none">×</button>
             </div>
-            <div style={{ position: 'relative', width: bodyW, height: bodyH, backgroundColor: style.bg, backgroundImage: [`linear-gradient(${style.gridLine.replace(/[\d.]+\)$/, '0.28)')} 1px, transparent 1px)`,`linear-gradient(90deg, ${style.gridLine.replace(/[\d.]+\)$/, '0.28)')} 1px, transparent 1px)`,`linear-gradient(${style.gridLine} 1px, transparent 1px)`,`linear-gradient(90deg, ${style.gridLine} 1px, transparent 1px)`].join(', '), backgroundSize: [`${cellW*5}px ${cellH*5}px`,`${cellW*5}px ${cellH*5}px`,`${cellW}px ${cellH}px`,`${cellW}px ${cellH}px`].join(', '), overflow: 'visible' }}
+            <div style={{ position: 'relative', width: bodyW, height: bodyH, backgroundColor: style.bg, backgroundImage: [`linear-gradient(${style.gridLine.replace(/[\d.]+\)$/, '0.28)')} 1px, transparent 1px)`, `linear-gradient(90deg, ${style.gridLine.replace(/[\d.]+\)$/, '0.28)')} 1px, transparent 1px)`, `linear-gradient(${style.gridLine} 1px, transparent 1px)`, `linear-gradient(90deg, ${style.gridLine} 1px, transparent 1px)`].join(', '), backgroundSize: [`${cellW * 5}px ${cellH * 5}px`, `${cellW * 5}px ${cellH * 5}px`, `${cellW}px ${cellH}px`, `${cellW}px ${cellH}px`].join(', '), overflow: 'visible' }}
                 onDragOver={e => e.preventDefault()} onDrop={e => { e.stopPropagation(); onZoneDrop(e, zoneIdx, cellH, cellW); }}>
                 {resizePreview?.zoneIdx === zoneIdx && <div className="absolute inset-0 border-2 border-dashed border-white/40 pointer-events-none z-10 rounded-sm" />}
                 {grid.flatMap((row, r) => row.map((cell, c) => {
                     if (!cell?.plant || coveredSet.has(`${r},${c}`)) return null;
                     const preview = plantResizePreview?.zoneIdx === zoneIdx && plantResizePreview.row === r && plantResizePreview.col === c ? plantResizePreview : null;
-                    return <PlantBlock key={`${r}-${c}`} cell={preview ? { ...cell, spanCols: preview.spanCols, spanRows: preview.spanRows } : cell} row={r} col={c} cellW={cellW} cellH={cellH} cellSizeM={cellSizeM} zoneIdx={zoneIdx} plantList={plantList} onRemove={() => onRemovePlant(zoneIdx, r, c, cell.spanRows||1, cell.spanCols||1)} onPlantResizeStart={onPlantResizeStart} />;
+                    return <PlantBlock key={`${r}-${c}`} cell={preview ? { ...cell, spanCols: preview.spanCols, spanRows: preview.spanRows } : cell} row={r} col={c} cellW={cellW} cellH={cellH} cellSizeM={cellSizeM} zoneIdx={zoneIdx} plantList={plantList} onRemove={() => onRemovePlant(zoneIdx, r, c, cell.spanRows || 1, cell.spanCols || 1)} onPlantResizeStart={onPlantResizeStart} />;
                 }))}
             </div>
-            <div style={{ height: FOOTER_H, background: style.headerBg+'12', borderTop: `1px solid ${style.border}30`, position: 'relative' }} className="flex items-center px-2">
+            <div style={{ height: FOOTER_H, background: style.headerBg + '12', borderTop: `1px solid ${style.border}30`, position: 'relative' }} className="flex items-center px-2">
                 <span className="flex-1 text-center text-[10px]" style={{ color: style.headerBg, opacity: 0.55 }}>
-                    {resizePreview?.zoneIdx === zoneIdx ? `${resizePreview.rows} × ${resizePreview.cols} cells` : `${grid.length} × ${grid[0]?.length||1} cells`}
+                    {resizePreview?.zoneIdx === zoneIdx ? `${resizePreview.rows} × ${resizePreview.cols} cells` : `${grid.length} × ${grid[0]?.length || 1} cells`}
                 </span>
                 <div className="absolute bottom-0 right-0 w-5 h-5 flex items-end justify-end pb-0.5 pr-0.5" style={{ cursor: 'se-resize' }}
                     onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onResizeMouseDown(e, zoneIdx); }} title="Drag to resize area">
@@ -493,6 +526,7 @@ function ZoneBlock({ zone, grid, position, zoneIdx, selected, cellSizeM, plantLi
 
 // ── General overview canvas ───────────────────────────────────────────────────
 function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList, setup, onSelectZone, onUpdatePositions, onUpdateOverlayItems, onAddZone }) {
+    const { t } = useLanguage();
     const widthM = setup.widthM || 100;
     const heightM = setup.heightM || 60;
 
@@ -711,6 +745,7 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
 
     return (
         <div className="flex-1" style={{ position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <CompassLabels labels={t.canvas} />
             {/* Scrollable map area */}
             <div
                 ref={containerRef}
@@ -816,6 +851,7 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
 
 // ── Main canvas ───────────────────────────────────────────────────────────────
 export default function GardenCanvas({ zones, grids, positions, setup, currentZone, onSelectZone, onUpdateGrid, onUpdatePositions, onAddZone, onDeleteZone, onRenameZone, plantList, overlayItems = [], onUpdateOverlayItems }) {
+    const { t } = useLanguage();
     const [resizeState, setResizeState] = useState(null);
     const [plantResizeState, setPlantResizeState] = useState(null);
     const [resizePreview, setResizePreview] = useState(null);
@@ -875,8 +911,8 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
     useEffect(() => {
         if (!resizeState) return;
         const { zoneIdx, startX, startY, origCols, origRows, cw, ch, grid } = resizeState;
-        const onMove = (e) => setResizePreview({ zoneIdx, cols: Math.max(1, origCols + Math.round((e.clientX-startX)/cw)), rows: Math.max(1, origRows + Math.round((e.clientY-startY)/ch)) });
-        const onUp = (e) => { onUpdateGrid(zoneIdx, resizeGridLocal(grid, Math.max(1, origRows+Math.round((e.clientY-startY)/ch)), Math.max(1, origCols+Math.round((e.clientX-startX)/cw)))); setResizePreview(null); setResizeState(null); };
+        const onMove = (e) => setResizePreview({ zoneIdx, cols: Math.max(1, origCols + Math.round((e.clientX - startX) / cw)), rows: Math.max(1, origRows + Math.round((e.clientY - startY) / ch)) });
+        const onUp = (e) => { onUpdateGrid(zoneIdx, resizeGridLocal(grid, Math.max(1, origRows + Math.round((e.clientY - startY) / ch)), Math.max(1, origCols + Math.round((e.clientX - startX) / cw)))); setResizePreview(null); setResizeState(null); };
         window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
         return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
     }, [resizeState]);
@@ -885,19 +921,19 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
         if (!plantResizeState) return;
         const { zoneIdx, row, col, startX, startY, origSC, origSR, cw, ch, gridCols, gridRows, cornerIdx, grid } = plantResizeState;
         const calc = (e) => {
-            const dx = e.clientX-startX; const dy = e.clientY-startY;
-            const signX = cornerIdx===0||cornerIdx===2 ? 1 : -1;
-            const signY = cornerIdx===0||cornerIdx===1 ? 1 : -1;
-            return { newSC: Math.max(1, Math.min(origSC+signX*Math.round(dx/cw), gridCols-col)), newSR: Math.max(1, Math.min(origSR+signY*Math.round(dy/ch), gridRows-row)) };
+            const dx = e.clientX - startX; const dy = e.clientY - startY;
+            const signX = cornerIdx === 0 || cornerIdx === 2 ? 1 : -1;
+            const signY = cornerIdx === 0 || cornerIdx === 1 ? 1 : -1;
+            return { newSC: Math.max(1, Math.min(origSC + signX * Math.round(dx / cw), gridCols - col)), newSR: Math.max(1, Math.min(origSR + signY * Math.round(dy / ch), gridRows - row)) };
         };
         const onMove = (e) => { const { newSC, newSR } = calc(e); setPlantResizePreview({ zoneIdx, row, col, spanCols: newSC, spanRows: newSR }); };
-        const onUp = (e) => { const { newSC, newSR } = calc(e); onUpdateGrid(zoneIdx, grid.map((r,ri) => r.map((c,ci) => { if (ri===row&&ci===col) return {...c,spanCols:newSC,spanRows:newSR}; if (ri>=row&&ri<row+newSR&&ci>=col&&ci<col+newSC) return null; return c; }))); setPlantResizePreview(null); setPlantResizeState(null); };
+        const onUp = (e) => { const { newSC, newSR } = calc(e); onUpdateGrid(zoneIdx, grid.map((r, ri) => r.map((c, ci) => { if (ri === row && ci === col) return { ...c, spanCols: newSC, spanRows: newSR }; if (ri >= row && ri < row + newSR && ci >= col && ci < col + newSC) return null; return c; }))); setPlantResizePreview(null); setPlantResizeState(null); };
         window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
         return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
     }, [plantResizeState]);
 
-    const handleResizeMouseDown = (e, zoneIdx) => { e.preventDefault(); const grid = grids[zoneIdx]; setResizeState({ zoneIdx, startX: e.clientX, startY: e.clientY, origCols: grid[0]?.length||1, origRows: grid.length, cw: cellW, ch: cellH, grid }); };
-    const handlePlantResizeStart = (e, zoneIdx, row, col, origSC, origSR, cornerIdx) => { const grid = grids[zoneIdx]; setPlantResizeState({ zoneIdx, row, col, startX: e.clientX, startY: e.clientY, origSC, origSR, cornerIdx, cw: cellW, ch: cellH, gridCols: grid[0]?.length||1, gridRows: grid.length, grid }); };
+    const handleResizeMouseDown = (e, zoneIdx) => { e.preventDefault(); const grid = grids[zoneIdx]; setResizeState({ zoneIdx, startX: e.clientX, startY: e.clientY, origCols: grid[0]?.length || 1, origRows: grid.length, cw: cellW, ch: cellH, grid }); };
+    const handlePlantResizeStart = (e, zoneIdx, row, col, origSC, origSR, cornerIdx) => { const grid = grids[zoneIdx]; setPlantResizeState({ zoneIdx, row, col, startX: e.clientX, startY: e.clientY, origSC, origSR, cornerIdx, cw: cellW, ch: cellH, gridCols: grid[0]?.length || 1, gridRows: grid.length, grid }); };
 
     const handleZoneDrop = (e, zoneIdx, dropCH, dropCW) => {
         e.preventDefault(); e.stopPropagation();
@@ -905,21 +941,21 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
         try {
             const dropped = JSON.parse(raw);
             const rect = e.currentTarget.getBoundingClientRect();
-            const colIndex = Math.max(0, Math.min(Math.floor((e.clientX-rect.left)/dropCW), (grids[zoneIdx][0]?.length||1)-1));
-            const rowIndex = Math.max(0, Math.min(Math.floor((e.clientY-rect.top)/dropCH), (grids[zoneIdx]?.length||1)-1));
+            const colIndex = Math.max(0, Math.min(Math.floor((e.clientX - rect.left) / dropCW), (grids[zoneIdx][0]?.length || 1) - 1));
+            const rowIndex = Math.max(0, Math.min(Math.floor((e.clientY - rect.top) / dropCH), (grids[zoneIdx]?.length || 1) - 1));
             if (dropped.fromZone !== undefined) {
-                const { fromZone, fromRow, fromCol, spanCols:dSC=1, spanRows:dSR=1 } = dropped;
+                const { fromZone, fromRow, fromCol, spanCols: dSC = 1, spanRows: dSR = 1 } = dropped;
                 const cell = grids[fromZone]?.[fromRow]?.[fromCol];
-                if (!cell || (fromZone===zoneIdx&&fromRow===rowIndex&&fromCol===colIndex)) return;
-                const clearSrc = (g) => g.map((row,r) => row.map((c,col) => r>=fromRow&&r<fromRow+dSR&&col>=fromCol&&col<fromCol+dSC ? null : c));
-                const placeAt = (g) => g.map((row,r) => row.map((c,co) => { if (r===rowIndex&&co===colIndex) return cell; if (r>=rowIndex&&r<rowIndex+dSR&&co>=colIndex&&co<colIndex+dSC) return null; return c; }));
-                if (fromZone===zoneIdx) { onUpdateGrid(zoneIdx, placeAt(clearSrc(grids[zoneIdx]))); } else { onUpdateGrid(fromZone, clearSrc(grids[fromZone])); onUpdateGrid(zoneIdx, placeAt(grids[zoneIdx])); }
+                if (!cell || (fromZone === zoneIdx && fromRow === rowIndex && fromCol === colIndex)) return;
+                const clearSrc = (g) => g.map((row, r) => row.map((c, col) => r >= fromRow && r < fromRow + dSR && col >= fromCol && col < fromCol + dSC ? null : c));
+                const placeAt = (g) => g.map((row, r) => row.map((c, co) => { if (r === rowIndex && co === colIndex) return cell; if (r >= rowIndex && r < rowIndex + dSR && co >= colIndex && co < colIndex + dSC) return null; return c; }));
+                if (fromZone === zoneIdx) { onUpdateGrid(zoneIdx, placeAt(clearSrc(grids[zoneIdx]))); } else { onUpdateGrid(fromZone, clearSrc(grids[fromZone])); onUpdateGrid(zoneIdx, placeAt(grids[zoneIdx])); }
                 return;
             }
-            if (dropped.isStructure) { const def = STRUCTURE_MAP[dropped.name]; onUpdateGrid(zoneIdx, grids[zoneIdx].map((row,r) => row.map((c,col) => r===rowIndex&&col===colIndex ? { plant:dropped.name,isStructure:true,iconData:dropped.icon||def?.icon,structureColor:dropped.color||def?.color,notes:'',spanCols:1,spanRows:1 } : c))); return; }
-            const fullPlant = plantList.find(p => p.name===dropped.name);
-            const zt = fullPlant?.planting?.zoneTimes?.[setup.hardinessZone||'7b'];
-            const suggestedDate = zt?.directSow||zt?.transplant||new Date().toISOString().split('T')[0];
+            if (dropped.isStructure) { const def = STRUCTURE_MAP[dropped.name]; onUpdateGrid(zoneIdx, grids[zoneIdx].map((row, r) => row.map((c, col) => r === rowIndex && col === colIndex ? { plant: dropped.name, isStructure: true, iconData: dropped.icon || def?.icon, structureColor: dropped.color || def?.color, notes: '', spanCols: 1, spanRows: 1 } : c))); return; }
+            const fullPlant = plantList.find(p => p.name === dropped.name);
+            const zt = fullPlant?.planting?.zoneTimes?.[setup.hardinessZone || '7b'];
+            const suggestedDate = zt?.directSow || zt?.transplant || new Date().toISOString().split('T')[0];
             setPendingDrop({ zoneIdx, rowIndex, colIndex, plant: dropped, fullPlant, suggestedDate });
         } catch (err) { console.error('Drop error', err); }
     };
@@ -928,34 +964,22 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
         const { zoneIdx, rowIndex, colIndex, plant, fullPlant } = pendingDrop;
         const plantedDate = new Date(date);
         let expectedHarvest = null;
-        if (fullPlant?.planting?.daysToMaturity) { const h = new Date(plantedDate); h.setDate(h.getDate()+fullPlant.planting.daysToMaturity); expectedHarvest = h.toISOString().split('T')[0]; }
-        onUpdateGrid(zoneIdx, grids[zoneIdx].map((row,r) => row.map((c,co) => r===rowIndex&&co===colIndex ? { plant:plant.name,plantedDate:plantedDate.toISOString().split('T')[0],expectedHarvest,notes,iconData:plant.iconData,spanCols:1,spanRows:1 } : c)));
+        if (fullPlant?.planting?.daysToMaturity) { const h = new Date(plantedDate); h.setDate(h.getDate() + fullPlant.planting.daysToMaturity); expectedHarvest = h.toISOString().split('T')[0]; }
+        onUpdateGrid(zoneIdx, grids[zoneIdx].map((row, r) => row.map((c, co) => r === rowIndex && co === colIndex ? { plant: plant.name, plantedDate: plantedDate.toISOString().split('T')[0], expectedHarvest, notes, iconData: plant.iconData, spanCols: 1, spanRows: 1 } : c)));
         setPendingDrop(null);
     };
 
-    const handleRemovePlant = (zoneIdx, row, col, spanRows=1, spanCols=1) => onUpdateGrid(zoneIdx, grids[zoneIdx].map((r,ri) => r.map((c,ci) => ri>=row&&ri<row+spanRows&&ci>=col&&ci<col+spanCols ? null : c)));
+    const handleRemovePlant = (zoneIdx, row, col, spanRows = 1, spanCols = 1) => onUpdateGrid(zoneIdx, grids[zoneIdx].map((r, ri) => r.map((c, ci) => ri >= row && ri < row + spanRows && ci >= col && ci < col + spanCols ? null : c)));
 
-    const handleRenameConfirm = () => { if (!renaming) return; const updated=[...zones]; updated[renaming.idx]=renaming.value.trim()||zones[renaming.idx]; onRenameZone(updated); setRenaming(null); };
+    const handleRenameConfirm = () => { if (!renaming) return; const updated = [...zones]; updated[renaming.idx] = renaming.value.trim() || zones[renaming.idx]; onRenameZone(updated); setRenaming(null); };
 
     const isGeneralView = currentZone === -1;
-    const detailCanvasW = zones[currentZone] ? Math.max(800, 20+(grids[currentZone]?.[0]?.length||1)*cellW+80) : 800;
-    const detailCanvasH = zones[currentZone] ? Math.max(600, 20+HEADER_H+(grids[currentZone]?.length||1)*cellH+FOOTER_H+60) : 600;
+    const detailCanvasW = zones[currentZone] ? Math.max(800, 20 + (grids[currentZone]?.[0]?.length || 1) * cellW + 80) : 800;
+    const detailCanvasH = zones[currentZone] ? Math.max(600, 20 + HEADER_H + (grids[currentZone]?.length || 1) * cellH + FOOTER_H + 60) : 600;
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            <div className="flex items-center gap-3 px-4 py-2 bg-[#2d4a2a] flex-shrink-0">
-                <span className="text-white font-semibold text-sm">{setup.gardenName || 'My Garden'}</span>
-                <span className="text-green-300/50 text-xs">· {setup.widthM}m × {setup.heightM}m</span>
-                <div className="flex-1" />
-                <span className="text-green-300/40 text-xs hidden lg:inline">
-                    {isGeneralView
-                        ? 'Drag to move · ▭ shape · corner resizes · Ctrl+scroll to zoom'
-                        : 'Hover plant → drag corners to multiply · corner resizes area · Ctrl+scroll to zoom'}
-                </span>
-                <button onClick={() => setAddZoneOpen(true)} className="bg-white/15 hover:bg-white/25 text-white text-xs px-3 py-1.5 rounded-lg font-medium border border-white/20 transition-colors">
-                    + Add Area
-                </button>
-            </div>
+
 
             <div className="bg-white border-b border-gray-200 px-3 py-2 flex-shrink-0">
                 <ZoneTabs zones={zones} currentZone={currentZone} setCurrentZone={onSelectZone} setZones={onRenameZone} onAddZone={() => setAddZoneOpen(true)} onDeleteZone={onDeleteZone} onRenameZone={onRenameZone} />
@@ -965,12 +989,13 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
                 <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} onAddZone={onAddZone} />
             ) : (
                 <div className="flex-1" style={{ position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <CompassLabels labels={t.canvas} />
                     {/* Scrollable zone area */}
                     <div
                         ref={detailContainerRef}
                         className="overflow-auto flex-1"
                         style={{
-                            cursor: resizeState||plantResizeState ? 'crosshair' : 'default',
+                            cursor: resizeState || plantResizeState ? 'crosshair' : 'default',
                             background: '#3d6b34',
                             backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
                             backgroundSize: '40px 40px',
@@ -979,7 +1004,7 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
                         }}
                     >
                         {zones[currentZone] && (
-                            <ZoneBlock zone={zones[currentZone]} grid={grids[currentZone]||[]} position={{ x:0, y:0 }} zoneIdx={currentZone} selected detailView zoom={detailZoom} cellSizeM={cellSizeM} plantList={plantList} onResizeMouseDown={handleResizeMouseDown} onZoneDrop={handleZoneDrop} onRemovePlant={handleRemovePlant} onPlantResizeStart={handlePlantResizeStart} onDelete={onDeleteZone} onStartRename={(idx,value) => setRenaming({ idx, value })} renameValue={renaming?.value||''} onRenameChange={e => setRenaming(r => ({ ...r, value: e.target.value }))} onRenameConfirm={handleRenameConfirm} onRenameCancel={() => setRenaming(null)} isRenaming={renaming?.idx===currentZone} resizePreview={resizePreview} plantResizePreview={plantResizePreview} />
+                            <ZoneBlock zone={zones[currentZone]} grid={grids[currentZone] || []} position={{ x: 0, y: 0 }} zoneIdx={currentZone} selected detailView zoom={detailZoom} cellSizeM={cellSizeM} plantList={plantList} onResizeMouseDown={handleResizeMouseDown} onZoneDrop={handleZoneDrop} onRemovePlant={handleRemovePlant} onPlantResizeStart={handlePlantResizeStart} onDelete={onDeleteZone} onStartRename={(idx, value) => setRenaming({ idx, value })} renameValue={renaming?.value || ''} onRenameChange={e => setRenaming(r => ({ ...r, value: e.target.value }))} onRenameConfirm={handleRenameConfirm} onRenameCancel={() => setRenaming(null)} isRenaming={renaming?.idx === currentZone} resizePreview={resizePreview} plantResizePreview={plantResizePreview} />
                         )}
                     </div>
 

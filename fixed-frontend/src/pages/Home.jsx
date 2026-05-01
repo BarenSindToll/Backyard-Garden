@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardHeader from '../components/DashboardHeader';
+import { useLanguage } from '../utils/languageContext';
 
 export default function Home() {
     const [recentPosts, setRecentPosts] = useState([]);
     const navigate = useNavigate();
+    const { t } = useLanguage();
+    const h = t.home;
 
     useEffect(() => {
         fetch('http://localhost:4000/api/blog/all')
@@ -24,19 +27,18 @@ export default function Home() {
             <DashboardHeader />
 
             <div className="text-center mt-8">
-                <h2 className="text-3xl font-bold text-forest mb-4">Welcome to Backyard Garden!</h2>
+                <h2 className="text-3xl font-bold text-forest mb-4">{h.welcome}</h2>
                 <p className="text-gray-600 max-w-xl mx-auto mb-10">
-                    This is a gardening website created by gardener and mother Ana Berehorschi. Here you can explore helpful guides, create your own designs, check the local weather, and schedule your daily tasks.
-
+                    {h.subtitle}
                 </p>
             </div>
 
             {/* Recent Blog Posts */}
             <div className="max-w-7xl mx-auto p-6">
-                <h3 className="text-2xl font-bold text-forest mb-4">Recent Blog Posts</h3>
+                <h3 className="text-2xl font-bold text-forest mb-4">{h.recentPosts}</h3>
 
                 {recentPosts.length === 0 ? (
-                    <p className="text-gray-500">No recent posts yet.</p>
+                    <p className="text-gray-500">{h.noPosts}</p>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                         {recentPosts.map((post, i) => (

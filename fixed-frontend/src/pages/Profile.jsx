@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import DashboardHeader from '../components/DashboardHeader';
 import { fetchCurrentUser } from '../utils/fetchCurrentUser';
+import { useLanguage } from '../utils/languageContext';
 
-const sections = ['Account Settings', 'Garden Settings', 'Help'];
+const sectionKeys = ['accountSettings', 'gardenSettings', 'language', 'help'];
 
 export function detectZoneFromLatLon(lat, lon) {
-    if (!lat || !lon) return '7a'; // fallback
+    if (!lat || !lon) return '7a';
 
     if (lat < 44.5) return '7b';
     if (lat >= 44.5 && lat < 45.5 && lon > 25) return '7a';
@@ -18,10 +19,12 @@ export function detectZoneFromLatLon(lat, lon) {
 
 
 export default function Profile() {
+    const { t, language, changeLanguage } = useLanguage();
+    const p = t.profile;
+
     const [active, setActive] = useState(() => {
-        return localStorage.getItem('profileTab') || 'Account Settings';
+        return localStorage.getItem('profileTab') || 'accountSettings';
     });
-    //this saves the last viewed section to show on refresh
     const [selectedFile, setSelectedFile] = useState(null);
     const [preview, setPreview] = useState(null);
     const [name, setName] = useState('');
@@ -68,15 +71,15 @@ export default function Profile() {
         };
         fetchUser();
     }, []);
+
     useEffect(() => {
-        if (active === 'Garden Settings') {
+        if (active === 'gardenSettings') {
             fetch('http://localhost:4000/api/plants/all')
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) setAllPlants(data.plants);
                 });
 
-            // Load user favorites
             fetch('http://localhost:4000/api/user/get-data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -103,7 +106,7 @@ export default function Profile() {
         e.preventDefault();
 
         if (newPassword && newPassword !== confirmPassword) {
-            alert("Passwords do not match!");
+            alert(p.passwordMismatch);
             return;
         }
 
@@ -117,8 +120,6 @@ export default function Profile() {
             if (location) formData.append('location', location);
             formData.append('favoritePlants', JSON.stringify(favoritePlants));
 
-
-
             const res = await fetch('http://localhost:4000/api/user/update-profile', {
                 method: 'POST',
                 body: formData,
@@ -127,7 +128,7 @@ export default function Profile() {
 
             const data = await res.json();
             if (data.success) {
-                setNotification('Settings updated successfully!');
+                setNotification(p.saved);
                 setNewPassword('');
                 setConfirmPassword('');
                 setSelectedFile(null);
@@ -139,24 +140,19 @@ export default function Profile() {
                 }
                 setTimeout(() => setNotification(''), 3000);
             } else {
-                alert(data.message || 'Failed to update.');
+                alert(data.message || p.failedToUpdate);
             }
         } catch (err) {
             console.error(err);
-            alert("An error occurred.");
+            alert(p.errorOccurred);
         }
     };
-
-
-
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         setSelectedFile(file);
         setPreview(URL.createObjectURL(file));
     };
-
-
 
     const fetchLocationSuggestions = async (query) => {
         if (!query) return setLocationSuggestions([]);
@@ -170,70 +166,57 @@ export default function Profile() {
         }
     };
 
-
-
+    const sections = sectionKeys.map(key => ({ key, label: p[key] }));
 
     return (
         <div className="bg-white min-h-screen">
             <DashboardHeader />
             <div className="max-w-6xl mx-auto mt-10 flex border rounded shadow bg-white overflow-hidden">
                 <div className="w-60 bg-cream border-r p-4 space-y-4 text-forest">
-                    <h2 className="text-lg font-bold mb-4">Settings</h2>
-                    {sections.map((sec) => (
+                    <h2 className="text-lg font-bold mb-4">{p.settings}</h2>
+                    {sections.map(({ key, label }) => (
                         <button
-                            key={sec}
+                            key={key}
                             onClick={() => {
-                                setActive(sec);
-                                localStorage.setItem('profileTab', sec);
+                                setActive(key);
+                                localStorage.setItem('profileTab', key);
                             }}
-                            className={`block w-full text-left px-3 py-2 rounded hover:bg-forest hover:text-white transition ${active === sec ? 'bg-forest text-white' : ''
-                                }`}
+                            className={`block w-full text-left px-3 py-2 rounded hover:bg-forest hover:text-white transition ${active === key ? 'bg-forest text-white' : ''}`}
                         >
-                            {sec}
+                            {label}
                         </button>
                     ))}
                 </div>
 
                 <div className="flex-1 p-6">
-                    {active === 'Account Settings' && (
+                    {active === 'accountSettings' && (
                         <div>
-                            <h3 className="text-xl font-bold mb-4 text-forest">Profile Information</h3>
+                            <h3 className="text-xl font-bold mb-4 text-forest">{p.profileInfo}</h3>
                             <form onSubmit={handleSave} className="space-y-4">
 
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Profile Photo</label>
+                                    <label className="block text-sm font-medium mb-1">{p.profilePhoto}</label>
                                     {preview ? (
-                                        <img
-                                            src={preview}
-                                            alt="Preview"
-                                            className="w-20 h-20 object-cover rounded-full mb-2"
-                                        />
+                                        <img src={preview} alt="Preview" className="w-20 h-20 object-cover rounded-full mb-2" />
                                     ) : userImage && (
-                                        <img
-                                            src={`http://localhost:4000${userImage}`}
-                                            alt="Profile"
-                                            className="w-20 h-20 object-cover rounded-full mb-2"
-                                        />
+                                        <img src={`http://localhost:4000${userImage}`} alt="Profile" className="w-20 h-20 object-cover rounded-full mb-2" />
                                     )}
                                     <input type="file" accept="image/*" onChange={handleFileChange} />
-
-
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium">Name</label>
+                                    <label className="block text-sm font-medium">{p.name}</label>
                                     <input
                                         type="text"
                                         className="w-full border px-3 py-2 rounded"
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
-                                        placeholder="Your Name"
+                                        placeholder={p.namePlaceholder}
                                     />
-
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium">Location</label>
+                                    <label className="block text-sm font-medium">{p.location}</label>
                                     <input
                                         type="text"
                                         value={location}
@@ -242,7 +225,7 @@ export default function Profile() {
                                             fetchLocationSuggestions(e.target.value);
                                         }}
                                         className="w-full border px-3 py-2 rounded"
-                                        placeholder="Start typing your city..."
+                                        placeholder={p.locationPlaceholder}
                                     />
                                     {locationSuggestions.length > 0 && (
                                         <ul className="border bg-white rounded mt-1 max-h-40 overflow-y-auto">
@@ -260,10 +243,10 @@ export default function Profile() {
                                             ))}
                                         </ul>
                                     )}
-
                                 </div>
+
                                 <div>
-                                    <label className="block text-sm font-medium">Email</label>
+                                    <label className="block text-sm font-medium">{p.email}</label>
                                     <input
                                         type="email"
                                         className="w-full border px-3 py-2 rounded"
@@ -274,7 +257,7 @@ export default function Profile() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium">New Password</label>
+                                        <label className="block text-sm font-medium">{p.newPassword}</label>
                                         <input
                                             type="password"
                                             className="w-full border px-3 py-2 rounded"
@@ -283,7 +266,7 @@ export default function Profile() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium">Confirm Password</label>
+                                        <label className="block text-sm font-medium">{p.confirmPassword}</label>
                                         <input
                                             type="password"
                                             className="w-full border px-3 py-2 rounded"
@@ -293,13 +276,9 @@ export default function Profile() {
                                     </div>
                                 </div>
 
-
                                 <div className="flex justify-center mt-8">
-                                    <button
-                                        type="submit" // so the form submission is triggered
-                                        className="bg-forest text-white mt-6 px-6 py-2 rounded hover:bg-green-800"
-                                    >
-                                        Save Account Settings
+                                    <button type="submit" className="bg-forest text-white mt-6 px-6 py-2 rounded hover:bg-green-800">
+                                        {p.saveAccount}
                                     </button>
                                 </div>
                                 {notification && (
@@ -307,16 +286,14 @@ export default function Profile() {
                                         {notification}
                                     </div>
                                 )}
-
                             </form>
                         </div>
-                    )},
+                    )}
 
-                    {active === 'Garden Settings' && (
+                    {active === 'gardenSettings' && (
                         <div>
-                            <h3 className="text-xl font-bold mb-4 text-forest">Garden Settings</h3>
-                            <h4 className="text-md text-gray-700 mb-4">Select your most used plants</h4>
-
+                            <h3 className="text-xl font-bold mb-4 text-forest">{p.gardenSettingsTitle}</h3>
+                            <h4 className="text-md text-gray-700 mb-4">{p.selectPlants}</h4>
 
                             {Object.entries(grouped).map(([category, plants]) => (
                                 <div key={category} className="mb-6">
@@ -327,15 +304,9 @@ export default function Profile() {
                                                 key={plant.name}
                                                 onClick={() => toggleFavorite(plant.name)}
                                                 className={`border p-3 rounded flex items-center gap-2 text-sm transition
-            ${favoritePlants.includes(plant.name)
-                                                        ? 'bg-cream text-forest'
-                                                        : 'bg-white hover:bg-cream'}`}
+                                                    ${favoritePlants.includes(plant.name) ? 'bg-cream text-forest' : 'bg-white hover:bg-cream'}`}
                                             >
-                                                <img
-                                                    src={`data:image/svg+xml;base64,${plant.iconData}`}
-                                                    alt={plant.name}
-                                                    className="w-6 h-6"
-                                                />
+                                                <img src={`data:image/svg+xml;base64,${plant.iconData}`} alt={plant.name} className="w-6 h-6" />
                                                 <span>{plant.name}</span>
                                             </button>
                                         ))}
@@ -348,7 +319,7 @@ export default function Profile() {
                                     onClick={handleSave}
                                     className="bg-forest text-white px-6 py-2 rounded hover:bg-green-800"
                                 >
-                                    Save Garden Settings
+                                    {p.saveGarden}
                                 </button>
                             </div>
                             {notification && (
@@ -359,12 +330,33 @@ export default function Profile() {
                         </div>
                     )}
 
+                    {active === 'language' && (
+                        <div>
+                            <h3 className="text-xl font-bold mb-6 text-forest">{p.languageSetting}</h3>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => changeLanguage('en')}
+                                    className={`px-6 py-3 rounded-lg border-2 font-semibold transition ${language === 'en' ? 'bg-forest text-white border-forest' : 'bg-white text-forest border-forest hover:bg-cream'}`}
+                                >
+                                    🇬🇧 {p.english}
+                                </button>
+                                <button
+                                    onClick={() => changeLanguage('ro')}
+                                    className={`px-6 py-3 rounded-lg border-2 font-semibold transition ${language === 'ro' ? 'bg-forest text-white border-forest' : 'bg-white text-forest border-forest hover:bg-cream'}`}
+                                >
+                                    🇷🇴 {p.romanian}
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
-
-
-                    {/* Other sections remain unchanged */}
+                    {active === 'help' && (
+                        <div>
+                            <h3 className="text-xl font-bold mb-4 text-forest">{p.help}</h3>
+                        </div>
+                    )}
                 </div>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }

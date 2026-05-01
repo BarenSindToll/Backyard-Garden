@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardHeader from '../components/DashboardHeader';
+import { useLanguage } from '../utils/languageContext';
+import { translations } from '../utils/translations';
+
+const EN_CATEGORIES = translations.en.blog.categories;
 
 export default function BlogPage() {
     const [posts, setPosts] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedCategoryIdx, setSelectedCategoryIdx] = useState(0);
     const navigate = useNavigate();
-
-    const categoryOptions = ['All', 'Garden', 'Landscaping', 'Vegetables', 'Fruits', 'Trees', 'Permaculture'];
+    const { t } = useLanguage();
+    const b = t.blog;
 
     useEffect(() => {
         fetch('http://localhost:4000/api/blog/all')
@@ -18,9 +22,10 @@ export default function BlogPage() {
             });
     }, []);
 
+    const selectedEnglishCat = EN_CATEGORIES[selectedCategoryIdx];
     const filteredPosts = posts.filter(post => {
         const matchesCategory =
-            selectedCategory === '' || selectedCategory === 'All' || post.category === selectedCategory;
+            selectedCategoryIdx === 0 || post.category === selectedEnglishCat;
         const matchesSearch =
             post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             post.excerpt?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -32,30 +37,30 @@ export default function BlogPage() {
             <DashboardHeader />
 
             <div className="max-w-6xl mx-auto p-6">
-                <h1 className="text-2xl font-bold mb-6">Explore Our Blog</h1>
+                <h1 className="text-2xl font-bold mb-6">{b.title}</h1>
 
                 {/* Filters */}
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
                     <input
                         type="text"
-                        placeholder="Search posts..."
+                        placeholder={b.searchPlaceholder}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="flex-1 border px-3 py-2 rounded"
                     />
                     <select
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        value={selectedCategoryIdx}
+                        onChange={(e) => setSelectedCategoryIdx(Number(e.target.value))}
                         className="border px-3 py-2 rounded bg-white"
                     >
-                        {categoryOptions.map((cat, i) => (
-                            <option key={i} value={cat}>{cat}</option>
+                        {b.categories.map((cat, i) => (
+                            <option key={i} value={i}>{cat}</option>
                         ))}
                     </select>
                 </div>
 
                 {filteredPosts.length === 0 ? (
-                    <p className="text-gray-500">No matching posts found.</p>
+                    <p className="text-gray-500">{b.noResults}</p>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                         {filteredPosts.map((post, i) => (

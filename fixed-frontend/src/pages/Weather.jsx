@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import DashboardHeader from '../components/DashboardHeader';
+import { useLanguage } from '../utils/languageContext';
 
 const API_KEY = '2Y4LEHPRNRVWJFJFJDG87GGFL';
 
@@ -21,8 +22,9 @@ export default function Weather() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [todaySnapshot, setToday] = useState(null);
+    const { t, language } = useLanguage();
+    const w = t.weather;
 
-    //  Extract weather using saved location
     const fetchForecast = async (cityName) => {
         setLoading(true);
         setError('');
@@ -37,17 +39,16 @@ export default function Weather() {
                 setForecast(data.days.slice(0, 7));
                 setToday(data.currentConditions);
             } else {
-                setError('No forecast data available.');
+                setError(w.noData);
             }
         } catch (err) {
             console.error(err);
-            setError('Failed to fetch weather data.');
+            setError(w.fetchError);
         } finally {
             setLoading(false);
         }
     };
 
-    //  Load user location from backend
     useEffect(() => {
         const fetchUserLocation = async () => {
             try {
@@ -65,13 +66,13 @@ export default function Weather() {
                 } else {
                     setLocation('Timișoara');
                     fetchForecast('Timișoara');
-                    setError('No saved location found. Showing default.');
+                    setError(w.noLocation);
                 }
             } catch (err) {
                 console.error(err);
                 setLocation('Timișoara');
                 fetchForecast('Timișoara');
-                setError('Could not load your saved location. Showing default.');
+                setError(w.noLocationLoad);
             }
         };
         fetchUserLocation();
@@ -91,17 +92,18 @@ export default function Weather() {
     }
     const todayDate = forecast[0]?.datetime;
     const today = todaySnapshot || forecast[0];
+    const dateLocale = w.dateLocale;
 
     return (
         <div className="bg-white min-h-screen">
             <DashboardHeader />
             <div className="max-w-4xl mx-auto p-6 text-forest">
-                <h2 className="text-2xl font-bold mb-4">7-Day Weather Forecast</h2>
+                <h2 className="text-2xl font-bold mb-4">{w.title}</h2>
                 <p className="mb-6 text-sm text-gray-600">
-                    Forecast for <strong>{location || 'your location'}</strong>
+                    {w.forecastFor} <strong>{location || w.yourLocation}</strong>
                 </p>
 
-                {loading && <p>Loading forecast...</p>}
+                {loading && <p>{w.loading}</p>}
                 {error && <p className="text-red-600">{error}</p>}
 
                 {/* Today Forecast */}
@@ -111,10 +113,10 @@ export default function Weather() {
                             {/* Date & Condition */}
                             <div className="text-left space-y-1 mb-4 md:mb-0">
                                 <h2 className="text-2xl font-semibold tracking-wide">
-                                    {todayDate ? new Date(todayDate).toLocaleDateString('en-US', { weekday: 'long' }) : ''}
+                                    {todayDate ? new Date(todayDate).toLocaleDateString(dateLocale, { weekday: 'long' }) : ''}
                                 </h2>
                                 <p className="text-sm text-gray-700">
-                                    {todayDate ? new Date(todayDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : ''}
+                                    {todayDate ? new Date(todayDate).toLocaleDateString(dateLocale, { month: 'long', day: 'numeric' }) : ''}
                                 </p>
 
                                 <p className="text-sm text-gray-700 italic pt-24">{today.conditions}</p>
@@ -129,7 +131,7 @@ export default function Weather() {
                                 />
                                 <div className="text-4xl font-bold">{today.temp}°C</div>
                                 <p className="text-sm text-gray-600">
-                                    Feels like {today.feelslike}°C
+                                    {w.feelsLike} {today.feelslike}°C
                                 </p>
                             </div>
 
@@ -167,10 +169,10 @@ export default function Weather() {
                     {forecast.slice(1).map((day, i) => (
                         <div key={i} className="bg-cream rounded-lg shadow p-4 text-center">
                             <p className="font-semibold text-lg">
-                                {new Date(day.datetime).toLocaleDateString('en-US', { weekday: 'long' })}
+                                {new Date(day.datetime).toLocaleDateString(dateLocale, { weekday: 'long' })}
                             </p>
                             <p className="text-sm text-gray-600">
-                                {new Date(day.datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                {new Date(day.datetime).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })}
                             </p>
                             <img
                                 src={`/icons/${getIconForCondition(day.conditions)}`}

@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
 import DashboardHeader from '../components/DashboardHeader';
 import dayjs from 'dayjs';
+import 'dayjs/locale/ro';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { fetchCurrentUser } from '../utils/fetchCurrentUser';
-const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+import { useLanguage } from '../utils/languageContext';
 
 export default function Calendar() {
+    const { t } = useLanguage();
+    const cal = t.calendar;
+    const daysOfWeek = cal.days;
+    const loc = cal.locale;
+    // Helper: dayjs with current locale applied
+    const djs = (d) => d ? dayjs(d).locale(loc) : dayjs().locale(loc);
     const [view, setView] = useState('MONTH');
     const [current, setCurrent] = useState(dayjs());
     const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -77,7 +84,7 @@ export default function Calendar() {
 
             return (
                 <div key={offset}>
-                    <div className="text-sm font-semibold mb-2">{month.format('MMMM YYYY')}</div>
+                    <div className="text-sm font-semibold mb-2">{djs(month).format('MMMM YYYY')}</div>
                     <div className="grid grid-cols-7 gap-1 text-center text-xs mb-4">
                         {daysOfWeek.map(d => <div key={d} className="font-bold">{d.slice(0, 2)}</div>)}
                         {Array.from({ length: startDay }).map((_, i) => <div key={i}></div>)}
@@ -168,7 +175,7 @@ export default function Calendar() {
                         >
 
                             <div className="font-semibold text-xs">{daysOfWeek[i]}</div>
-                            <div className="text-xs text-gray-500">{date.format('MMM D')}</div>
+                            <div className="text-xs text-gray-500">{djs(date).format('MMM D')}</div>
                             {appointments
                                 .filter(app => app.date === formatted)
                                 .map((app, idx) => (
@@ -243,7 +250,7 @@ export default function Calendar() {
 
         return (
             <div className="bg-cream p-4 border rounded min-h-[300px]">
-                <div className="font-semibold mb-4 text-lg">{selectedDate.format('dddd, MMMM D, YYYY')}</div>
+                <div className="font-semibold mb-4 text-lg">{djs(selectedDate).format('dddd, MMMM D, YYYY')}</div>
                 {tasks.map((app) => (
                     <div
                         key={app.originalIndex}
@@ -271,14 +278,14 @@ export default function Calendar() {
                                 onClick={() => handleEdit(app.originalIndex)}
                                 className="text-xs text-blue-700 underline"
                             >
-                                Edit
+                                {cal.edit}
                             </button>
 
                             <button
                                 onClick={() => handleDelete(app.originalIndex)}
                                 className="text-xs text-red-700 underline"
                             >
-                                Delete
+                                {cal.delete}
                             </button>
                         </div>
                     </div>
@@ -322,11 +329,11 @@ export default function Calendar() {
                             <option value="bg-yellow-200">Yellow</option>
                             <option value="bg-red-200">Red</option>
                         </select>
-                        <button onClick={saveTask} className="bg-forest text-white px-4 py-2 rounded hover:bg-green-800">Save Task</button>
+                        <button onClick={saveTask} className="bg-forest text-white px-4 py-2 rounded hover:bg-green-800">{cal.save}</button>
                     </div>
                 ) : (
                     <div onClick={() => setIsEditing(true)} className="mt-6 p-4 border-2 border-dashed rounded text-center text-gray-400 cursor-pointer">
-                        + Click here to add a task
+                        + {cal.addTask}
                     </div>
                 )}
             </div>
@@ -339,28 +346,21 @@ export default function Calendar() {
             <div className="max-w-7xl mx-auto p-6 text-forest">
                 <div className="flex justify-between items-center mb-4">
                     <div className="space-x-2">
-                        {['MONTH', 'WEEK', 'DAY'].map(v => (
+                        {[['MONTH', cal.month], ['WEEK', cal.week], ['DAY', cal.day]].map(([v, label]) => (
                             <button
                                 key={v}
                                 onClick={() => {
-                                    if (v === 'WEEK') {
-                                        setCurrent(selectedDate);
-                                    }
-
-                                    if (v === 'DAY') {
-                                        setCurrent(selectedDate);
-                                    }
-
+                                    if (v === 'WEEK') setCurrent(selectedDate);
+                                    if (v === 'DAY') setCurrent(selectedDate);
                                     setView(v);
                                 }}
-                                className={`px-3 py-1 rounded border ${view === v ? 'bg-forest text-white' : 'bg-cream'
-                                    }`}
+                                className={`px-3 py-1 rounded border ${view === v ? 'bg-forest text-white' : 'bg-cream'}`}
                             >
-                                {v}
+                                {label}
                             </button>
                         ))}
                     </div>
-                    <h2 className="text-xl font-semibold">{current.format('MMMM YYYY')}</h2>
+                    <h2 className="text-xl font-semibold">{djs(current).format('MMMM YYYY')}</h2>
                     <div className="space-x-2">
                         <button onClick={goToPrev} className="px-2 py-1 bg-cream border rounded">←</button>
                         <button onClick={goToNext} className="px-2 py-1 bg-cream border rounded">→</button>

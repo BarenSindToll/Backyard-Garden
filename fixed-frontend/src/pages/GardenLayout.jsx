@@ -8,6 +8,7 @@ import SetupPanel from '../components/garden-layout/SetupPanel';
 import GuildHealthBar from '../components/garden-layout/GuildHealthBar';
 import { STRUCTURES } from '../components/garden-layout/gardenZoneConfig';
 import { fetchCurrentUser } from '../utils/fetchCurrentUser';
+import { useLanguage } from '../utils/languageContext';
 
 const DEFAULT_SETUP = {
     gardenName: 'My Garden',
@@ -63,6 +64,8 @@ const defaultPositions = (count) =>
     }));
 
 export default function GardenLayout() {
+    const { t } = useLanguage();
+    const g = t.garden;
     const [setup, setSetup] = useState(DEFAULT_SETUP);
     const [zones, setZones] = useState(['Zone 1']);
     const [currentZone, setCurrentZone] = useState(-1);
@@ -92,7 +95,7 @@ export default function GardenLayout() {
                     overlayItems: overlayItemsToSave,
                 }),
             }).then(r => r.json());
-            if (showToast) toast.success('Layout saved!', { position: 'top-center', autoClose: 2000 });
+            if (showToast) toast.success(g.layoutSaved, { position: 'top-center', autoClose: 2000 });
         } catch (err) {
             console.error('Save failed:', err);
         }
@@ -245,7 +248,7 @@ export default function GardenLayout() {
                     onClick={() => saveToBackend(grids, zones, setup, positions, overlayItems, true)}
                     className="bg-forest text-white text-xs px-4 py-1.5 rounded-lg font-medium hover:bg-green-800 transition-colors flex-shrink-0"
                 >
-                    Save
+                    {g.save}
                 </button>
             </div>
 
