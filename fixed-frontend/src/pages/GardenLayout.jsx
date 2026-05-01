@@ -146,21 +146,19 @@ export default function GardenLayout() {
         if (userId) saveToBackend(grids, zones, newSetup, positions, overlayItems);
     };
 
-    const handleAddZone = (zoneName, inGeneral = false) => {
+    const handleAddZone = (zoneName, inGeneral = false, canvasPos = null) => {
         const name = zoneName || `Zone ${zones.length + 1}`;
-        const cols = 4;
-        const rows = 4;
         const updatedZones = [...zones, name];
-        const updatedGrids = [...grids, createEmptyGrid(rows, cols)];
+        const updatedGrids = [...grids, createEmptyGrid(4, 4)];
         const newIdx = positions.length;
-        const updatedPositions = [
-            ...positions,
-            { x: 200 + (newIdx % 4) * 180, y: 120 + Math.floor(newIdx / 4) * 160, inGeneral },
-        ];
+        const newPos = canvasPos
+            ? { x: canvasPos.x, y: canvasPos.y, inGeneral: true, shape: 'rect', w: canvasPos.w, h: canvasPos.h }
+            : { x: 200 + (newIdx % 4) * 180, y: 120 + Math.floor(newIdx / 4) * 160, inGeneral, shape: 'circle' };
+        const updatedPositions = [...positions, newPos];
         setZones(updatedZones);
         setGrids(updatedGrids);
         setPositions(updatedPositions);
-        setCurrentZone(inGeneral ? -1 : updatedZones.length - 1);
+        setCurrentZone(canvasPos || inGeneral ? -1 : updatedZones.length - 1);
         if (userId) saveToBackend(updatedGrids, updatedZones, setup, updatedPositions, overlayItems);
     };
 

@@ -11,8 +11,14 @@ const FOOTER_H = 24;
 const GENERAL_PX_PER_M = 10;
 const RULER_SIZE = 30;
 
-// Linear structures resize only in length; all others resize by area
+// Linear structures resize only in length
 const LINEAR_STRUCTURES = new Set(['Path', 'Fence']);
+// Structures that show the rotation handle
+const ROTATABLE_STRUCTURES = new Set(['Path', 'Fence', 'Raised Bed']);
+// Structures rendered as circles (force square + 50% radius)
+const CIRCULAR_STRUCTURES = new Set(['Pond']);
+// Structures that become real zones when dropped on the General map
+const ZONE_STRUCTURES = new Set(['Greenhouse']);
 
 // Default sizes in metres for each structure when first dropped on General map
 const STRUCTURE_DEFAULTS = {
@@ -20,7 +26,7 @@ const STRUCTURE_DEFAULTS = {
     Fence:      { wM: 10,  hM: 0.5 },
     Greenhouse: { wM: 5,   hM: 4   },
     Compost:    { wM: 2,   hM: 2   },
-    Pond:       { wM: 5,   hM: 4   },
+    Pond:       { wM: 5,   hM: 5   },
     House:      { wM: 10,  hM: 8   },
     Shed:       { wM: 4,   hM: 3   },
     'Raised Bed': { wM: 3, hM: 1.2 },
@@ -136,117 +142,108 @@ function VerticalRuler({ heightM, pxPerM }) {
     );
 }
 
-const ROTATE_HANDLE_H = 34; // px above item content reserved for the rotation handle
-
 // ── Free-floating overlay item ────────────────────────────────────────────────
-function OverlayItem({ item, pxPerM, onMouseDown, onRemove, onResizeStart, onRotateStart }) {
+function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeStart, onRotateStart }) {
     const [hovered, setHovered] = useState(false);
     const iconSrc = resolveIconSrc(item.iconData);
-    const pxW = Math.max(pxPerM, (item.wM ?? 4) * pxPerM);
-    const pxH = Math.max(pxPerM * 0.5, (item.hM ?? 4) * pxPerM);
-    const iconSize = Math.min(pxW * 0.55, pxH * 0.55, 36);
     const isLinear = LINEAR_STRUCTURES.has(item.name);
+    const isRotatable = ROTATABLE_STRUCTURES.has(item.name);
+    const isCircular = CIRCULAR_STRUCTURES.has(item.name);
+    // Circular structures are always rendered as a square so 50% radius = circle
+    const rawW = Math.max(pxPerM * 2, (item.wM ?? 4) * pxPerM);
+    const rawH = Math.max(isRotatable ? 28 : pxPerM, (item.hM ?? 4) * pxPerM);
+    const pxW = isCircular ? Math.max(rawW, rawH) : rawW;
+    const pxH = isCircular ? Math.max(rawW, rawH) : rawH;
+    const iconSize = Math.min(pxW * 0.45, (pxH - (isRotatable ? 16 : 0)) * 0.7, 32);
     const rotation = item.rotation ?? 0;
-    // For linear items, extend the wrapper upward so the rotation handle stays
-    // inside the hover area and the mouse doesn't leave before reaching it.
-    const topPad = isLinear ? ROTATE_HANDLE_H : 0;
 
     return (
-        // Outer wrapper — covers item content + handle area above it
         <div
             style={{
-                position: 'absolute',
-                left: item.x,
-                top: item.y - topPad,
-                width: pxW,
-                height: pxH + topPad,
-                // Rotate around the item content centre, not the wrapper centre
+                position: 'absolute', left: item.x * zoom, top: item.y * zoom,
+                width: pxW, height: pxH,
                 transform: `rotate(${rotation}deg)`,
-                transformOrigin: `50% ${topPad + pxH / 2}px`,
-                zIndex: hovered ? 50 : 5,
-                userSelect: 'none',
+                transformOrigin: '50% 50%',
+                cursor: 'grab', zIndex: hovered ? 50 : 5, userSelect: 'none',
             }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
+            onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onMouseDown(e, item.id); }}
+            onDoubleClick={e => { e.stopPropagation(); onRemove(item.id); }}
         >
-            {/* Rotation handle — sits in the top pad area, always in DOM */}
-            {isLinear && (
-                <div
-                    style={{
-                        position: 'absolute', top: 0, left: '50%',
-                        transform: 'translateX(-50%)',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center',
-                        opacity: hovered ? 1 : 0,
-                        transition: 'opacity 0.15s',
-                        zIndex: 40, cursor: 'crosshair',
-                    }}
-                    onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onRotateStart(e, item.id); }}
-                >
-                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'white', border: '1.5px solid #555', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.25)' }}>↻</div>
-                    <div style={{ width: 1, height: topPad - 20, background: 'rgba(255,255,255,0.45)' }} />
+            {/* Box */}
+            <div style={{
+                width: '100%', height: '100%',
+                borderRadius: isCircular ? '50%' : isLinear ? 4 : 8,
+                background: item.color ? item.color + '66' : 'rgba(255,255,255,0.88)',
+                border: hovered ? '2px solid white' : '1.5px solid rgba(255,255,255,0.5)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                boxShadow: hovered ? '0 4px 14px rgba(0,0,0,0.35)' : '0 2px 7px rgba(0,0,0,0.22)',
+                overflow: 'hidden', transition: 'border-color 0.1s, box-shadow 0.1s',
+                gap: 2,
+            }}>
+                {/* Rotate handle row — always rendered inside, visible when hovered */}
+                {isRotatable && (
+                    <div
+                        title="Drag to rotate"
+                        style={{
+                            width: 18, height: 18, flexShrink: 0,
+                            borderRadius: '50%',
+                            background: hovered ? 'white' : 'rgba(255,255,255,0.4)',
+                            border: '1.5px solid rgba(0,0,0,0.25)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 12, cursor: 'crosshair',
+                            transition: 'background 0.15s',
+                        }}
+                        onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onRotateStart(e, item.id); }}
+                    >↻</div>
+                )}
+                {iconSrc
+                    ? <img src={iconSrc} alt={item.name} style={{ width: iconSize, height: iconSize, flexShrink: 0 }} className="object-contain" draggable={false} />
+                    : <span style={{ fontSize: Math.max(10, Math.min(iconSize, 20)), pointerEvents: 'none' }}>🌱</span>
+                }
+            </div>
+
+            {/* Tooltip */}
+            {hovered && (
+                <div style={{
+                    position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+                    marginBottom: 6, background: '#fefce8', border: '1px solid #fde68a',
+                    borderRadius: 8, padding: '4px 10px', fontSize: 11, color: '#92400e',
+                    whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 60,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                }}>
+                    <p style={{ fontWeight: 700 }}>{item.name}</p>
+                    <p style={{ fontSize: 9, opacity: 0.7 }}>
+                        {isLinear
+                            ? `${(item.wM ?? 4).toFixed(1)} m · ${Math.round(rotation)}°`
+                            : isCircular
+                            ? `⌀ ${(item.wM ?? 4).toFixed(1)} m`
+                            : `${(item.wM ?? 4).toFixed(1)} m × ${(item.hM ?? 4).toFixed(1)} m`}
+                    </p>
+                    <p style={{ fontSize: 9, color: '#ef4444' }}>dbl-click to remove</p>
                 </div>
             )}
 
-            {/* Item content box */}
+            {/* Resize handle */}
             <div
-                style={{ position: 'absolute', top: topPad, left: 0, width: pxW, height: pxH, cursor: 'grab' }}
-                onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onMouseDown(e, item.id); }}
-                onDoubleClick={e => { e.stopPropagation(); onRemove(item.id); }}
-            >
-                <div style={{
-                    width: '100%', height: '100%',
-                    borderRadius: isLinear ? 4 : 8,
-                    background: item.color ? item.color + '66' : 'rgba(255,255,255,0.88)',
-                    border: hovered ? '2px solid white' : '1.5px solid rgba(255,255,255,0.5)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: hovered ? '0 4px 14px rgba(0,0,0,0.35)' : '0 2px 7px rgba(0,0,0,0.22)',
-                    overflow: 'hidden', transition: 'border-color 0.1s, box-shadow 0.1s',
-                }}>
-                    {iconSrc
-                        ? <img src={iconSrc} alt={item.name} style={{ width: iconSize, height: iconSize }} className="object-contain" draggable={false} />
-                        : <span style={{ fontSize: Math.max(10, Math.min(iconSize, 20)), pointerEvents: 'none' }}>🌱</span>
-                    }
-                </div>
-
-                {/* Tooltip */}
-                {hovered && (
-                    <div style={{
-                        position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-                        marginBottom: 6, background: '#fefce8', border: '1px solid #fde68a',
-                        borderRadius: 8, padding: '4px 10px', fontSize: 11, color: '#92400e',
-                        whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 60,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                    }}>
-                        <p style={{ fontWeight: 700 }}>{item.name}</p>
-                        <p style={{ fontSize: 9, opacity: 0.7 }}>
-                            {isLinear
-                                ? `${(item.wM ?? 4).toFixed(1)} m · ${Math.round(rotation)}°`
-                                : `${(item.wM ?? 4).toFixed(1)} m × ${(item.hM ?? 4).toFixed(1)} m`}
-                        </p>
-                        <p style={{ fontSize: 9, color: '#ef4444' }}>dbl-click to remove</p>
-                    </div>
-                )}
-
-                {/* Resize handle */}
-                <div
-                    title="Drag to resize"
-                    style={{
-                        position: 'absolute', bottom: -4, right: -4,
-                        width: hovered ? 12 : 8, height: hovered ? 12 : 8,
-                        background: 'white', border: '1.5px solid #555',
-                        borderRadius: 2, cursor: 'se-resize',
-                        zIndex: 30, transition: 'width 0.1s, height 0.1s, opacity 0.1s',
-                        opacity: hovered ? 1 : 0.4,
-                    }}
-                    onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onResizeStart(e, item.id); }}
-                />
-            </div>
+                title="Drag to resize"
+                style={{
+                    position: 'absolute', bottom: -4, right: -4,
+                    width: hovered ? 12 : 8, height: hovered ? 12 : 8,
+                    background: 'white', border: '1.5px solid #555',
+                    borderRadius: 2, cursor: 'se-resize',
+                    zIndex: 30, transition: 'width 0.1s, height 0.1s, opacity 0.1s',
+                    opacity: hovered ? 1 : 0.4,
+                }}
+                onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onResizeStart(e, item.id); }}
+            />
         </div>
     );
 }
 
 // ── Zone circle / rectangle ───────────────────────────────────────────────────
-function ZoneCircle({ zone, zoneIdx, position, selected, onMouseDown, onClick, onShapeToggle, onRectResizeStart, onRemoveFromGeneral }) {
+function ZoneCircle({ zone, zoneIdx, position, selected, pxPerM, zoom = 1, onMouseDown, onClick, onShapeToggle, onRectResizeStart, onRemoveFromGeneral }) {
     const [hovered, setHovered] = useState(false);
     const mouseDownPos = useRef(null);
     const zoneType = detectZoneType(zone);
@@ -254,9 +251,10 @@ function ZoneCircle({ zone, zoneIdx, position, selected, onMouseDown, onClick, o
     const typeConfig = ZONE_TYPES[zoneType] || ZONE_TYPES.general;
 
     const isRect = position.shape === 'rect';
-    const r = 58;
-    const rw = position.w || 120;
-    const rh = position.h || 80;
+    // positions stored in base pixels (zoom=1); scale by zoom for rendering
+    const r = 58 * zoom;
+    const rw = (position.w || 120) * zoom;
+    const rh = (position.h || 80) * zoom;
     const w = isRect ? rw : r * 2;
     const h = isRect ? rh : r * 2;
 
@@ -264,8 +262,8 @@ function ZoneCircle({ zone, zoneIdx, position, selected, onMouseDown, onClick, o
         <div
             style={{
                 position: 'absolute',
-                left: position.x - w / 2,
-                top: position.y - h / 2,
+                left: position.x * zoom - w / 2,
+                top: position.y * zoom - h / 2,
                 width: w, height: h,
                 borderRadius: isRect ? 10 : '50%',
                 background: style.bg,
@@ -312,8 +310,8 @@ function ZoneCircle({ zone, zoneIdx, position, selected, onMouseDown, onClick, o
                         whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 60,
                         boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                     }}>
-                        {isRect ? `${Math.round(rw / GENERAL_PX_PER_M)}m × ${Math.round(rh / GENERAL_PX_PER_M)}m · ` : ''}
-                        Click to edit · Drag to move
+                        {isRect ? `${Math.round(rw / pxPerM)}m × ${Math.round(rh / pxPerM)}m · ` : ''}
+                        Drag to move · click to edit
                     </div>
 
                     {/* Remove from General map (keeps zone tab) */}
@@ -435,11 +433,12 @@ function PlantBlock({ cell, row, col, cellW, cellH, cellSizeM, zoneIdx, plantLis
 }
 
 // ── Zone block (detail view) ──────────────────────────────────────────────────
-function ZoneBlock({ zone, grid, position, zoneIdx, selected, cellSizeM, plantList, onResizeMouseDown, onZoneDrop, onRemovePlant, onPlantResizeStart, onDelete, onStartRename, renameValue, onRenameChange, onRenameConfirm, onRenameCancel, isRenaming, resizePreview, plantResizePreview }) {
+function ZoneBlock({ zone, grid, position, zoneIdx, selected, cellSizeM, plantList, onResizeMouseDown, onZoneDrop, onRemovePlant, onPlantResizeStart, onDelete, onStartRename, renameValue, onRenameChange, onRenameConfirm, onRenameCancel, isRenaming, resizePreview, plantResizePreview, detailView, zoom = 1 }) {
     const zoneType = detectZoneType(zone);
     const style = ZONE_STYLES[zoneType] || ZONE_STYLES.general;
-    const cellW = Math.max(MIN_CELL, cellSizeM * CELL_PX);
-    const cellH = Math.max(MIN_CELL, cellSizeM * CELL_PX);
+    // zoom changes actual pixel size so scroll area updates correctly
+    const cellW = Math.max(4, cellSizeM * CELL_PX * zoom);
+    const cellH = Math.max(4, cellSizeM * CELL_PX * zoom);
     const liveCols = resizePreview?.zoneIdx === zoneIdx ? resizePreview.cols : (grid[0]?.length || 1);
     const liveRows = resizePreview?.zoneIdx === zoneIdx ? resizePreview.rows : grid.length;
     const bodyW = liveCols * cellW;
@@ -452,7 +451,7 @@ function ZoneBlock({ zone, grid, position, zoneIdx, selected, cellSizeM, plantLi
             if (dr !== 0 || dc !== 0) coveredSet.add(`${r+dr},${c+dc}`);
     }));
     return (
-        <div style={{ position: 'absolute', left: position.x, top: position.y, width: bodyW, border: `${style.bw}px solid ${style.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: selected ? '0 0 0 3px #a8d870, 0 4px 18px rgba(0,0,0,0.35)' : '0 2px 10px rgba(0,0,0,0.28)', zIndex: 2, userSelect: 'none' }}
+        <div style={{ position: detailView ? 'relative' : 'absolute', left: detailView ? undefined : position.x, top: detailView ? undefined : position.y, width: bodyW, border: `${style.bw}px solid ${style.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: selected ? '0 0 0 3px #a8d870, 0 4px 18px rgba(0,0,0,0.35)' : '0 2px 10px rgba(0,0,0,0.28)', zIndex: 2, userSelect: 'none' }}
             onClick={e => e.stopPropagation()} onDragStart={e => e.preventDefault()}>
             <div style={{ background: style.headerBg, height: HEADER_H, cursor: 'default' }} className="flex items-center px-2 gap-1.5 select-none">
                 {isRenaming ? (
@@ -493,7 +492,7 @@ function ZoneBlock({ zone, grid, position, zoneIdx, selected, cellSizeM, plantLi
 }
 
 // ── General overview canvas ───────────────────────────────────────────────────
-function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList, setup, onSelectZone, onUpdatePositions, onUpdateOverlayItems }) {
+function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList, setup, onSelectZone, onUpdatePositions, onUpdateOverlayItems, onAddZone }) {
     const widthM = setup.widthM || 100;
     const heightM = setup.heightM || 60;
 
@@ -510,10 +509,26 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
         return () => obs.disconnect();
     }, []);
 
-    // Fill the container while keeping proportions; clamp so it's always usable
+    // zoom=1 means "fit garden in container" (basePxPerM already handles that)
+    const [zoom, setZoom] = useState(1);
+
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const onWheel = (e) => {
+            if (!e.ctrlKey && !e.metaKey) return;
+            e.preventDefault();
+            setZoom(z => Math.min(5, Math.max(0.05, z * (e.deltaY < 0 ? 1.1 : 0.9))));
+        };
+        el.addEventListener('wheel', onWheel, { passive: false });
+        return () => el.removeEventListener('wheel', onWheel);
+    }, []);
+
+    // Fill the container while keeping proportions; zoom multiplies from that fit
     const availW = Math.max(200, containerSize.w - RULER_SIZE - 2);
     const availH = Math.max(150, containerSize.h - RULER_SIZE - 2);
-    const pxPerM = Math.max(4, Math.min(availW / widthM, availH / heightM));
+    const basePxPerM = Math.max(4, Math.min(availW / widthM, availH / heightM));
+    const pxPerM = basePxPerM * zoom;
 
     const canvasW = widthM * pxPerM;
     const canvasH = heightM * pxPerM;
@@ -535,9 +550,9 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
     useEffect(() => {
         if (!circleDragState) return;
         const { zoneIdx, startX, startY, origX, origY } = circleDragState;
-        const onMove = (e) => setLiveCirclePos({ [zoneIdx]: { x: Math.max(58, origX + (e.clientX - startX)), y: Math.max(58, origY + (e.clientY - startY)) } });
+        const onMove = (e) => setLiveCirclePos({ [zoneIdx]: { x: Math.max(0, origX + (e.clientX - startX) / zoom), y: Math.max(0, origY + (e.clientY - startY) / zoom) } });
         const onUp = (e) => {
-            onUpdatePositions(positions.map((p, i) => i === zoneIdx ? { ...p, x: Math.max(58, origX + (e.clientX - startX)), y: Math.max(58, origY + (e.clientY - startY)) } : p));
+            onUpdatePositions(positions.map((p, i) => i === zoneIdx ? { ...p, x: Math.max(0, origX + (e.clientX - startX) / zoom), y: Math.max(0, origY + (e.clientY - startY) / zoom) } : p));
             setLiveCirclePos({}); setCircleDragState(null);
         };
         window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
@@ -548,9 +563,9 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
     useEffect(() => {
         if (!overlayDragState) return;
         const { itemId, startX, startY, origX, origY } = overlayDragState;
-        const onMove = (e) => setLiveOverlayPos({ [itemId]: { x: Math.max(0, origX + (e.clientX - startX)), y: Math.max(0, origY + (e.clientY - startY)) } });
+        const onMove = (e) => setLiveOverlayPos({ [itemId]: { x: Math.max(0, origX + (e.clientX - startX) / zoom), y: Math.max(0, origY + (e.clientY - startY) / zoom) } });
         const onUp = (e) => {
-            onUpdateOverlayItems(overlayItems.map(it => it.id === itemId ? { ...it, x: Math.max(0, origX + (e.clientX - startX)), y: Math.max(0, origY + (e.clientY - startY)) } : it));
+            onUpdateOverlayItems(overlayItems.map(it => it.id === itemId ? { ...it, x: Math.max(0, origX + (e.clientX - startX) / zoom), y: Math.max(0, origY + (e.clientY - startY) / zoom) } : it));
             setLiveOverlayPos({}); setOverlayDragState(null);
         };
         window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
@@ -561,15 +576,18 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
     useEffect(() => {
         if (!overlayResizeState) return;
         const { itemId, startX, startY, origW, origH, isLinear } = overlayResizeState;
+        const isCirc = CIRCULAR_STRUCTURES.has(overlayItems.find(it => it.id === itemId)?.name);
         const onMove = (e) => {
             const newW = Math.max(pxPerM, origW + (e.clientX - startX));
             const newH = isLinear ? origH : Math.max(pxPerM * 0.5, origH + (e.clientY - startY));
-            setLiveOverlaySize({ [itemId]: { wM: newW / pxPerM, hM: newH / pxPerM } });
+            const sq = Math.max(newW, newH);
+            setLiveOverlaySize({ [itemId]: { wM: (isCirc ? sq : newW) / pxPerM, hM: (isCirc ? sq : newH) / pxPerM } });
         };
         const onUp = (e) => {
             const newW = Math.max(pxPerM, origW + (e.clientX - startX));
             const newH = isLinear ? origH : Math.max(pxPerM * 0.5, origH + (e.clientY - startY));
-            onUpdateOverlayItems(overlayItems.map(it => it.id === itemId ? { ...it, wM: newW / pxPerM, hM: newH / pxPerM } : it));
+            const sq = Math.max(newW, newH);
+            onUpdateOverlayItems(overlayItems.map(it => it.id === itemId ? { ...it, wM: (isCirc ? sq : newW) / pxPerM, hM: (isCirc ? sq : newH) / pxPerM } : it));
             setLiveOverlaySize({}); setOverlayResizeState(null);
         };
         window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
@@ -580,9 +598,9 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
     useEffect(() => {
         if (!zoneResizeState) return;
         const { zoneIdx, startX, startY, origW, origH } = zoneResizeState;
-        const onMove = (e) => setLiveZoneSize({ [zoneIdx]: { w: Math.max(60, origW + (e.clientX - startX)), h: Math.max(40, origH + (e.clientY - startY)) } });
+        const onMove = (e) => setLiveZoneSize({ [zoneIdx]: { w: Math.max(60 / zoom, origW + (e.clientX - startX) / zoom), h: Math.max(40 / zoom, origH + (e.clientY - startY) / zoom) } });
         const onUp = (e) => {
-            onUpdatePositions(positions.map((p, i) => i === zoneIdx ? { ...p, w: Math.max(60, origW + (e.clientX - startX)), h: Math.max(40, origH + (e.clientY - startY)) } : p));
+            onUpdatePositions(positions.map((p, i) => i === zoneIdx ? { ...p, w: Math.max(60 / zoom, origW + (e.clientX - startX) / zoom), h: Math.max(40 / zoom, origH + (e.clientY - startY) / zoom) } : p));
             setLiveZoneSize({}); setZoneResizeState(null);
         };
         window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
@@ -658,17 +676,30 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
             const rawX = e.clientX - rect.left + containerRef.current.scrollLeft - RULER_SIZE;
             const rawY = e.clientY - rect.top + containerRef.current.scrollTop - RULER_SIZE;
             if (rawX < 0 || rawY < 0) return;
+            // Greenhouse → create a real zone at the drop position
+            // rawX/rawY are in current (zoomed) canvas pixels; divide by zoom to get base units
+            const baseX = rawX / zoom;
+            const baseY = rawY / zoom;
+
+            if (dropped.isStructure && ZONE_STRUCTURES.has(dropped.name)) {
+                const def = STRUCTURE_DEFAULTS[dropped.name] || { wM: 5, hM: 4 };
+                const wBase = def.wM * basePxPerM;   // base px (zoom=1)
+                const hBase = def.hM * basePxPerM;
+                onAddZone(dropped.name, true, { x: baseX + wBase / 2, y: baseY + hBase / 2, w: wBase, h: hBase });
+                return;
+            }
+
             const def = dropped.isStructure ? (STRUCTURE_DEFAULTS[dropped.name] || { wM: 4, hM: 4 }) : DEFAULT_PLANT_SIZE;
-            const pxW = def.wM * pxPerM;
-            const pxH = def.hM * pxPerM;
+            const wBase = def.wM * basePxPerM;
+            const hBase = def.hM * basePxPerM;
             onUpdateOverlayItems([...overlayItems, {
                 id: Date.now() + Math.random(),
                 name: dropped.name,
                 iconData: dropped.iconData || dropped.icon || null,
                 color: dropped.color || null,
                 isStructure: dropped.isStructure || false,
-                x: Math.max(0, rawX - pxW / 2),
-                y: Math.max(0, rawY - pxH / 2),
+                x: Math.max(0, baseX - wBase / 2),
+                y: Math.max(0, baseY - hBase / 2),
                 wM: def.wM, hM: def.hM,
                 rotation: 0,
             }]);
@@ -679,88 +710,105 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
     const isBusy = !!(circleDragState || overlayDragState || overlayResizeState || zoneResizeState || rotateState);
 
     return (
-        <div
-            ref={containerRef}
-            className="relative overflow-auto flex-1"
-            style={{ cursor: isBusy ? 'grabbing' : 'default' }}
-            onDragOver={e => e.preventDefault()}
-            onDrop={handleCanvasDrop}
-        >
-            {/* Content wrapper — creates the scroll area */}
-            <div style={{ display: 'inline-flex', flexDirection: 'column', minWidth: canvasW + RULER_SIZE, minHeight: canvasH + RULER_SIZE }}>
-
-                {/* Row 1: corner + horizontal ruler (sticky top) */}
-                <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 25 }}>
-                    <div style={{ width: RULER_SIZE, height: RULER_SIZE, flexShrink: 0, background: '#1e3320', position: 'sticky', left: 0, zIndex: 30 }} />
-                    <HorizontalRuler widthM={widthM} pxPerM={pxPerM} />
-                </div>
-
-                {/* Row 2: vertical ruler (sticky left) + canvas content */}
-                <div style={{ display: 'flex' }}>
-                    <div style={{ position: 'sticky', left: 0, zIndex: 25, flexShrink: 0 }}>
-                        <VerticalRuler heightM={heightM} pxPerM={pxPerM} />
+        <div className="flex-1" style={{ position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Scrollable map area */}
+            <div
+                ref={containerRef}
+                className="overflow-auto flex-1"
+                style={{ cursor: isBusy ? 'grabbing' : 'default', display: 'flex' }}
+                onDragOver={e => e.preventDefault()}
+                onDrop={handleCanvasDrop}
+            >
+                <div style={{ display: 'inline-flex', flexDirection: 'column', margin: 'auto' }}>
+                    {/* Row 1: corner + horizontal ruler (sticky top) */}
+                    <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 25 }}>
+                        <div style={{ width: RULER_SIZE, height: RULER_SIZE, flexShrink: 0, background: '#1e3320', position: 'sticky', left: 0, zIndex: 30 }} />
+                        <HorizontalRuler widthM={widthM} pxPerM={pxPerM} />
                     </div>
 
-                    {/* Canvas */}
-                    <div
-                        style={{
-                            position: 'relative', width: canvasW, height: canvasH,
-                            background: '#3a6632',
-                            backgroundImage: [
-                                'linear-gradient(rgba(255,255,255,0.13) 1px, transparent 1px)',
-                                'linear-gradient(90deg, rgba(255,255,255,0.13) 1px, transparent 1px)',
-                                'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',
-                                'linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
-                            ].join(', '),
-                            backgroundSize: `${largeGrid}px ${largeGrid}px, ${largeGrid}px ${largeGrid}px, ${smallGrid}px ${smallGrid}px, ${smallGrid}px ${smallGrid}px`,
-                        }}
-                        onClick={() => onSelectZone(-1)}
-                    >
-                        {generalZones.length === 0 && overlayItems.length === 0 && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none">
-                                <p className="text-white/50 text-sm">No zones on the map yet.</p>
-                                <p className="text-white/30 text-xs text-center px-8">
-                                    When adding a new area, toggle "Add to General" to place it here as a circle.<br />
-                                    Drop any plant or structure from the sidebar to place it freely.
-                                </p>
-                            </div>
-                        )}
-
-                        {generalZones.map(({ zone, i, pos }) => {
-                            const livePos = liveCirclePos[i] || {};
-                            const liveSize = liveZoneSize[i] || {};
-                            return (
-                                <ZoneCircle
-                                    key={i} zone={zone} zoneIdx={i}
-                                    position={{ ...pos, ...livePos, ...liveSize }}
-                                    selected={i === currentZone}
-                                    onMouseDown={handleCircleMouseDown}
-                                    onClick={onSelectZone}
-                                    onShapeToggle={handleShapeToggle}
-                                    onRectResizeStart={handleZoneRectResizeStart}
-                                    onRemoveFromGeneral={handleRemoveFromGeneral}
-                                />
-                            );
-                        })}
-
-                        {overlayItems.map(item => {
-                            const lp = liveOverlayPos[item.id] || {};
-                            const ls = liveOverlaySize[item.id] || {};
-                            const lr = liveRotation[item.id];
-                            return (
-                                <OverlayItem
-                                    key={item.id}
-                                    item={{ ...item, ...lp, ...ls, ...(lr !== undefined ? { rotation: lr } : {}) }}
-                                    pxPerM={pxPerM}
-                                    onMouseDown={handleOverlayMouseDown}
-                                    onRemove={id => onUpdateOverlayItems(overlayItems.filter(it => it.id !== id))}
-                                    onResizeStart={handleOverlayResizeStart}
-                                    onRotateStart={handleRotateStart}
-                                />
-                            );
-                        })}
+                    {/* Row 2: vertical ruler (sticky left) + canvas */}
+                    <div style={{ display: 'flex' }}>
+                        <div style={{ position: 'sticky', left: 0, zIndex: 25, flexShrink: 0 }}>
+                            <VerticalRuler heightM={heightM} pxPerM={pxPerM} />
+                        </div>
+                        <div
+                            style={{
+                                position: 'relative', width: canvasW, height: canvasH,
+                                background: '#3a6632',
+                                backgroundImage: [
+                                    'linear-gradient(rgba(255,255,255,0.13) 1px, transparent 1px)',
+                                    'linear-gradient(90deg, rgba(255,255,255,0.13) 1px, transparent 1px)',
+                                    'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',
+                                    'linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
+                                ].join(', '),
+                                backgroundSize: `${largeGrid}px ${largeGrid}px, ${largeGrid}px ${largeGrid}px, ${smallGrid}px ${smallGrid}px, ${smallGrid}px ${smallGrid}px`,
+                            }}
+                            onClick={() => onSelectZone(-1)}
+                        >
+                            {generalZones.length === 0 && overlayItems.length === 0 && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none">
+                                    <p className="text-white/50 text-sm">No zones on the map yet.</p>
+                                    <p className="text-white/30 text-xs text-center px-8">
+                                        When adding a new area, toggle "Add to General" to place it here as a circle.<br />
+                                        Drop any plant or structure from the sidebar to place it freely.
+                                    </p>
+                                </div>
+                            )}
+                            {generalZones.map(({ zone, i, pos }) => {
+                                const livePos = liveCirclePos[i] || {};
+                                const liveSize = liveZoneSize[i] || {};
+                                return (
+                                    <ZoneCircle
+                                        key={i} zone={zone} zoneIdx={i}
+                                        position={{ ...pos, ...livePos, ...liveSize }}
+                                        selected={i === currentZone}
+                                        pxPerM={pxPerM}
+                                        zoom={zoom}
+                                        onMouseDown={handleCircleMouseDown}
+                                        onClick={onSelectZone}
+                                        onShapeToggle={handleShapeToggle}
+                                        onRectResizeStart={handleZoneRectResizeStart}
+                                        onRemoveFromGeneral={handleRemoveFromGeneral}
+                                    />
+                                );
+                            })}
+                            {overlayItems.map(item => {
+                                const lp = liveOverlayPos[item.id] || {};
+                                const ls = liveOverlaySize[item.id] || {};
+                                const lr = liveRotation[item.id];
+                                return (
+                                    <OverlayItem
+                                        key={item.id}
+                                        item={{ ...item, ...lp, ...ls, ...(lr !== undefined ? { rotation: lr } : {}) }}
+                                        pxPerM={pxPerM}
+                                        zoom={zoom}
+                                        onMouseDown={handleOverlayMouseDown}
+                                        onRemove={id => onUpdateOverlayItems(overlayItems.filter(it => it.id !== id))}
+                                        onResizeStart={handleOverlayResizeStart}
+                                        onRotateStart={handleRotateStart}
+                                    />
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Zoom pill — sibling of scroll container, stays fixed in corner */}
+            <div style={{
+                position: 'absolute', bottom: 12, right: 12,
+                background: 'rgba(0,0,0,0.55)', borderRadius: 20,
+                display: 'flex', alignItems: 'center', gap: 2,
+                padding: '3px 6px', zIndex: 100, userSelect: 'none',
+            }}>
+                <button onClick={() => setZoom(z => Math.max(0.05, z / 1.25))}
+                    style={{ color: 'white', fontSize: 16, cursor: 'pointer', background: 'none', border: 'none', lineHeight: 1, padding: '0 4px' }}>−</button>
+                <span onClick={() => setZoom(1)} title="Click to fit map in view"
+                    style={{ color: 'white', fontSize: 11, cursor: 'pointer', minWidth: 38, textAlign: 'center' }}>
+                    {Math.round(zoom * 100)}%
+                </span>
+                <button onClick={() => setZoom(z => Math.min(5, z * 1.25))}
+                    style={{ color: 'white', fontSize: 16, cursor: 'pointer', background: 'none', border: 'none', lineHeight: 1, padding: '0 4px' }}>+</button>
             </div>
         </div>
     );
@@ -771,14 +819,58 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
     const [resizeState, setResizeState] = useState(null);
     const [plantResizeState, setPlantResizeState] = useState(null);
     const [resizePreview, setResizePreview] = useState(null);
+    const [generalZoom, setGeneralZoom] = useState(1);
+    const [zoomMap, setZoomMap] = useState({});
+    const detailContainerRef = useRef(null);
+    const detailZoom = zoomMap[currentZone] ?? 1;
+    const setDetailZoom = (val) => setZoomMap(prev => ({ ...prev, [currentZone]: typeof val === 'function' ? val(prev[currentZone] ?? 1) : val }));
+
+    // Compute zoom that fits the current zone in the container
+    const computeFitZoom = () => {
+        if (currentZone < 0 || !zones[currentZone]) return 1;
+        const el = detailContainerRef.current;
+        const cw = el ? el.clientWidth : 800;
+        const ch = el ? el.clientHeight : 600;
+        const grid = grids[currentZone] || [];
+        const cols = grid[0]?.length || 1;
+        const rows = grid.length || 1;
+        const baseCell = (setup.cellSizeM || 1) * CELL_PX;
+        const zoneW = cols * baseCell;
+        const zoneH = HEADER_H + rows * baseCell + FOOTER_H;
+        const pad = 56;
+        return Math.max(0.05, Math.min(1, Math.min((cw - pad) / zoneW, (ch - pad) / zoneH)));
+    };
+
+    // Auto-fit only on first visit to a zone (zoom persists on subsequent tab switches)
+    const visitedZones = useRef(new Set());
+    useEffect(() => {
+        if (currentZone < 0) return;
+        if (!visitedZones.current.has(currentZone)) {
+            visitedZones.current.add(currentZone);
+            setDetailZoom(computeFitZoom());
+        }
+    }, [currentZone]);
+
+    // Ctrl+scroll zoom on the detail canvas
+    useEffect(() => {
+        const el = detailContainerRef.current;
+        if (!el) return;
+        const onWheel = (e) => {
+            if (!e.ctrlKey && !e.metaKey) return;
+            e.preventDefault();
+            setDetailZoom(z => Math.min(5, Math.max(0.05, z * (e.deltaY < 0 ? 1.1 : 0.9))));
+        };
+        el.addEventListener('wheel', onWheel, { passive: false });
+        return () => el.removeEventListener('wheel', onWheel);
+    }, [currentZone]);
     const [plantResizePreview, setPlantResizePreview] = useState(null);
     const [pendingDrop, setPendingDrop] = useState(null);
     const [addZoneOpen, setAddZoneOpen] = useState(false);
     const [renaming, setRenaming] = useState(null);
 
     const cellSizeM = setup.cellSizeM || 1;
-    const cellW = Math.max(MIN_CELL, cellSizeM * CELL_PX);
-    const cellH = Math.max(MIN_CELL, cellSizeM * CELL_PX);
+    const cellW = Math.max(4, cellSizeM * CELL_PX * detailZoom);
+    const cellH = Math.max(4, cellSizeM * CELL_PX * detailZoom);
 
     useEffect(() => {
         if (!resizeState) return;
@@ -857,8 +949,8 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
                 <div className="flex-1" />
                 <span className="text-green-300/40 text-xs hidden lg:inline">
                     {isGeneralView
-                        ? 'Drag circles to arrange · ▭ toggles shape · corner handle resizes · drop plants/structures from sidebar'
-                        : 'Hover plant → drag corners to multiply · Drag ⠿ corner to resize area'}
+                        ? 'Drag to move · ▭ shape · corner resizes · Ctrl+scroll to zoom'
+                        : 'Hover plant → drag corners to multiply · corner resizes area · Ctrl+scroll to zoom'}
                 </span>
                 <button onClick={() => setAddZoneOpen(true)} className="bg-white/15 hover:bg-white/25 text-white text-xs px-3 py-1.5 rounded-lg font-medium border border-white/20 transition-colors">
                     + Add Area
@@ -870,13 +962,43 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
             </div>
 
             {isGeneralView ? (
-                <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} />
+                <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} onAddZone={onAddZone} />
             ) : (
-                <div className="relative overflow-auto flex-1" style={{ cursor: resizeState||plantResizeState ? 'crosshair' : 'default', background: '#3d6b34', backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
-                    <div style={{ width: detailCanvasW, height: detailCanvasH, position: 'absolute', pointerEvents: 'none' }} />
-                    {zones[currentZone] && (
-                        <ZoneBlock zone={zones[currentZone]} grid={grids[currentZone]||[]} position={{ x:20, y:20 }} zoneIdx={currentZone} selected cellSizeM={cellSizeM} plantList={plantList} onResizeMouseDown={handleResizeMouseDown} onZoneDrop={handleZoneDrop} onRemovePlant={handleRemovePlant} onPlantResizeStart={handlePlantResizeStart} onDelete={onDeleteZone} onStartRename={(idx,value) => setRenaming({ idx, value })} renameValue={renaming?.value||''} onRenameChange={e => setRenaming(r => ({ ...r, value: e.target.value }))} onRenameConfirm={handleRenameConfirm} onRenameCancel={() => setRenaming(null)} isRenaming={renaming?.idx===currentZone} resizePreview={resizePreview} plantResizePreview={plantResizePreview} />
-                    )}
+                <div className="flex-1" style={{ position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    {/* Scrollable zone area */}
+                    <div
+                        ref={detailContainerRef}
+                        className="overflow-auto flex-1"
+                        style={{
+                            cursor: resizeState||plantResizeState ? 'crosshair' : 'default',
+                            background: '#3d6b34',
+                            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
+                            backgroundSize: '40px 40px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '28px',
+                        }}
+                    >
+                        {zones[currentZone] && (
+                            <ZoneBlock zone={zones[currentZone]} grid={grids[currentZone]||[]} position={{ x:0, y:0 }} zoneIdx={currentZone} selected detailView zoom={detailZoom} cellSizeM={cellSizeM} plantList={plantList} onResizeMouseDown={handleResizeMouseDown} onZoneDrop={handleZoneDrop} onRemovePlant={handleRemovePlant} onPlantResizeStart={handlePlantResizeStart} onDelete={onDeleteZone} onStartRename={(idx,value) => setRenaming({ idx, value })} renameValue={renaming?.value||''} onRenameChange={e => setRenaming(r => ({ ...r, value: e.target.value }))} onRenameConfirm={handleRenameConfirm} onRenameCancel={() => setRenaming(null)} isRenaming={renaming?.idx===currentZone} resizePreview={resizePreview} plantResizePreview={plantResizePreview} />
+                        )}
+                    </div>
+
+                    {/* Zoom pill — sibling of scroll container, always stays in corner */}
+                    <div style={{
+                        position: 'absolute', bottom: 12, right: 12,
+                        background: 'rgba(0,0,0,0.55)', borderRadius: 20,
+                        display: 'flex', alignItems: 'center', gap: 2,
+                        padding: '3px 6px', zIndex: 100, userSelect: 'none',
+                    }}>
+                        <button onClick={() => setDetailZoom(z => Math.max(0.05, z / 1.25))}
+                            style={{ color: 'white', fontSize: 16, cursor: 'pointer', background: 'none', border: 'none', lineHeight: 1, padding: '0 4px' }}>−</button>
+                        <span onClick={() => setDetailZoom(computeFitZoom())} title="Click to fit zone in view"
+                            style={{ color: 'white', fontSize: 11, cursor: 'pointer', minWidth: 38, textAlign: 'center' }}>
+                            {Math.round(detailZoom * 100)}%
+                        </span>
+                        <button onClick={() => setDetailZoom(z => Math.min(5, z * 1.25))}
+                            style={{ color: 'white', fontSize: 16, cursor: 'pointer', background: 'none', border: 'none', lineHeight: 1, padding: '0 4px' }}>+</button>
+                    </div>
                 </div>
             )}
 

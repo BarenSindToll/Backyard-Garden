@@ -50,6 +50,17 @@ export default function Calendar() {
 
     };
 
+    const toggleTaskCompleted = (index) => {
+        const updated = [...appointments];
+
+        updated[index] = {
+            ...updated[index],
+            completed: !updated[index].completed,
+        };
+
+        saveCalendar(updated);
+    };
+
     const goToPrev = () => setCurrent(prev => prev.subtract(1, view.toLowerCase()));
     const goToNext = () => setCurrent(prev => prev.add(1, view.toLowerCase()));
     const handleDayClick = (date) => {
@@ -116,8 +127,18 @@ export default function Calendar() {
                             {appointments
                                 .filter(app => app.date === formatted)
                                 .map((app, idx) => (
-                                    <div key={idx} className={`prose prose-sm text-xs p-1 rounded ${app.color}`} dangerouslySetInnerHTML={{ __html: app.title }}
-                                    ></div>
+                                    <div
+                                        key={idx}
+                                        className={`text-xs p-1 rounded flex items-start gap-1 ${app.color} ${app.completed ? 'opacity-60' : ''
+                                            }`}
+                                    >
+
+
+                                        <div
+                                            className={`prose prose-sm text-xs ${app.completed ? 'line-through' : ''}`}
+                                            dangerouslySetInnerHTML={{ __html: app.title }}
+                                        />
+                                    </div>
 
                                 ))}
                         </div>
@@ -151,8 +172,17 @@ export default function Calendar() {
                             {appointments
                                 .filter(app => app.date === formatted)
                                 .map((app, idx) => (
-                                    <div key={idx} className={`prose prose-sm text-xs p-1 rounded mt-1 ${app.color}`} dangerouslySetInnerHTML={{ __html: app.title }}
-                                    ></div>
+                                    <div
+                                        key={idx}
+                                        className={`text-xs p-1 rounded mt-1 flex items-start gap-1 ${app.color} ${app.completed ? 'opacity-60' : ''
+                                            }`}
+                                    >
+
+                                        <div
+                                            className={`prose prose-sm text-xs ${app.completed ? 'line-through' : ''}`}
+                                            dangerouslySetInnerHTML={{ __html: app.title }}
+                                        />
+                                    </div>
 
                                 ))}
                         </div>
@@ -164,17 +194,34 @@ export default function Calendar() {
 
     const renderDay = () => {
         const dateStr = selectedDate.format('YYYY-MM-DD');
-        const tasks = appointments.filter(app => app.date === dateStr);
+
+        const tasks = appointments
+            .map((app, index) => ({ ...app, originalIndex: index }))
+            .filter(app => app.date === dateStr);
 
         const saveTask = () => {
             if (!dayTask.trim()) return;
+
             let updated = [...appointments];
+
             if (editIndex !== null) {
-                updated[editIndex] = { ...updated[editIndex], title: dayTask, color };
+                updated[editIndex] = {
+                    ...updated[editIndex],
+                    title: dayTask,
+                    color,
+                };
+
                 setEditIndex(null);
             } else {
-                updated.push({ date: dateStr, time: 'Custom', title: dayTask, color });
+                updated.push({
+                    date: dateStr,
+                    time: 'Custom',
+                    title: dayTask,
+                    color,
+                    completed: false,
+                });
             }
+
             setDayTask('');
             setIsEditing(false);
             saveCalendar(updated);
@@ -187,6 +234,7 @@ export default function Calendar() {
 
         const handleEdit = (index) => {
             const app = appointments[index];
+
             setEditIndex(index);
             setDayTask(app.title);
             setColor(app.color);
@@ -196,13 +244,42 @@ export default function Calendar() {
         return (
             <div className="bg-cream p-4 border rounded min-h-[300px]">
                 <div className="font-semibold mb-4 text-lg">{selectedDate.format('dddd, MMMM D, YYYY')}</div>
-                {tasks.map((app, i) => (
-                    <div key={i} className={`text-sm p-3 mb-3 rounded ${app.color} relative`}>
+                {tasks.map((app) => (
+                    <div
+                        key={app.originalIndex}
+                        className={`text-sm p-3 mb-3 rounded ${app.color} relative ${app.completed ? 'opacity-60' : ''
+                            }`}
+                    >
                         <div className="font-medium mb-1">{app.time}</div>
-                        <div className="prose prose-sm " dangerouslySetInnerHTML={{ __html: app.title }} />
-                        <div className="absolute top-1 right-2 space-x-2">
-                            <button onClick={() => handleEdit(i)} className="text-xs text-blue-700 underline">Edit</button>
-                            <button onClick={() => handleDelete(i)} className="text-xs text-red-700 underline">Delete</button>
+
+                        <div
+                            className={`prose prose-sm ${app.completed ? 'line-through' : ''}`}
+                            dangerouslySetInnerHTML={{ __html: app.title }}
+                        />
+
+                        <div className="absolute top-1 right-2 flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                checked={!!app.completed}
+                                onChange={() => toggleTaskCompleted(app.originalIndex)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="cursor-pointer"
+                                title="Mark as completed"
+                            />
+
+                            <button
+                                onClick={() => handleEdit(app.originalIndex)}
+                                className="text-xs text-blue-700 underline"
+                            >
+                                Edit
+                            </button>
+
+                            <button
+                                onClick={() => handleDelete(app.originalIndex)}
+                                className="text-xs text-red-700 underline"
+                            >
+                                Delete
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -263,7 +340,24 @@ export default function Calendar() {
                 <div className="flex justify-between items-center mb-4">
                     <div className="space-x-2">
                         {['MONTH', 'WEEK', 'DAY'].map(v => (
-                            <button key={v} onClick={() => setView(v)} className={`px-3 py-1 rounded border ${view === v ? 'bg-forest text-white' : 'bg-cream'}`}>{v}</button>
+                            <button
+                                key={v}
+                                onClick={() => {
+                                    if (v === 'WEEK') {
+                                        setCurrent(selectedDate);
+                                    }
+
+                                    if (v === 'DAY') {
+                                        setCurrent(selectedDate);
+                                    }
+
+                                    setView(v);
+                                }}
+                                className={`px-3 py-1 rounded border ${view === v ? 'bg-forest text-white' : 'bg-cream'
+                                    }`}
+                            >
+                                {v}
+                            </button>
                         ))}
                     </div>
                     <h2 className="text-xl font-semibold">{current.format('MMMM YYYY')}</h2>
