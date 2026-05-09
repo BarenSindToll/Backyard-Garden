@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import DashboardHeader from '../components/DashboardHeader';
 import dayjs from 'dayjs';
+import { apiUrl } from '../utils/api';
 import 'dayjs/locale/ro';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -31,7 +32,7 @@ export default function Calendar() {
             if (!user) return;
 
             try {
-                const res = await fetch('http://localhost:4000/api/calendar/load', {
+                const res = await fetch(apiUrl('/api/calendar/load'), {
                     method: 'GET',
                     credentials: 'include',
                 });
@@ -47,7 +48,7 @@ export default function Calendar() {
     // Save tasks
     const saveCalendar = async (updatedTasks) => {
         setAppointments(updatedTasks);
-        await fetch('http://localhost:4000/api/calendar/save', {
+        await fetch(apiUrl('/api/calendar/save'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',

@@ -14,7 +14,7 @@ export const getAllUsers = async (req, res) => {
 
         if (filter === 'active') query.isActive = true;
         else if (filter === 'inactive') query.isActive = false;
-        else if (filter === 'deleted') query.isDeleted = true;
+        else if (filter === 'deleted') return res.json({ success: true, users: [] });
 
         const users = await User.find(query)
             .sort({ [sort]: 1 })
@@ -51,8 +51,6 @@ export const sendAnnouncement = async (req, res) => {
         if (!message) return res.status(400).json({ success: false, message: 'Message required' });
 
         // Placeholder logic (email integration goes here)
-        console.log("Sending announcement:", message);
-
         res.json({ success: true, message: 'Announcement sent to all users' });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });

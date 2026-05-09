@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import DashboardHeader from '../components/DashboardHeader';
 import { fetchCurrentUser } from '../utils/fetchCurrentUser';
 import { useLanguage } from '../utils/languageContext';
+import { apiUrl, assetUrl } from '../utils/api';
 
 const sectionKeys = ['accountSettings', 'gardenSettings', 'language', 'help'];
 
@@ -28,7 +29,6 @@ export default function Profile() {
     const [selectedFile, setSelectedFile] = useState(null);
     const [preview, setPreview] = useState(null);
     const [name, setName] = useState('');
-    const userId = localStorage.getItem('userId');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [notification, setNotification] = useState('');
@@ -74,13 +74,13 @@ export default function Profile() {
 
     useEffect(() => {
         if (active === 'gardenSettings') {
-            fetch('http://localhost:4000/api/plants/all')
+            fetch(apiUrl('/api/plants/all'))
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) setAllPlants(data.plants);
                 });
 
-            fetch('http://localhost:4000/api/user/get-data', {
+            fetch(apiUrl('/api/user/get-data'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include'
@@ -120,7 +120,7 @@ export default function Profile() {
             if (location) formData.append('location', location);
             formData.append('favoritePlants', JSON.stringify(favoritePlants));
 
-            const res = await fetch('http://localhost:4000/api/user/update-profile', {
+            const res = await fetch(apiUrl('/api/user/update-profile'), {
                 method: 'POST',
                 body: formData,
                 credentials: 'include'
@@ -199,7 +199,7 @@ export default function Profile() {
                                     {preview ? (
                                         <img src={preview} alt="Preview" className="w-20 h-20 object-cover rounded-full mb-2" />
                                     ) : userImage && (
-                                        <img src={`http://localhost:4000${userImage}`} alt="Profile" className="w-20 h-20 object-cover rounded-full mb-2" />
+                                        <img src={assetUrl(userImage)} alt="Profile" className="w-20 h-20 object-cover rounded-full mb-2" />
                                     )}
                                     <input type="file" accept="image/*" onChange={handleFileChange} />
                                 </div>

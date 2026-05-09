@@ -1,4 +1,5 @@
 import userModel from "../models/userModel.js";
+import bcrypt from 'bcryptjs';
 import path from 'path';
 import fs from 'fs';
 

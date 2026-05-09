@@ -62,6 +62,8 @@ const pathIcon = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5v
 const shedIcon = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iI2QyYjQ4YyIvPjxwb2x5Z29uIHBvaW50cz0iMjU2LDUwIDQ4MCwyMDAgMzIsMjAwIiBmaWxsPSIjYTU3YTRhIi8+PHJlY3QgeD0iNjQiIHk9IjIwMCIgd2lkdGg9IjM4NCIgaGVpZ2h0PSIyODAiIGZpbGw9IiNjNGE0NzQiLz48cmVjdCB4PSIyMDAiIHk9IjMwMCIgd2lkdGg9IjExMiIgaGVpZ2h0PSIxODAiIGZpbGw9IiM4YjY2NDAiLz48L3N2Zz4=';
 const fenceIcon = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iI2Y1ZjVmNSIgb3BhY2l0eT0iMCIvPjxyZWN0IHg9IjQwIiB5PSIxMjAiIHdpZHRoPSI2NCIgaGVpZ2h0PSIyNzIiIGZpbGw9IiNjOGE4NjAiIHJ4PSI4Ii8+PHJlY3QgeD0iMjI0IiB5PSIxMjAiIHdpZHRoPSI2NCIgaGVpZ2h0PSIyNzIiIGZpbGw9IiNjOGE4NjAiIHJ4PSI4Ii8+PHJlY3QgeD0iNDA4IiB5PSIxMjAiIHdpZHRoPSI2NCIgaGVpZ2h0PSIyNzIiIGZpbGw9IiNjOGE4NjAiIHJ4PSI4Ii8+PHJlY3QgeD0iNDAiIHk9IjE2MCIgd2lkdGg9IjQzMiIgaGVpZ2h0PSI0OCIgZmlsbD0iI2Q0Yjg3MCIgcng9IjgiLz48cmVjdCB4PSI0MCIgeT0iMjg4IiB3aWR0aD0iNDMyIiBoZWlnaHQ9IjQ4IiBmaWxsPSIjZDRiODcwIiByeD0iOCIvPjxwb2x5Z29uIHBvaW50cz0iNDAsMTIwIDcyLDgwIDEwNCwxMjAiIGZpbGw9IiNjOGE4NjAiLz48cG9seWdvbiBwb2ludHM9IjIyNCwxMjAgMjU2LDgwIDI4OCwxMjAiIGZpbGw9IiNjOGE4NjAiLz48cG9seWdvbiBwb2ludHM9IjQwOCwxMjAgNDQwLDgwIDQ3MiwxMjAiIGZpbGw9IiNjOGE4NjAiLz48L3N2Zz4=';
 
+const coopIcon = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="50" width="80" height="44" fill="#c4a270" rx="6" stroke="#8b6040" stroke-width="2"/><polygon points="50,14 10,50 90,50" fill="#8b6040"/><rect x="35" y="62" width="30" height="32" fill="#7a5030" rx="4"/><circle cx="71" cy="37" r="11" fill="#f0c040"/><circle cx="78" cy="32" r="5" fill="#e05030"/><line x1="22" y1="65" x2="22" y2="94" stroke="#8b6040" stroke-width="2"/><line x1="78" y1="65" x2="78" y2="94" stroke="#8b6040" stroke-width="2"/></svg>');
+
 export const STRUCTURES = [
     { name: 'Path',         color: '#c4a882', icon: pathIcon,       description: 'Walkway or path' },
     { name: 'Greenhouse',   color: '#b0d0a8', icon: greenhouseIcon, description: 'Covered growing area' },
@@ -71,4 +73,5 @@ export const STRUCTURES = [
     { name: 'Shed',         color: '#d2b48c', icon: shedIcon,       description: 'Storage or workspace' },
     { name: 'Raised Bed',   color: '#b87348', icon: raisedBedIcon,  description: 'Elevated planting bed' },
     { name: 'Fence',        color: '#c8a860', icon: fenceIcon,      description: 'Border or barrier' },
+    { name: 'Coop',         color: '#c4a270', icon: coopIcon,       description: 'Chicken coop' },
 ];

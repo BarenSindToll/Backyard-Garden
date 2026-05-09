@@ -1,65 +1,42 @@
-
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import bgImage from '../assets/sign-in-bg.jpg';
+import { apiUrl } from '../utils/api';
 
-export default function ResetPassword() {
-    const [otp, setOtp] = useState(['', '', '', '', '', '']);
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
+export default function ForgotPassword() {
+    const [email, setEmail] = useState('');
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
     const navigate = useNavigate();
-    const location = useLocation();
-    const { email } = location.state || {};
-
-    const handleChange = (index, value) => {
-        if (!/^[0-9]?$/.test(value)) return;
-        const updatedOtp = [...otp];
-        updatedOtp[index] = value;
-        setOtp(updatedOtp);
-        if (value && index < 5) {
-            document.getElementById(`otp-${index + 1}`).focus();
-        }
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!email.trim()) {
+            setError('Please enter your email address.');
+            return;
+        }
+        setLoading(true);
         setError('');
-        setSuccess('');
-
-        const otpCode = otp.join('');
-        if (otpCode.length !== 6) {
-            setError('Please enter the full 6-digit OTP.');
-            return;
-        }
-
-        if (newPassword !== confirmPassword) {
-            setError('Passwords do not match.');
-            return;
-        }
-
         try {
-            const response = await fetch('http://localhost:4000/api/auth/reset-password', {
+            const response = await fetch(apiUrl('/api/auth/send-reset-otp'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, otp: otpCode, newPassword }),
+                body: JSON.stringify({ email }),
             });
-
             const data = await response.json();
             if (data.success) {
-                setSuccess('Password reset successfully!');
-                setTimeout(() => navigate('/signin'), 2000);
+                sessionStorage.setItem('resetEmail', email);
+                navigate('/reset-password', { state: { email } });
             } else {
-                setError(data.message || 'Reset failed.');
+                setError(data.message || 'Failed to send OTP. Please try again.');
             }
         } catch {
             setError('Server error. Please try again later.');
+        } finally {
+            setLoading(false);
         }
     };
-
-    if (!email) return <p className="text-center mt-10 text-red-500">Missing email. Please start from the Forgot Password page.</p>;
 
     return (
         <div
@@ -70,52 +47,27 @@ export default function ResetPassword() {
             <div className="relative z-10 flex flex-col min-h-screen">
                 <Header textColor="white" />
                 <main className="flex-grow flex items-center justify-center px-4 py-12">
-                    <div className="bg-white shadow-md border border-gray-200 rounded-lg p-8 w-full max-w-md text-center">
-                        <h2 className="text-3xl font-bold text-forest mb-4">Reset Your Password</h2>
-                        <p className="text-sm text-gray-600 mb-6">Enter the OTP sent to {email}</p>
-
-                        <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
-                            <div className="flex justify-center gap-2">
-                                {otp.map((digit, i) => (
-                                    <input
-                                        key={i}
-                                        id={`otp-${i}`}
-                                        type="text"
-                                        maxLength="1"
-                                        value={digit}
-                                        onChange={(e) => handleChange(i, e.target.value)}
-                                        className="w-10 h-12 text-xl text-center border border-gray-300 rounded focus:outline-forest"
-                                        required
-                                    />
-                                ))}
-                            </div>
-
+                    <div className="bg-white shadow-md border border-gray-200 rounded-lg p-8 w-full max-w-md">
+                        <h2 className="text-3xl font-bold text-forest mb-4 text-center">Forgot Password</h2>
+                        <p className="text-sm text-gray-600 mb-6 text-center">
+                            Enter your email address and we will send you a one-time code to reset your password.
+                        </p>
+                        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                             <input
-                                type="password"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                placeholder="New Password"
-                                className="w-full border border-gray-300 rounded px-3 py-2"
+                                type="email"
+                                placeholder="Your email address"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="border border-gray-300 rounded px-3 py-2"
                                 required
                             />
-
-                            <input
-                                type="password"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                placeholder="Confirm Password"
-                                className="w-full border border-gray-300 rounded px-3 py-2"
-                                required
-                            />
-
-                            {error && <p className="text-sm text-red-600">{error}</p>}
-                            {success && <p className="text-sm text-green-600">{success}</p>}
-
+                            {error && <p className="text-sm text-red-600 text-center">{error}</p>}
                             <button
                                 type="submit"
-                                className="mt-2 bg-forest text-white font-semibold py-2 px-6 rounded hover:bg-green-800 transition"
+                                disabled={loading}
+                                className="bg-forest text-white font-semibold py-2 rounded hover:bg-green-800 transition disabled:opacity-60"
                             >
-                                Reset Password
+                                {loading ? 'Sending...' : 'Send OTP'}
                             </button>
                         </form>
                     </div>

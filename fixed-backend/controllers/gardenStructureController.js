@@ -4,7 +4,7 @@ import GardenStructureModel from '../models/gardenStructureModel.js';
 // Get all garden structures for a user
 export const getAllStructures = async (req, res) => {
     try {
-        const structures = await GardenStructure.find({ userId: req.user.id });
+        const structures = await GardenStructureModel.find({ userId: req.user.id });
         res.json({ success: true, structures });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -28,7 +28,7 @@ export const createStructure = async (req, res) => {
 // Update an existing garden structure
 export const updateStructure = async (req, res) => {
     try {
-        const updatedStructure = await GardenStructure.findOneAndUpdate(
+        const updatedStructure = await GardenStructureModel.findOneAndUpdate(
             { _id: req.params.id, userId: req.user.id },
             req.body,
             { new: true }
@@ -45,7 +45,7 @@ export const updateStructure = async (req, res) => {
 // Delete a garden structure
 export const deleteStructure = async (req, res) => {
     try {
-        const deleted = await GardenStructure.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+        const deleted = await GardenStructureModel.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
         if (!deleted) {
             return res.status(404).json({ success: false, message: 'Structure not found' });
         }

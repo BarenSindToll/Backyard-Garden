@@ -20,6 +20,8 @@ const ROTATABLE_STRUCTURES = new Set(['Path', 'Fence', 'Raised Bed']);
 const CIRCULAR_STRUCTURES = new Set(['Pond']);
 // Structures that become real zones when dropped on the General map
 const ZONE_STRUCTURES = new Set(['Greenhouse']);
+// Structures that open the Bed Editor when clicked
+const BED_LIKE_STRUCTURES = new Set(['Raised Bed', 'Greenhouse']);
 
 // Default sizes in metres for each structure when first dropped on General map
 const STRUCTURE_DEFAULTS = {
@@ -31,6 +33,7 @@ const STRUCTURE_DEFAULTS = {
     House: { wM: 10, hM: 8 },
     Shed: { wM: 4, hM: 3 },
     'Raised Bed': { wM: 3, hM: 1.2 },
+    Coop: { wM: 3, hM: 3 },
 };
 const DEFAULT_PLANT_SIZE = { wM: 1, hM: 1 };
 
@@ -175,20 +178,246 @@ function VerticalRuler({ heightM, pxPerM }) {
     );
 }
 
+// ── Bed icon helpers ──────────────────────────────────────────────────────────
+function getRepeatedPositionsPx(widthPx, heightPx, spacingPx, maxIcons = 80) {
+    if (widthPx <= 0 || heightPx <= 0 || spacingPx < 2) return [];
+    let sp = spacingPx;
+    let cols = Math.max(1, Math.floor(widthPx / sp));
+    let rows = Math.max(1, Math.floor(heightPx / sp));
+    while (cols * rows > maxIcons && sp < Math.max(widthPx, heightPx)) {
+        sp *= 1.4; cols = Math.max(1, Math.floor(widthPx / sp)); rows = Math.max(1, Math.floor(heightPx / sp));
+    }
+    const offX = (widthPx - (cols - 1) * sp) / 2;
+    const offY = (heightPx - (rows - 1) * sp) / 2;
+    const out = [];
+    for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++)
+            out.push({ x: offX + c * sp, y: offY + r * sp });
+    return out;
+}
+
+function mkSrc(iconData) {
+    if (!iconData) return null;
+    return iconData.startsWith('data:') ? iconData : `data:image/svg+xml;base64,${iconData}`;
+}
+
+function BedIcon({ iconData, name, size, bg = '#4a7c3f' }) {
+    const src = mkSrc(iconData);
+    if (src) return <img src={src} alt="" style={{ width: size, height: size, objectFit: 'contain' }} draggable={false} />;
+    return (
+        <div style={{ width: size, height: size, borderRadius: '50%', background: bg, color: '#fff', fontSize: Math.max(4, size * 0.36), display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, lineHeight: 1 }}>
+            {(name || '?').slice(0, 2).toUpperCase()}
+        </div>
+    );
+}
+
+// ── Bed row/block previews rendered inside a bed on the General Map ───────────
+function BedRowPreview({ row, bedWM, bedHM, pxPerM, selected, onDragStart, onClick, onResizeStart }) {
+    if (!bedWM || !bedHM) return null;
+    const xM = row.x || 0; const yM = row.y || 0;
+    const wM = row.widthM || 1; const hM = row.heightM || 0.3;
+    const leftPct = `${Math.max(0, Math.min(1, xM / bedWM)) * 100}%`;
+    const topPct  = `${Math.max(0, Math.min(1, yM / bedHM)) * 100}%`;
+    const widPct  = `${Math.max(0.1, Math.min(1 - xM / bedWM, wM / bedWM)) * 100}%`;
+    const hgtPct  = `${Math.max(0.1, Math.min(1 - yM / bedHM, hM / bedHM)) * 100}%`;
+
+    const plant = row.plant;
+    const companions = row.companions || [];
+    const rowPxW = wM * pxPerM;
+    const rowPxH = hM * pxPerM;
+    const spacingPx = Math.max(8, ((row.spacingCm || 30) / 100) * pxPerM);
+    const iconSz = Math.min(spacingPx * 0.72, rowPxH * 0.78, 22);
+    const showIcons = plant && iconSz >= 5 && rowPxW >= 10 && rowPxH >= 5;
+
+    const mainPos = showIcons ? getRepeatedPositionsPx(rowPxW, rowPxH, spacingPx, 80) : [];
+    const compSp  = spacingPx * 1.6;
+    const compSz  = iconSz * 0.62;
+    const compPos = companions.length > 0 && showIcons ? getRepeatedPositionsPx(rowPxW, rowPxH, compSp, 30) : [];
+
+    return (
+        <div style={{
+            position: 'absolute', left: leftPct, top: topPct, width: widPct, height: hgtPct,
+            background: selected ? 'rgba(140,205,80,0.82)' : 'rgba(140,205,80,0.50)',
+            border: selected ? '2px solid #5a9a28' : '1px solid rgba(255,255,255,0.55)',
+            borderRadius: 2, cursor: 'grab', boxSizing: 'border-box', overflow: 'hidden',
+            transition: 'background 0.08s',
+        }}
+            onMouseDown={e => { e.stopPropagation(); onDragStart?.(e); }}
+            onClick={e => { e.stopPropagation(); onClick?.(); }}
+        >
+            {mainPos.map((pos, i) => (
+                <div key={i} style={{ position: 'absolute', left: pos.x - iconSz / 2, top: pos.y - iconSz / 2, width: iconSz, height: iconSz, pointerEvents: 'none' }}>
+                    <BedIcon iconData={plant?.iconData} name={plant?.name} size={iconSz} />
+                </div>
+            ))}
+            {companions.map((comp, ci) =>
+                compPos.filter((_, pi) => pi % companions.length === ci).map((pos, pi) => (
+                    <div key={`c${ci}${pi}`} style={{ position: 'absolute', left: pos.x - compSz / 2, top: pos.y - compSz / 2, width: compSz, height: compSz, pointerEvents: 'none', opacity: 0.85 }}>
+                        <BedIcon iconData={comp?.iconData} name={comp?.name} size={compSz} bg="#8a4a8f" />
+                    </div>
+                ))
+            )}
+            {!showIcons && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                    <span style={{ fontSize: Math.max(6, rowPxH * 0.38), color: '#fff', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '0 2px', lineHeight: 1, textShadow: '0 1px 2px rgba(0,0,0,0.35)' }}>
+                        {plant?.name || 'Row'}
+                    </span>
+                </div>
+            )}
+            {selected && rowPxH >= 10 && (
+                <div style={{ position: 'absolute', bottom: 1, right: 1, width: 7, height: 7, background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(90,154,40,0.8)', borderRadius: 1, cursor: 'se-resize' }}
+                    onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onResizeStart?.(e); }} />
+            )}
+        </div>
+    );
+}
+
+function BedBlockPreview({ block, bedWM, bedHM, pxPerM, selected, onDragStart, onClick, onResizeStart }) {
+    if (!bedWM || !bedHM) return null;
+    const xM = block.x || 0; const yM = block.y || 0;
+    const wM = block.widthM || 0.8; const hM = block.heightM || 0.8;
+    const leftPct = `${Math.max(0, Math.min(1, xM / bedWM)) * 100}%`;
+    const topPct  = `${Math.max(0, Math.min(1, yM / bedHM)) * 100}%`;
+    const widPct  = `${Math.max(0.1, Math.min(1 - xM / bedWM, wM / bedWM)) * 100}%`;
+    const hgtPct  = `${Math.max(0.1, Math.min(1 - yM / bedHM, hM / bedHM)) * 100}%`;
+
+    const plant = block.plant;
+    const companions = block.companions || [];
+    const blkPxW = wM * pxPerM;
+    const blkPxH = hM * pxPerM;
+    const spacingPx = Math.max(8, ((block.spacingCm || 25) / 100) * pxPerM);
+    const iconSz = Math.min(spacingPx * 0.72, Math.min(blkPxW, blkPxH) * 0.6, 22);
+    const showIcons = plant && iconSz >= 5 && blkPxW >= 10 && blkPxH >= 10;
+
+    const mainPos = showIcons ? getRepeatedPositionsPx(blkPxW, blkPxH, spacingPx, 80) : [];
+    const compSp  = spacingPx * 1.6;
+    const compSz  = iconSz * 0.62;
+    const compPos = companions.length > 0 && showIcons ? getRepeatedPositionsPx(blkPxW, blkPxH, compSp, 30) : [];
+
+    return (
+        <div style={{
+            position: 'absolute', left: leftPct, top: topPct, width: widPct, height: hgtPct,
+            background: selected ? 'rgba(80,140,210,0.82)' : 'rgba(80,140,210,0.50)',
+            border: selected ? '2px solid #3a8abf' : '1px solid rgba(255,255,255,0.55)',
+            borderRadius: 3, cursor: 'grab', boxSizing: 'border-box', overflow: 'hidden',
+            transition: 'background 0.08s',
+        }}
+            onMouseDown={e => { e.stopPropagation(); onDragStart?.(e); }}
+            onClick={e => { e.stopPropagation(); onClick?.(); }}
+        >
+            {mainPos.map((pos, i) => (
+                <div key={i} style={{ position: 'absolute', left: pos.x - iconSz / 2, top: pos.y - iconSz / 2, width: iconSz, height: iconSz, pointerEvents: 'none' }}>
+                    <BedIcon iconData={plant?.iconData} name={plant?.name} size={iconSz} />
+                </div>
+            ))}
+            {companions.map((comp, ci) =>
+                compPos.filter((_, pi) => pi % companions.length === ci).map((pos, pi) => (
+                    <div key={`c${ci}${pi}`} style={{ position: 'absolute', left: pos.x - compSz / 2, top: pos.y - compSz / 2, width: compSz, height: compSz, pointerEvents: 'none', opacity: 0.85 }}>
+                        <BedIcon iconData={comp?.iconData} name={comp?.name} size={compSz} bg="#8a4a8f" />
+                    </div>
+                ))
+            )}
+            {!showIcons && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                    <span style={{ fontSize: Math.max(6, Math.min(blkPxW, blkPxH) * 0.3), color: '#fff', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '0 2px', lineHeight: 1, textShadow: '0 1px 2px rgba(0,0,0,0.35)' }}>
+                        {plant?.name || 'Block'}
+                    </span>
+                </div>
+            )}
+            {selected && blkPxH >= 10 && blkPxW >= 10 && (
+                <div style={{ position: 'absolute', bottom: 1, right: 1, width: 7, height: 7, background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(58,138,191,0.8)', borderRadius: 1, cursor: 'se-resize' }}
+                    onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onResizeStart?.(e); }} />
+            )}
+        </div>
+    );
+}
+
 // ── Free-floating overlay item ────────────────────────────────────────────────
-function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeStart, onRotateStart }) {
+function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeStart, onRotateStart, onSelectBed, selectedBedId, bedLayout, selectedBedElementId, onSelectBedElement, onUpdateBedLayout }) {
     const [hovered, setHovered] = useState(false);
+    const mouseDownPos = useRef(null);
+    const [bedElemDrag, setBedElemDrag] = useState(null);
+    const [bedElemResize, setBedElemResize] = useState(null);
+
+    // Refs for non-stale access in window-level effects
+    const bedLayoutRef = useRef(bedLayout);
+    useEffect(() => { bedLayoutRef.current = bedLayout; }, [bedLayout]);
+    const onUpdateRef = useRef(onUpdateBedLayout);
+    useEffect(() => { onUpdateRef.current = onUpdateBedLayout; }, [onUpdateBedLayout]);
+    const pxPerMRef = useRef(pxPerM);
+    useEffect(() => { pxPerMRef.current = pxPerM; }, [pxPerM]);
+
+    // Bed-element drag
+    useEffect(() => {
+        if (!bedElemDrag) return;
+        const { elemId, isRow, startX, startY, origX, origY } = bedElemDrag;
+        const bedWM = item.wM || 3; const bedHM = item.hM || 1.2;
+        const onMove = (e) => {
+            const layout = bedLayoutRef.current; if (!layout) return;
+            const dxM = (e.clientX - startX) / pxPerMRef.current;
+            const dyM = (e.clientY - startY) / pxPerMRef.current;
+            const upd = (el) => ({ ...el, x: Math.max(0, Math.min(bedWM - (el.widthM || 1), origX + dxM)), y: Math.max(0, Math.min(bedHM - (el.heightM || 0.3), origY + dyM)) });
+            const newLayout = isRow
+                ? { ...layout, rows: layout.rows.map(r => r.id === elemId ? upd(r) : r) }
+                : { ...layout, blocks: layout.blocks.map(b => b.id === elemId ? upd(b) : b) };
+            onUpdateRef.current?.(item.id, newLayout);
+        };
+        const onUp = () => setBedElemDrag(null);
+        window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+        return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    }, [bedElemDrag, item.id, item.wM, item.hM]);
+
+    // Bed-element resize
+    useEffect(() => {
+        if (!bedElemResize) return;
+        const { elemId, isRow, startX, startY, origW, origH, origX, origY } = bedElemResize;
+        const bedWM = item.wM || 3; const bedHM = item.hM || 1.2;
+        const onMove = (e) => {
+            const layout = bedLayoutRef.current; if (!layout) return;
+            const dwM = (e.clientX - startX) / pxPerMRef.current;
+            const dhM = (e.clientY - startY) / pxPerMRef.current;
+            const upd = (el) => ({ ...el, widthM: Math.max(0.2, Math.min(bedWM - origX, origW + dwM)), heightM: Math.max(0.15, Math.min(bedHM - origY, origH + dhM)) });
+            const newLayout = isRow
+                ? { ...layout, rows: layout.rows.map(r => r.id === elemId ? upd(r) : r) }
+                : { ...layout, blocks: layout.blocks.map(b => b.id === elemId ? upd(b) : b) };
+            onUpdateRef.current?.(item.id, newLayout);
+        };
+        const onUp = () => setBedElemResize(null);
+        window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+        return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    }, [bedElemResize, item.id, item.wM, item.hM]);
+
+    const startElemDrag = (e, elemId, isRow) => {
+        const layout = bedLayoutRef.current;
+        const elem = isRow ? layout?.rows?.find(r => r.id === elemId) : layout?.blocks?.find(b => b.id === elemId);
+        if (!elem) return;
+        onSelectBedElement?.(elemId);
+        setBedElemDrag({ elemId, isRow, startX: e.clientX, startY: e.clientY, origX: elem.x || 0, origY: elem.y || 0 });
+    };
+    const startElemResize = (e, elemId, isRow) => {
+        const layout = bedLayoutRef.current;
+        const elem = isRow ? layout?.rows?.find(r => r.id === elemId) : layout?.blocks?.find(b => b.id === elemId);
+        if (!elem) return;
+        setBedElemResize({ elemId, isRow, startX: e.clientX, startY: e.clientY, origW: elem.widthM || 1, origH: elem.heightM || 0.3, origX: elem.x || 0, origY: elem.y || 0 });
+    };
+
     const iconSrc = resolveIconSrc(item.iconData);
     const isLinear = LINEAR_STRUCTURES.has(item.name);
     const isRotatable = ROTATABLE_STRUCTURES.has(item.name);
     const isCircular = CIRCULAR_STRUCTURES.has(item.name);
-    // Circular structures are always rendered as a square so 50% radius = circle
+    const isBedLike = BED_LIKE_STRUCTURES.has(item.name);
+    const isSelectedBed = isBedLike && selectedBedId === item.id;
+
     const rawW = Math.max(pxPerM * 2, (item.wM ?? 4) * pxPerM);
     const rawH = Math.max(isRotatable ? 28 : pxPerM, (item.hM ?? 4) * pxPerM);
     const pxW = isCircular ? Math.max(rawW, rawH) : rawW;
     const pxH = isCircular ? Math.max(rawW, rawH) : rawH;
     const iconSize = Math.min(pxW * 0.45, (pxH - (isRotatable ? 16 : 0)) * 0.7, 32);
     const rotation = item.rotation ?? 0;
+
+    const bedRows = bedLayout?.rows || [];
+    const bedBlocks = bedLayout?.blocks || [];
+    const hasBedContent = isBedLike && (bedRows.length > 0 || bedBlocks.length > 0);
 
     return (
         <div
@@ -197,80 +426,226 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
                 width: pxW, height: pxH,
                 transform: `rotate(${rotation}deg)`,
                 transformOrigin: '50% 50%',
-                cursor: 'grab', zIndex: hovered ? 50 : 5, userSelect: 'none',
+                cursor: 'grab', zIndex: isSelectedBed ? 20 : hovered ? 10 : 5, userSelect: 'none',
             }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
-            onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onMouseDown(e, item.id); }}
-            onDoubleClick={e => { e.stopPropagation(); onRemove(item.id); }}
+            onMouseDown={e => {
+                e.preventDefault(); e.stopPropagation();
+                mouseDownPos.current = { x: e.clientX, y: e.clientY };
+                onMouseDown(e, item.id);
+            }}
+            onClick={e => {
+                e.stopPropagation();
+                if (!isBedLike || !onSelectBed) return;
+                if (mouseDownPos.current) {
+                    const dx = e.clientX - mouseDownPos.current.x;
+                    const dy = e.clientY - mouseDownPos.current.y;
+                    if (dx * dx + dy * dy > 25) return;
+                }
+                onSelectBed(item.id);
+            }}
+            onDoubleClick={e => { e.stopPropagation(); if (!isBedLike) onRemove(item.id); }}
         >
-            {/* Box */}
+            {isSelectedBed && (
+                <div style={{ position: 'absolute', top: -20, left: '50%', transform: 'translateX(-50%)', background: '#a8d870', color: '#1a3a0a', fontSize: 9, fontWeight: 700, borderRadius: 4, padding: '1px 7px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 25 }}>Editing</div>
+            )}
+
             <div style={{
-                width: '100%', height: '100%',
+                position: 'relative', width: '100%', height: '100%',
                 borderRadius: isCircular ? '50%' : isLinear ? 4 : 8,
                 background: item.color ? item.color + '66' : 'rgba(255,255,255,0.88)',
-                border: hovered ? '2px solid white' : '1.5px solid rgba(255,255,255,0.5)',
+                border: isSelectedBed ? '3px solid #a8d870' : hovered ? '2px solid white' : '1.5px solid rgba(255,255,255,0.5)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                boxShadow: hovered ? '0 4px 14px rgba(0,0,0,0.35)' : '0 2px 7px rgba(0,0,0,0.22)',
-                overflow: 'hidden', transition: 'border-color 0.1s, box-shadow 0.1s',
-                gap: 2,
+                boxShadow: isSelectedBed ? '0 0 0 2px rgba(168,216,112,0.4), 0 4px 14px rgba(0,0,0,0.35)' : hovered ? '0 4px 14px rgba(0,0,0,0.35)' : '0 2px 7px rgba(0,0,0,0.22)',
+                overflow: 'hidden', transition: 'border-color 0.1s, box-shadow 0.1s', gap: 2,
             }}>
-                {/* Rotate handle row — always rendered inside, visible when hovered */}
                 {isRotatable && (
-                    <div
-                        title="Drag to rotate"
-                        style={{
-                            width: 18, height: 18, flexShrink: 0,
-                            borderRadius: '50%',
-                            background: hovered ? 'white' : 'rgba(255,255,255,0.4)',
-                            border: '1.5px solid rgba(0,0,0,0.25)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 12, cursor: 'crosshair',
-                            transition: 'background 0.15s',
-                        }}
-                        onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onRotateStart(e, item.id); }}
-                    >↻</div>
+                    <div title="Drag to rotate" style={{ width: 18, height: 18, flexShrink: 0, borderRadius: '50%', background: hovered ? 'white' : 'rgba(255,255,255,0.4)', border: '1.5px solid rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'crosshair', transition: 'background 0.15s', position: 'relative', zIndex: 2 }}
+                        onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onRotateStart(e, item.id); }}>↻</div>
                 )}
-                {iconSrc
-                    ? <img src={iconSrc} alt={item.name} style={{ width: iconSize, height: iconSize, flexShrink: 0 }} className="object-contain" draggable={false} />
-                    : <span style={{ fontSize: Math.max(10, Math.min(iconSize, 20)), pointerEvents: 'none' }}>🌱</span>
-                }
+                {!hasBedContent && (
+                    iconSrc
+                        ? <img src={iconSrc} alt={item.name} style={{ width: iconSize, height: iconSize, flexShrink: 0, position: 'relative', zIndex: 1 }} className="object-contain" draggable={false} />
+                        : <span style={{ fontSize: Math.max(10, Math.min(iconSize, 20)), pointerEvents: 'none', position: 'relative', zIndex: 1 }}>🌱</span>
+                )}
+                {hasBedContent && (
+                    <div style={{ position: 'absolute', inset: isRotatable ? '22px 0 0 0' : 0, overflow: 'hidden' }}>
+                        {bedRows.map(row => (
+                            <BedRowPreview key={row.id}
+                                row={row} bedWM={item.wM || 3} bedHM={item.hM || 1.2} pxPerM={pxPerM}
+                                selected={row.id === selectedBedElementId}
+                                onDragStart={e => startElemDrag(e, row.id, true)}
+                                onClick={() => onSelectBedElement?.(row.id === selectedBedElementId ? null : row.id)}
+                                onResizeStart={e => startElemResize(e, row.id, true)}
+                            />
+                        ))}
+                        {bedBlocks.map(block => (
+                            <BedBlockPreview key={block.id}
+                                block={block} bedWM={item.wM || 3} bedHM={item.hM || 1.2} pxPerM={pxPerM}
+                                selected={block.id === selectedBedElementId}
+                                onDragStart={e => startElemDrag(e, block.id, false)}
+                                onClick={() => onSelectBedElement?.(block.id === selectedBedElementId ? null : block.id)}
+                                onResizeStart={e => startElemResize(e, block.id, false)}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
 
-            {/* Tooltip */}
             {hovered && (
-                <div style={{
-                    position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-                    marginBottom: 6, background: '#fefce8', border: '1px solid #fde68a',
-                    borderRadius: 8, padding: '4px 10px', fontSize: 11, color: '#92400e',
-                    whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 60,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                }}>
+                <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 6, background: '#fefce8', border: '1px solid #fde68a', borderRadius: 8, padding: '4px 10px', fontSize: 11, color: '#92400e', whiteSpace: 'nowrap', zIndex: 60, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', pointerEvents: isBedLike ? 'auto' : 'none' }}>
                     <p style={{ fontWeight: 700 }}>{item.name}</p>
                     <p style={{ fontSize: 9, opacity: 0.7 }}>
-                        {isLinear
-                            ? `${(item.wM ?? 4).toFixed(1)} m · ${Math.round(rotation)}°`
-                            : isCircular
-                                ? `⌀ ${(item.wM ?? 4).toFixed(1)} m`
-                                : `${(item.wM ?? 4).toFixed(1)} m × ${(item.hM ?? 4).toFixed(1)} m`}
+                        {isLinear ? `${(item.wM ?? 4).toFixed(1)} m · ${Math.round(rotation)}°` : isCircular ? `⌀ ${(item.wM ?? 4).toFixed(1)} m` : `${(item.wM ?? 4).toFixed(1)} m × ${(item.hM ?? 4).toFixed(1)} m`}
+                        {isBedLike && (bedRows.length + bedBlocks.length) > 0 && ` · ${bedRows.length + bedBlocks.length} areas`}
                     </p>
-                    <p style={{ fontSize: 9, color: '#ef4444' }}>dbl-click to remove</p>
+                    {isBedLike ? (
+                        <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                            <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onSelectBed?.(item.id); }} style={{ background: '#4a7c3f', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 9, cursor: 'pointer', fontWeight: 700 }}>{isSelectedBed ? '✓ Editing' : 'Edit bed'}</button>
+                            <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onRemove(item.id); }} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 9, cursor: 'pointer' }}>Remove</button>
+                        </div>
+                    ) : (
+                        <p style={{ fontSize: 9, color: '#ef4444' }}>dbl-click to remove</p>
+                    )}
                 </div>
             )}
 
-            {/* Resize handle */}
-            <div
-                title="Drag to resize"
-                style={{
-                    position: 'absolute', bottom: -4, right: -4,
-                    width: hovered ? 12 : 8, height: hovered ? 12 : 8,
-                    background: 'white', border: '1.5px solid #555',
-                    borderRadius: 2, cursor: 'se-resize',
-                    zIndex: 30, transition: 'width 0.1s, height 0.1s, opacity 0.1s',
-                    opacity: hovered ? 1 : 0.4,
-                }}
-                onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onResizeStart(e, item.id); }}
-            />
+            <div title="Drag to resize" style={{ position: 'absolute', bottom: -4, right: -4, width: hovered ? 12 : 8, height: hovered ? 12 : 8, background: 'white', border: '1.5px solid #555', borderRadius: 2, cursor: 'se-resize', zIndex: 30, transition: 'width 0.1s, height 0.1s, opacity 0.1s', opacity: hovered ? 1 : 0.4 }}
+                onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onResizeStart(e, item.id); }} />
+        </div>
+    );
+}
+
+// ── Zone item overlay (raised beds / paths inside a zone) ────────────────────
+function ZoneItemLayer({ items = [], pxPerM, zoneName, selectedBedId, onSelectBed, onUpdateItems, onRemoveItem, bedLayouts, selectedBedElementId, onSelectBedElement, onUpdateBedLayout, borderW = 3 }) {
+    const [dragState, setDragState] = useState(null);
+    const [resizeState, setResizeState] = useState(null);
+    const [livePos, setLivePos] = useState({});
+    const [liveSize, setLiveSize] = useState({});
+    const pxPerMRef = useRef(pxPerM);
+    useEffect(() => { pxPerMRef.current = pxPerM; }, [pxPerM]);
+    const itemsRef = useRef(items);
+    useEffect(() => { itemsRef.current = items; }, [items]);
+    const onUpdateRef = useRef(onUpdateItems);
+    useEffect(() => { onUpdateRef.current = onUpdateItems; }, [onUpdateItems]);
+
+    useEffect(() => {
+        if (!dragState) return;
+        const { itemId, startX, startY, origXM, origYM } = dragState;
+        const onMove = (e) => {
+            const dxM = (e.clientX - startX) / pxPerMRef.current;
+            const dyM = (e.clientY - startY) / pxPerMRef.current;
+            setLivePos({ [itemId]: { xM: Math.max(0, origXM + dxM), yM: Math.max(0, origYM + dyM) } });
+        };
+        const onUp = (e) => {
+            const dxM = (e.clientX - startX) / pxPerMRef.current;
+            const dyM = (e.clientY - startY) / pxPerMRef.current;
+            onUpdateRef.current?.(itemsRef.current.map(it => it.id === itemId
+                ? { ...it, xM: Math.max(0, origXM + dxM), yM: Math.max(0, origYM + dyM) }
+                : it
+            ));
+            setLivePos({}); setDragState(null);
+        };
+        window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+        return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    }, [dragState]);
+
+    useEffect(() => {
+        if (!resizeState) return;
+        const { itemId, startX, startY, origWM, origHM } = resizeState;
+        const onMove = (e) => {
+            const dwM = (e.clientX - startX) / pxPerMRef.current;
+            const dhM = (e.clientY - startY) / pxPerMRef.current;
+            setLiveSize({ [itemId]: { wM: Math.max(0.5, origWM + dwM), hM: Math.max(0.3, origHM + dhM) } });
+        };
+        const onUp = (e) => {
+            const dwM = (e.clientX - startX) / pxPerMRef.current;
+            const dhM = (e.clientY - startY) / pxPerMRef.current;
+            onUpdateRef.current?.(itemsRef.current.map(it => it.id === itemId
+                ? { ...it, wM: Math.max(0.5, origWM + dwM), hM: Math.max(0.3, origHM + dhM) }
+                : it
+            ));
+            setLiveSize({}); setResizeState(null);
+        };
+        window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+        return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    }, [resizeState]);
+
+    if (items.length === 0) return null;
+
+    return (
+        <div style={{ position: 'absolute', top: HEADER_H + borderW, left: borderW, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 10 }}>
+            {items.map(item => {
+                const lp = livePos[item.id] || {};
+                const ls = liveSize[item.id] || {};
+                const xM = lp.xM ?? item.xM ?? 0;
+                const yM = lp.yM ?? item.yM ?? 0;
+                const wM = ls.wM ?? item.wM ?? 3;
+                const hM = ls.hM ?? item.hM ?? 1.2;
+                const xPx = xM * pxPerM;
+                const yPx = yM * pxPerM;
+                const wPx = Math.max(24, wM * pxPerM);
+                const hPx = Math.max(16, hM * pxPerM);
+                const isBedLike = BED_LIKE_STRUCTURES.has(item.name);
+                const isSelected = selectedBedId === item.id;
+                const bedLayout = bedLayouts?.[item.id];
+                const bedRows = bedLayout?.rows || [];
+                const bedBlocks = bedLayout?.blocks || [];
+                const hasBedContent = isBedLike && (bedRows.length > 0 || bedBlocks.length > 0);
+                return (
+                    <div key={item.id} style={{
+                        position: 'absolute', left: xPx, top: yPx, width: wPx, height: hPx,
+                        pointerEvents: 'auto', zIndex: isSelected ? 20 : 5, cursor: 'grab', userSelect: 'none',
+                    }}
+                        onMouseDown={e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); setDragState({ itemId: item.id, startX: e.clientX, startY: e.clientY, origXM: item.xM || 0, origYM: item.yM || 0 }); }}
+                        onClick={e => { e.stopPropagation(); if (isBedLike) onSelectBed?.(item.id, zoneName); }}
+                        onDoubleClick={e => { e.stopPropagation(); if (!isBedLike) onRemoveItem?.(item.id); }}
+                    >
+                        {isSelected && (
+                            <div style={{ position: 'absolute', top: -18, left: '50%', transform: 'translateX(-50%)', background: '#a8d870', color: '#1a3a0a', fontSize: 9, fontWeight: 700, borderRadius: 4, padding: '1px 7px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 25 }}>Editing</div>
+                        )}
+                        <div style={{
+                            position: 'relative', width: '100%', height: '100%',
+                            background: item.color ? item.color + '66' : 'rgba(139,94,60,0.55)',
+                            border: isSelected ? '3px solid #a8d870' : '1.5px solid rgba(255,255,255,0.6)',
+                            borderRadius: 6,
+                            boxShadow: isSelected ? '0 0 0 2px rgba(168,216,112,0.4), 0 4px 14px rgba(0,0,0,0.35)' : '0 2px 7px rgba(0,0,0,0.22)',
+                            overflow: 'hidden',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            {!hasBedContent && (
+                                <span style={{ fontSize: Math.max(8, Math.min(wPx, hPx) * 0.22), color: '#fff', fontWeight: 700, textAlign: 'center', padding: '2px 4px', lineHeight: 1.2, textShadow: '0 1px 3px rgba(0,0,0,0.4)', pointerEvents: 'none' }}>{item.name}</span>
+                            )}
+                            {hasBedContent && (
+                                <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+                                    {bedRows.map(row => (
+                                        <BedRowPreview key={row.id} row={row} bedWM={wM} bedHM={hM} pxPerM={pxPerM}
+                                            selected={row.id === selectedBedElementId}
+                                            onDragStart={e => e.stopPropagation()}
+                                            onClick={() => onSelectBedElement?.(row.id === selectedBedElementId ? null : row.id)}
+                                            onResizeStart={e => e.stopPropagation()}
+                                        />
+                                    ))}
+                                    {bedBlocks.map(block => (
+                                        <BedBlockPreview key={block.id} block={block} bedWM={wM} bedHM={hM} pxPerM={pxPerM}
+                                            selected={block.id === selectedBedElementId}
+                                            onDragStart={e => e.stopPropagation()}
+                                            onClick={() => onSelectBedElement?.(block.id === selectedBedElementId ? null : block.id)}
+                                            onResizeStart={e => e.stopPropagation()}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div title="Drag to resize" style={{ position: 'absolute', bottom: -4, right: -4, width: 10, height: 10, background: 'white', border: '1.5px solid #555', borderRadius: 2, cursor: 'se-resize', zIndex: 30 }}
+                            onMouseDown={e => { e.preventDefault(); e.stopPropagation(); setResizeState({ itemId: item.id, startX: e.clientX, startY: e.clientY, origWM: item.wM || 3, origHM: item.hM || 1.2 }); }} />
+                        <button title="Remove" style={{ position: 'absolute', top: -8, right: -8, width: 16, height: 16, background: '#dc2626', color: 'white', border: 'none', borderRadius: '50%', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 30, lineHeight: 1, padding: 0 }}
+                            onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }}
+                            onClick={e => { e.stopPropagation(); onRemoveItem?.(item.id); }}>×</button>
+                    </div>
+                );
+            })}
         </div>
     );
 }
@@ -525,7 +900,7 @@ function ZoneBlock({ zone, grid, position, zoneIdx, selected, cellSizeM, plantLi
 }
 
 // ── General overview canvas ───────────────────────────────────────────────────
-function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList, setup, onSelectZone, onUpdatePositions, onUpdateOverlayItems, onAddZone }) {
+function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList, setup, onSelectZone, onUpdatePositions, onUpdateOverlayItems, onAddZone, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout }) {
     const { t } = useLanguage();
     const widthM = setup.widthM || 100;
     const heightM = setup.heightM || 60;
@@ -778,7 +1153,7 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
                                 ].join(', '),
                                 backgroundSize: `${largeGrid}px ${largeGrid}px, ${largeGrid}px ${largeGrid}px, ${smallGrid}px ${smallGrid}px, ${smallGrid}px ${smallGrid}px`,
                             }}
-                            onClick={() => onSelectZone(-1)}
+                            onClick={() => { onSelectZone(-1); if (onSelectBed) { onSelectBed(null); if (onSelectBedElement) onSelectBedElement(null); } }}
                         >
                             {generalZones.length === 0 && overlayItems.length === 0 && (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none">
@@ -821,6 +1196,12 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
                                         onRemove={id => onUpdateOverlayItems(overlayItems.filter(it => it.id !== id))}
                                         onResizeStart={handleOverlayResizeStart}
                                         onRotateStart={handleRotateStart}
+                                        onSelectBed={onSelectBed}
+                                        selectedBedId={selectedBedId}
+                                        bedLayout={bedLayouts?.[item.id]}
+                                        selectedBedElementId={selectedBedElementId}
+                                        onSelectBedElement={onSelectBedElement}
+                                        onUpdateBedLayout={onUpdateBedLayout}
                                     />
                                 );
                             })}
@@ -850,7 +1231,7 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
 }
 
 // ── Main canvas ───────────────────────────────────────────────────────────────
-export default function GardenCanvas({ zones, grids, positions, setup, currentZone, onSelectZone, onUpdateGrid, onUpdatePositions, onAddZone, onDeleteZone, onRenameZone, plantList, overlayItems = [], onUpdateOverlayItems }) {
+export default function GardenCanvas({ zones, grids, positions, setup, currentZone, onSelectZone, onUpdateGrid, onUpdatePositions, onAddZone, onDeleteZone, onRenameZone, plantList, overlayItems = [], onUpdateOverlayItems, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, zoneItems, onUpdateZoneItems, onAddZoneItem }) {
     const { t } = useLanguage();
     const [resizeState, setResizeState] = useState(null);
     const [plantResizeState, setPlantResizeState] = useState(null);
@@ -974,8 +1355,10 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
     const handleRenameConfirm = () => { if (!renaming) return; const updated = [...zones]; updated[renaming.idx] = renaming.value.trim() || zones[renaming.idx]; onRenameZone(updated); setRenaming(null); };
 
     const isGeneralView = currentZone === -1;
-    const detailCanvasW = zones[currentZone] ? Math.max(800, 20 + (grids[currentZone]?.[0]?.length || 1) * cellW + 80) : 800;
-    const detailCanvasH = zones[currentZone] ? Math.max(600, 20 + HEADER_H + (grids[currentZone]?.length || 1) * cellH + FOOTER_H + 60) : 600;
+    const currentZoneName = !isGeneralView ? zones[currentZone] : null;
+    const currentZoneItems = currentZoneName ? (zoneItems?.[currentZoneName] || []) : [];
+    const currentZoneStyle = currentZoneName ? (ZONE_STYLES[detectZoneType(currentZoneName)] || ZONE_STYLES.general) : ZONE_STYLES.general;
+    const zonePxPerM = CELL_PX * detailZoom;
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -986,10 +1369,16 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
             </div>
 
             {isGeneralView ? (
-                <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} onAddZone={onAddZone} />
+                <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} onAddZone={onAddZone} selectedBedId={selectedBedId} onSelectBed={onSelectBed} selectedBedElementId={selectedBedElementId} onSelectBedElement={onSelectBedElement} bedLayouts={bedLayouts} onUpdateBedLayout={onUpdateBedLayout} />
             ) : (
                 <div className="flex-1" style={{ position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <CompassLabels labels={t.canvas} />
+                    {/* Zone item toolbar */}
+                    <div style={{ background: '#1e3320', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '4px 10px', display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, zIndex: 5 }}>
+                        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>Add to zone:</span>
+                        <button onClick={() => onAddZoneItem?.(currentZoneName, 'Raised Bed')} style={{ fontSize: 11, background: '#7a4e2c', color: 'white', border: 'none', borderRadius: 5, padding: '3px 9px', cursor: 'pointer', fontWeight: 600 }}>+ Raised Bed</button>
+                        <button onClick={() => onAddZoneItem?.(currentZoneName, 'Path')} style={{ fontSize: 11, background: '#6b5030', color: 'white', border: 'none', borderRadius: 5, padding: '3px 9px', cursor: 'pointer', fontWeight: 600 }}>+ Path</button>
+                    </div>
                     {/* Scrollable zone area */}
                     <div
                         ref={detailContainerRef}
@@ -1003,8 +1392,24 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
                             padding: '28px',
                         }}
                     >
-                        {zones[currentZone] && (
-                            <ZoneBlock zone={zones[currentZone]} grid={grids[currentZone] || []} position={{ x: 0, y: 0 }} zoneIdx={currentZone} selected detailView zoom={detailZoom} cellSizeM={cellSizeM} plantList={plantList} onResizeMouseDown={handleResizeMouseDown} onZoneDrop={handleZoneDrop} onRemovePlant={handleRemovePlant} onPlantResizeStart={handlePlantResizeStart} onDelete={onDeleteZone} onStartRename={(idx, value) => setRenaming({ idx, value })} renameValue={renaming?.value || ''} onRenameChange={e => setRenaming(r => ({ ...r, value: e.target.value }))} onRenameConfirm={handleRenameConfirm} onRenameCancel={() => setRenaming(null)} isRenaming={renaming?.idx === currentZone} resizePreview={resizePreview} plantResizePreview={plantResizePreview} />
+                        {currentZoneName && (
+                            <div style={{ position: 'relative' }}>
+                                <ZoneBlock zone={currentZoneName} grid={grids[currentZone] || []} position={{ x: 0, y: 0 }} zoneIdx={currentZone} selected detailView zoom={detailZoom} cellSizeM={cellSizeM} plantList={plantList} onResizeMouseDown={handleResizeMouseDown} onZoneDrop={handleZoneDrop} onRemovePlant={handleRemovePlant} onPlantResizeStart={handlePlantResizeStart} onDelete={onDeleteZone} onStartRename={(idx, value) => setRenaming({ idx, value })} renameValue={renaming?.value || ''} onRenameChange={e => setRenaming(r => ({ ...r, value: e.target.value }))} onRenameConfirm={handleRenameConfirm} onRenameCancel={() => setRenaming(null)} isRenaming={renaming?.idx === currentZone} resizePreview={resizePreview} plantResizePreview={plantResizePreview} />
+                                <ZoneItemLayer
+                                    items={currentZoneItems}
+                                    pxPerM={zonePxPerM}
+                                    zoneName={currentZoneName}
+                                    selectedBedId={selectedBedId}
+                                    onSelectBed={onSelectBed}
+                                    onUpdateItems={items => onUpdateZoneItems?.(currentZoneName, items)}
+                                    onRemoveItem={id => onUpdateZoneItems?.(currentZoneName, currentZoneItems.filter(it => it.id !== id))}
+                                    bedLayouts={bedLayouts}
+                                    selectedBedElementId={selectedBedElementId}
+                                    onSelectBedElement={onSelectBedElement}
+                                    onUpdateBedLayout={onUpdateBedLayout}
+                                    borderW={currentZoneStyle.bw}
+                                />
+                            </div>
                         )}
                     </div>
 

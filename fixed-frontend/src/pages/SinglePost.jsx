@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import DashboardHeader from '../components/DashboardHeader';
+import { apiUrl } from '../utils/api';
 
 export default function SinglePostPage() {
     const { slug } = useParams();
@@ -12,7 +13,7 @@ export default function SinglePostPage() {
     const [nextPost, setNextPost] = useState(null);
 
     useEffect(() => {
-        fetch(`http://localhost:4000/api/blog/${slug}`)
+        fetch(apiUrl(`/api/blog/${slug}`))
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
@@ -29,7 +30,7 @@ export default function SinglePostPage() {
 
     useEffect(() => {
         if (post?.category) {
-            fetch('http://localhost:4000/api/blog/all')
+            fetch(apiUrl('/api/blog/all'))
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {

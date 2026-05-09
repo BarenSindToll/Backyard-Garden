@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import Header from '../components/Header';
 import bgImage from '../assets/sign-in-bg.jpg';
 import { useLanguage } from '../utils/languageContext';
+import { apiUrl } from '../utils/api';
 
 export default function Signin() {
     const [email, setEmail] = useState('');
@@ -15,7 +16,7 @@ export default function Signin() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const res = await fetch('http://localhost:4000/api/auth/login', {
+        const res = await fetch(apiUrl('/api/auth/login'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',

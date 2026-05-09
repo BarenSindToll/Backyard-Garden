@@ -1,6 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '../utils/languageContext';
+import { apiUrl, assetUrl } from '../utils/api';
 
 export default function DashboardHeader() {
     const [menuOpen, setMenuOpen] = useState(false);
@@ -16,7 +17,7 @@ export default function DashboardHeader() {
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                const res = await fetch('http://localhost:4000/api/user/get-data', {
+                const res = await fetch(apiUrl('/api/user/get-data'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -42,7 +43,7 @@ export default function DashboardHeader() {
 
     const handleLogout = async () => {
         try {
-            const res = await fetch('http://localhost:4000/api/auth/logout', {
+            const res = await fetch(apiUrl('/api/auth/logout'), {
                 method: 'POST',
                 credentials: 'include',
             });
@@ -78,7 +79,7 @@ export default function DashboardHeader() {
                             <div className="relative" ref={menuRef}>
                                 <button onClick={() => setMenuOpen(!menuOpen)} className="focus:outline-none">
                                     {user?.profileImage ? (
-                                        <img src={`http://localhost:4000${user.profileImage}`} alt="Profile" className="w-10 h-10 rounded-full object-cover border-2 border-forest" />
+                                        <img src={assetUrl(user.profileImage)} alt="Profile" className="w-10 h-10 rounded-full object-cover border-2 border-forest" />
                                     ) : (
                                         <div className="w-10 h-10 bg-forest text-white flex items-center justify-center rounded-full text-sm">
                                             {user?.name ? user.name[0] : '?'}
@@ -91,11 +92,8 @@ export default function DashboardHeader() {
                                         <div className="px-4 py-2 text-xs text-gray-500 border-b mb-2">
                                             {user?.name ? `${n.hello}, ${user.name}` : `ID: ${localStorage.getItem('userId')}`}
                                         </div>
-                                        <Link to="/admin/profile" onClick={() => localStorage.setItem('profileTab', 'accountSettings')} className="block px-4 py-2 hover:bg-gray-100 text-forest">
+                                        <Link to="/admin/profile" onClick={() => localStorage.setItem('profileTab', 'Account Settings')} className="block px-4 py-2 hover:bg-gray-100 text-forest">
                                             {n.adminPanel}
-                                        </Link>
-                                        <Link to="/help" className="block px-4 py-2 hover:bg-gray-100 text-forest">
-                                            {n.help}
                                         </Link>
                                         <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600">
                                             {n.logout}
@@ -119,7 +117,7 @@ export default function DashboardHeader() {
                             <div className="relative" ref={menuRef}>
                                 <button onClick={() => setMenuOpen(!menuOpen)} className="focus:outline-none">
                                     {user?.profileImage ? (
-                                        <img src={`http://localhost:4000${user.profileImage}`} alt="Profile" className="w-10 h-10 rounded-full object-cover border-2 border-forest" />
+                                        <img src={assetUrl(user.profileImage)} alt="Profile" className="w-10 h-10 rounded-full object-cover border-2 border-forest" />
                                     ) : (
                                         <div className="w-10 h-10 bg-forest text-white flex items-center justify-center rounded-full text-sm">
                                             {user?.name ? user.name[0] : '?'}
@@ -134,9 +132,6 @@ export default function DashboardHeader() {
                                         </div>
                                         <Link to="/profile" className="block px-4 py-2 hover:bg-gray-100 text-forest">
                                             {n.profileSettings}
-                                        </Link>
-                                        <Link to="/help" className="block px-4 py-2 hover:bg-gray-100 text-forest">
-                                            {n.help}
                                         </Link>
                                         <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600">
                                             {n.logout}

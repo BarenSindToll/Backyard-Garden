@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import DashboardHeader from '../../components/DashboardHeader';
+import { apiUrl } from '../../utils/api';
 
 export default function AdminBlog() {
     const [posts, setPosts] = useState([]);
@@ -13,8 +14,8 @@ export default function AdminBlog() {
 
     useEffect(() => {
         const endpoint = viewArchived
-            ? 'http://localhost:4000/api/blog/archived'
-            : 'http://localhost:4000/api/blog/all';
+            ? apiUrl('/api/blog/archived')
+            : apiUrl('/api/blog/all');
 
         fetch(endpoint)
             .then(res => res.json())
@@ -26,7 +27,7 @@ export default function AdminBlog() {
     const handleDelete = async (slug) => {
         if (!window.confirm(`Delete "${slug}"?`)) return;
 
-        const res = await fetch(`http://localhost:4000/api/blog/delete/${slug}`, {
+        const res = await fetch(apiUrl(`/api/blog/delete/${slug}`), {
             method: 'DELETE',
             credentials: 'include',
         });
@@ -40,7 +41,7 @@ export default function AdminBlog() {
     };
 
     const handleRestore = async (slug) => {
-        const res = await fetch(`http://localhost:4000/api/blog/restore/${slug}`, {
+        const res = await fetch(apiUrl(`/api/blog/restore/${slug}`), {
             method: 'PUT',
             credentials: 'include',
         });

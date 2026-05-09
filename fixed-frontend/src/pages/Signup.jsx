@@ -3,6 +3,7 @@ import Header from '../components/Header';
 import bgImage from '../assets/sign-in-bg.jpg';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../utils/languageContext';
+import { apiUrl } from '../utils/api';
 
 export default function Signup() {
     const [name, setName] = useState('');
@@ -23,7 +24,7 @@ export default function Signup() {
         }
 
         try {
-            const response = await fetch('http://localhost:4000/api/auth/register', {
+            const response = await fetch(apiUrl('/api/auth/register'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

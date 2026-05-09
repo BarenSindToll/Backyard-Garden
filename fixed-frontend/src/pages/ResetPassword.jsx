@@ -1,8 +1,8 @@
-
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import Header from '../components/Header';
 import bgImage from '../assets/sign-in-bg.jpg';
+import { apiUrl } from '../utils/api';
 
 export default function ResetPassword() {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -12,7 +12,8 @@ export default function ResetPassword() {
     const [success, setSuccess] = useState('');
     const navigate = useNavigate();
     const location = useLocation();
-    const { email } = location.state || {};
+    const { email: stateEmail } = location.state || {};
+    const email = stateEmail || sessionStorage.getItem('resetEmail') || '';
 
     const handleChange = (index, value) => {
         if (!/^[0-9]?$/.test(value)) return;
@@ -41,7 +42,7 @@ export default function ResetPassword() {
         }
 
         try {
-            const response = await fetch('http://localhost:4000/api/auth/reset-password', {
+            const response = await fetch(apiUrl('/api/auth/reset-password'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, otp: otpCode, newPassword }),
@@ -49,8 +50,9 @@ export default function ResetPassword() {
 
             const data = await response.json();
             if (data.success) {
-                setSuccess('Password reset successfully! Redirecting you to the homepage...');
-                setTimeout(() => navigate('/home'), 2000);
+                sessionStorage.removeItem('resetEmail');
+                setSuccess('Password reset successfully! Redirecting to sign in...');
+                setTimeout(() => navigate('/signin'), 2000);
             } else {
                 setError(data.message || 'Reset failed.');
             }
@@ -59,7 +61,14 @@ export default function ResetPassword() {
         }
     };
 
-    if (!email) return <p className="text-center mt-10 text-red-500">Missing email. Please start from the Forgot Password page.</p>;
+    if (!email) return (
+        <div className="text-center mt-10 px-4">
+            <p className="text-red-500 mb-4">No email found. Please start the password reset from the beginning.</p>
+            <Link to="/forgot-password" className="text-forest underline font-medium">
+                Back to Forgot Password
+            </Link>
+        </div>
+    );
 
     return (
         <div

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import bgImage from '../assets/sign-in-bg.jpg';
+import { apiUrl } from '../utils/api';
 
 export default function VerifyEmail() {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -47,7 +48,7 @@ export default function VerifyEmail() {
         }
 
         try {
-            const response = await fetch('http://localhost:4000/api/auth/verify-account', {
+            const response = await fetch(apiUrl('/api/auth/verify-account'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -76,7 +77,7 @@ export default function VerifyEmail() {
         }
 
         try {
-            const response = await fetch('http://localhost:4000/api/auth/send-verify-otp', {
+            const response = await fetch(apiUrl('/api/auth/send-verify-otp'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

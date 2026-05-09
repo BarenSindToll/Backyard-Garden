@@ -18,7 +18,7 @@ export const saveCalendar = async (req, res) => {
         const userId = req.user.id;
         const { tasks } = req.body;
 
-        const updated = await Calendar.findOneAndUpdate(
+        await Calendar.findOneAndUpdate(
             { userId },
             { tasks },
             { new: true, upsert: true }

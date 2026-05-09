@@ -1,6 +1,8 @@
+import { apiUrl } from './api';
+
 export async function fetchCurrentUser() {
     try {
-        const res = await fetch('http://localhost:4000/api/user/get-profile', {
+        const res = await fetch(apiUrl('/api/user/get-profile'), {
             method: 'GET',
             credentials: 'include',
         });

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import DashboardHeader from '../../components/DashboardHeader';
 import AdminPostEditor from '../../components/AdminPostEditor';
 import slugify from 'slugify';
+import { apiUrl, assetUrl } from '../../utils/api';
 
 export default function EditBlogPost() {
     const { slug } = useParams();
@@ -19,7 +20,7 @@ export default function EditBlogPost() {
     const categoryOptions = ['Garden', 'Landscaping', 'Vegetables', 'Fruits', 'Trees', 'Permaculture'];
 
     useEffect(() => {
-        fetch(`http://localhost:4000/api/blog/${slug}`)
+        fetch(apiUrl(`/api/blog/${slug}`))
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
@@ -45,14 +46,14 @@ export default function EditBlogPost() {
         const formData = new FormData();
         formData.append('image', file);
 
-        const res = await fetch('http://localhost:4000/api/upload/image', {
+        const res = await fetch(apiUrl('/api/upload/image'), {
             method: 'POST',
             body: formData,
         });
 
         const data = await res.json();
         if (data.success) {
-            const fullUrl = `http://localhost:4000${data.url}`;
+            const fullUrl = assetUrl(data.url);
             setImage(fullUrl);
             setThumbnailPreview(fullUrl);
         }
@@ -66,7 +67,7 @@ export default function EditBlogPost() {
         e.preventDefault();
         const newSlug = slugify(title, { lower: true, strict: true });
 
-        const res = await fetch(`http://localhost:4000/api/blog/update-by-id/${postId}`, {
+        const res = await fetch(apiUrl(`/api/blog/update-by-id/${postId}`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',

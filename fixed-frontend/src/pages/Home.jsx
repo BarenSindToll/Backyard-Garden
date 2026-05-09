@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardHeader from '../components/DashboardHeader';
 import { useLanguage } from '../utils/languageContext';
+import { apiUrl } from '../utils/api';
 
 export default function Home() {
     const [recentPosts, setRecentPosts] = useState([]);
@@ -10,12 +11,11 @@ export default function Home() {
     const h = t.home;
 
     useEffect(() => {
-        fetch('http://localhost:4000/api/blog/all')
+        fetch(apiUrl('/api/blog/all'))
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     const sorted = data.posts
-                        .filter(p => !p.isDeleted)
                         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
                     setRecentPosts(sorted.slice(0, 6));
                 }

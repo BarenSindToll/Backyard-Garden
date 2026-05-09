@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import DashboardHeader from '../components/DashboardHeader';
 import { useLanguage } from '../utils/languageContext';
+import { apiUrl } from '../utils/api';
 
 const API_KEY = '2Y4LEHPRNRVWJFJFJDG87GGFL';
 
@@ -52,7 +53,7 @@ export default function Weather() {
     useEffect(() => {
         const fetchUserLocation = async () => {
             try {
-                const res = await fetch('http://localhost:4000/api/user/get-data', {
+                const res = await fetch(apiUrl('/api/user/get-data'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',

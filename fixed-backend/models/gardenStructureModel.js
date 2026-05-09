@@ -3,6 +3,12 @@ import mongoose from 'mongoose';
 
 const GardenStructureSchema = new mongoose.Schema({
 
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'user',
+        required: true,
+        index: true,
+    },
     type: {
         type: String,
         enum: [

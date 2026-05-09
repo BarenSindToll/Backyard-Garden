@@ -11,7 +11,8 @@ import calendarRouter from './routes/calendarRoutes.js';
 import blogPostRouter from './routes/blogPostRoutes.js'
 import uploadRouter from './routes/uploadRoutes.js';
 import adminRouter from './routes/adminRoutes.js';
-import gardenStructureRouter from "./models/gardenStructureModel.js";
+import gardenStructureRouter from "./routes/gardenStructureRoutes.js";
+import aiRouter from './routes/aiRoutes.js';
 
 const app = express();
 const port = process.env.PORT || 4000
@@ -24,7 +25,6 @@ app.use(cors({
 
 app.use(express.json());
 app.use(cookieParser());
-//app.use(cors({ credentials: true })); //send the cookies in the response from express app
 app.use('/uploads', express.static('uploads'));
 app.use('/api/upload', uploadRouter);
 
@@ -38,6 +38,7 @@ app.use('/api/calendar', calendarRouter);
 app.use('/api/blog', blogPostRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/gardenStructure', gardenStructureRouter);
+app.use('/api/ai', aiRouter);
 
 
 app.listen(port, () => console.log(`Server started on PORT: ${port}`));

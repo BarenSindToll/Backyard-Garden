@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardHeader from '../components/DashboardHeader';
 import { useLanguage } from '../utils/languageContext';
 import { translations } from '../utils/translations';
+import { apiUrl } from '../utils/api';
 
 const EN_CATEGORIES = translations.en.blog.categories;
 
@@ -15,7 +16,7 @@ export default function BlogPage() {
     const b = t.blog;
 
     useEffect(() => {
-        fetch('http://localhost:4000/api/blog/all')
+        fetch(apiUrl('/api/blog/all'))
             .then(res => res.json())
             .then(data => {
                 if (data.success) setPosts(data.posts);

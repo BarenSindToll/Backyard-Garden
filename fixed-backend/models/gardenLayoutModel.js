@@ -33,6 +33,9 @@ const gardenLayoutSchema = new mongoose.Schema({
     grids: { type: [[[gridCellSchema]]], default: [] },
     setup: { type: setupSchema, default: () => ({}) },
     positions: { type: [Object], default: [] },
+    overlayItems: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    bedLayouts: { type: mongoose.Schema.Types.Mixed, default: {} },
+    zoneItems: { type: mongoose.Schema.Types.Mixed, default: {} },
 });
 
 export default mongoose.models.gardenLayout || mongoose.model('gardenLayout', gardenLayoutSchema);

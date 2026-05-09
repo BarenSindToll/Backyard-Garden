@@ -4,6 +4,7 @@ import Image from '@tiptap/extension-image';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import { useEffect } from 'react';
+import { apiUrl, assetUrl } from '../utils/api';
 import './adminPostEditor.css'; // create this CSS file as shown below
 
 export default function AdminPostEditor({ content, setContent }) {
@@ -28,14 +29,14 @@ export default function AdminPostEditor({ content, setContent }) {
                 const formData = new FormData();
                 formData.append('image', file);
 
-                fetch('http://localhost:4000/api/upload/image', {
+                fetch(apiUrl('/api/upload/image'), {
                     method: 'POST',
                     body: formData,
                 })
                     .then(res => res.json())
                     .then(data => {
                         if (data.success) {
-                            const url = `http://localhost:4000${data.url}`;
+                            const url = assetUrl(data.url);
 
                             // Use the editor from outer scope, not from view
                             editor

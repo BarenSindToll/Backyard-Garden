@@ -12,4 +12,4 @@ const blogPostSchema = new mongoose.Schema({
 
 });
 
-export default mongoose.models.blogPost || mongoose.model('BlogPost', blogPostSchema);
+export default mongoose.models.BlogPost || mongoose.model('BlogPost', blogPostSchema);

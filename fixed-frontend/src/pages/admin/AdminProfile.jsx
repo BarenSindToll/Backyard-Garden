@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import DashboardHeader from '../../components/DashboardHeader';
 import { fetchCurrentUser } from '../../utils/fetchCurrentUser';
 import { useNavigate } from 'react-router-dom';
+import { apiUrl, assetUrl } from '../../utils/api';
 
 const sections = ['Account Settings', 'Blog Management', 'Garden Settings', 'Users Settings', 'Help'];
 
@@ -14,7 +15,6 @@ export default function Profile() {
     const [selectedFile, setSelectedFile] = useState(null);
     const [preview, setPreview] = useState(null);
     const [name, setName] = useState('');
-    const userId = localStorage.getItem('userId');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [notification, setNotification] = useState('');
@@ -82,14 +82,14 @@ export default function Profile() {
     useEffect(() => {
 
         if (active === 'Garden Settings') {
-            fetch('http://localhost:4000/api/plants/all')
+            fetch(apiUrl('/api/plants/all'))
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) setAllPlants(data.plants);
                 });
 
             // Load user favorites
-            fetch('http://localhost:4000/api/user/get-data', {
+            fetch(apiUrl('/api/user/get-data'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include'
@@ -102,7 +102,7 @@ export default function Profile() {
                 });
         }
         if (active === 'Users Settings') {
-            fetch(`http://localhost:4000/api/admin/users?search=${userSearch}&filter=${userFilter}`, {
+            fetch(apiUrl(`/api/admin/users?search=${userSearch}&filter=${userFilter}`), {
                 credentials: 'include'
             })
                 .then(res => res.json())
@@ -134,7 +134,7 @@ export default function Profile() {
 
 
 
-            const res = await fetch('http://localhost:4000/api/user/update-profile', {
+            const res = await fetch(apiUrl('/api/user/update-profile'), {
                 method: 'POST',
                 body: formData,
                 credentials: 'include'
@@ -223,7 +223,7 @@ export default function Profile() {
         formData.append('category', newPlantCategory);
         formData.append('icon', newPlantIcon);
 
-        const res = await fetch('http://localhost:4000/api/plants/create', {
+        const res = await fetch(apiUrl('/api/plants/create'), {
             method: 'POST',
             body: formData,
             credentials: 'include'
@@ -244,7 +244,7 @@ export default function Profile() {
 
     const handleDeletePlant = async (id) => {
         if (!window.confirm('Delete this plant?')) return;
-        const res = await fetch(`http://localhost:4000/api/plants/delete/${id}`, {
+        const res = await fetch(apiUrl(`/api/plants/delete/${id}`), {
             method: 'DELETE',
             credentials: 'include',
         });
@@ -282,7 +282,7 @@ export default function Profile() {
             }
 
             console.log(`⬆️ Updating plant: ${id}`);
-            const res = await fetch(`http://localhost:4000/api/plants/update/${id}`, {
+            const res = await fetch(apiUrl(`/api/plants/update/${id}`), {
                 method: 'PUT',
                 body: formData,
                 credentials: 'include',
@@ -301,7 +301,7 @@ export default function Profile() {
         setPlantIconFiles({});
         setPlantIconPreviews({});
 
-        const refreshed = await fetch('http://localhost:4000/api/plants/all');
+        const refreshed = await fetch(apiUrl('/api/plants/all'));
         const data = await refreshed.json();
         if (data.success) {
             setAllPlants(data.plants);
@@ -312,7 +312,7 @@ export default function Profile() {
         const updated = editedUsers[id];
         if (!updated) return;
 
-        const res = await fetch(`http://localhost:4000/api/admin/users/${id}`, {
+        const res = await fetch(apiUrl(`/api/admin/users/${id}`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -340,7 +340,7 @@ export default function Profile() {
         const confirm = window.confirm(`Permanently delete user "${user.name || user.email}"?`);
         if (!confirm) return;
 
-        const res = await fetch(`http://localhost:4000/api/admin/users/${user._id}`, {
+        const res = await fetch(apiUrl(`/api/admin/users/${user._id}`), {
             method: 'DELETE',
             credentials: 'include'
         });
@@ -403,7 +403,7 @@ export default function Profile() {
                                         />
                                     ) : userImage && (
                                         <img
-                                            src={`http://localhost:4000${userImage}`}
+                                            src={assetUrl(userImage)}
                                             alt="Profile"
                                             className="w-20 h-20 object-cover rounded-full mb-2"
                                         />
@@ -503,7 +503,7 @@ export default function Profile() {
 
                             </form>
                         </div>
-                    )},
+                    )}
 
                     {active === 'Garden Settings' && (
                         <div>

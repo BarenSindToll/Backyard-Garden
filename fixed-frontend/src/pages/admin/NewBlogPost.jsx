@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardHeader from '../../components/DashboardHeader';
 import AdminPostEditor from '../../components/AdminPostEditor';
+import { apiUrl, assetUrl } from '../../utils/api';
 
 
 
@@ -12,7 +13,6 @@ export default function NewBlogPost() {
     const [image, setImage] = useState('');
     const [excerpt, setExcerpt] = useState('');
     const [content, setContent] = useState('');
-    const quillRef = useRef();
     const [thumbnailPreview, setThumbnailPreview] = useState('');
     const categoryOptions = ['Garden', 'Landscaping', 'Vegetables', 'Fruits', 'Trees', 'Permaculture'];
 
@@ -24,14 +24,14 @@ export default function NewBlogPost() {
         const formData = new FormData();
         formData.append('image', file);
 
-        const res = await fetch('http://localhost:4000/api/upload/image', {
+        const res = await fetch(apiUrl('/api/upload/image'), {
             method: 'POST',
             body: formData,
         });
 
         const data = await res.json();
         if (data.success) {
-            const fullUrl = `http://localhost:4000${data.url}`;
+            const fullUrl = assetUrl(data.url);
             setImage(fullUrl);
             setThumbnailPreview(fullUrl);
         }
@@ -42,72 +42,10 @@ export default function NewBlogPost() {
     };
 
 
-    // Drag & drop handler
-    useEffect(() => {
-        const quill = quillRef.current?.getEditor();
-        if (!quill) return;
-
-        const handleDrop = async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const file = e.dataTransfer.files[0];
-            if (!file || !file.type.startsWith('image/')) return;
-
-            const formData = new FormData();
-            formData.append('image', file);
-
-            const res = await fetch('http://localhost:4000/api/upload/image', {
-                method: 'POST',
-                body: formData,
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                const range = quill.getSelection();
-                const index = range?.index || quill.getLength();
-                quill.insertEmbed(index, 'image', `http://localhost:4000${data.url}`);
-                quill.setSelection(index + 1);
-            }
-        };
-
-        const editor = quill.root;
-        editor.addEventListener('drop', handleDrop);
-
-        return () => {
-            editor.removeEventListener('drop', handleDrop);
-        };
-    }, []);
-
-    const imageHandler = () => {
-        const input = document.createElement('input');
-        input.setAttribute('type', 'file');
-        input.setAttribute('accept', 'image/*');
-        input.click();
-
-        input.onchange = async () => {
-            const file = input.files[0];
-            const formData = new FormData();
-            formData.append('image', file);
-
-            const res = await fetch('http://localhost:4000/api/upload/image', {
-                method: 'POST',
-                body: formData,
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                const quill = quillRef.current.getEditor();
-                const range = quill.getSelection();
-                quill.insertEmbed(range.index, 'image', `http://localhost:4000${data.url}`);
-            }
-        };
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const res = await fetch('http://localhost:4000/api/blog/create', {
+        const res = await fetch(apiUrl('/api/blog/create'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { apiUrl } from './api';
 
 const UserContext = createContext();
 
@@ -7,7 +8,7 @@ export const UserProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch('http://localhost:4000/api/user/get-profile', {
+        fetch(apiUrl('/api/user/get-profile'), {
             method: 'GET',
             credentials: 'include',
         })

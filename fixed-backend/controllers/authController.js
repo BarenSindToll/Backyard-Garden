@@ -144,7 +144,8 @@ export const sendVerifyOtp = async (req, res) => {
     await transporter.sendMail(mailOption);
     res.json({ success: true, message: "Verification OTP sent on email" });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    console.error('[sendVerifyOtp] Failed:', error.message);
+    res.json({ success: false, message: "Could not send verification email. Please try again later." });
   }
 };
 
@@ -230,24 +231,22 @@ export const sendResetOtp = async (req, res) => {
     await transporter.sendMail(mailOption);
     res.json({ success: true, message: "Reset OTP sent on email" });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    console.error('[sendResetOtp] Failed:', error.message);
+    res.json({ success: false, message: "Could not send reset email. Please try again later." });
   }
 };
 
-// Assuming token contains userId and is verified via middleware
 export const resetPassword = async (req, res) => {
-  const { otp, newPassword } = req.body;
-  const { token } = req.cookies;
+  const { email, otp, newPassword } = req.body;
 
-  if (!otp || !newPassword || !token) {
-    return res.json({ success: false, message: "OTP and new password are required!" });
+  if (!email || !otp || !newPassword) {
+    return res.json({ success: false, message: "Email, OTP and new password are required." });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await userModel.findById(decoded.id);
+    const user = await userModel.findOne({ email });
     if (!user) {
-      return res.json({ success: false, message: "User not found!" });
+      return res.json({ success: false, message: "User not found." });
     }
 
     if (user.resetOtp !== otp || user.resetOtpExpireAt < Date.now()) {
