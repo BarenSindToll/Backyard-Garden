@@ -4,6 +4,7 @@ import PlantingModal from './PlantingModal';
 import AddZoneModal from './AddZoneModal';
 import ZoneTabs from './ZoneTabs';
 import { useLanguage } from '../../utils/languageContext';
+import ProposedElementsOverlay from '../permaculture/ProposedElementsOverlay';
 
 const CELL_PX = 36;
 const MIN_CELL = 28;
@@ -493,21 +494,31 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
                 )}
             </div>
 
-            {hovered && (
-                <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 6, background: '#fefce8', border: '1px solid #fde68a', borderRadius: 8, padding: '4px 10px', fontSize: 11, color: '#92400e', whiteSpace: 'nowrap', zIndex: 60, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', pointerEvents: isBedLike ? 'auto' : 'none' }}>
-                    <p style={{ fontWeight: 700 }}>{item.name}</p>
-                    <p style={{ fontSize: 9, opacity: 0.7 }}>
-                        {isLinear ? `${(item.wM ?? 4).toFixed(1)} m · ${Math.round(rotation)}°` : isCircular ? `⌀ ${(item.wM ?? 4).toFixed(1)} m` : `${(item.wM ?? 4).toFixed(1)} m × ${(item.hM ?? 4).toFixed(1)} m`}
-                        {isBedLike && (bedRows.length + bedBlocks.length) > 0 && ` · ${bedRows.length + bedBlocks.length} areas`}
-                    </p>
-                    {isBedLike ? (
-                        <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                            <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onSelectBed?.(item.id); }} style={{ background: '#4a7c3f', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 9, cursor: 'pointer', fontWeight: 700 }}>{isSelectedBed ? '✓ Editing' : 'Edit bed'}</button>
-                            <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onRemove(item.id); }} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 9, cursor: 'pointer' }}>Remove</button>
-                        </div>
-                    ) : (
-                        <p style={{ fontSize: 9, color: '#ef4444' }}>dbl-click to remove</p>
-                    )}
+            {(hovered || isSelectedBed) && (
+                /* paddingBottom bridges the gap so the cursor stays inside a descendant
+                   and onMouseLeave on the parent OverlayItem does not fire mid-transit */
+                <div
+                    style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', paddingBottom: 4, pointerEvents: 'auto', zIndex: 60 }}
+                    onMouseEnter={() => setHovered(true)}
+                    onMouseLeave={() => setHovered(false)}
+                    onMouseDown={e => e.stopPropagation()}
+                    onClick={e => e.stopPropagation()}
+                >
+                    <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 8, padding: '4px 10px', fontSize: 11, color: '#92400e', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+                        <p style={{ fontWeight: 700 }}>{item.name}</p>
+                        <p style={{ fontSize: 9, opacity: 0.7 }}>
+                            {isLinear ? `${(item.wM ?? 4).toFixed(1)} m · ${Math.round(rotation)}°` : isCircular ? `⌀ ${(item.wM ?? 4).toFixed(1)} m` : `${(item.wM ?? 4).toFixed(1)} m × ${(item.hM ?? 4).toFixed(1)} m`}
+                            {isBedLike && (bedRows.length + bedBlocks.length) > 0 && ` · ${bedRows.length + bedBlocks.length} areas`}
+                        </p>
+                        {isBedLike ? (
+                            <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                                <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onSelectBed?.(item.id); }} style={{ background: '#4a7c3f', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 9, cursor: 'pointer', fontWeight: 700 }}>{isSelectedBed ? '✓ Editing' : 'Edit bed'}</button>
+                                <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onRemove(item.id); onSelectBed?.(null); }} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 9, cursor: 'pointer' }}>Remove</button>
+                            </div>
+                        ) : (
+                            <p style={{ fontSize: 9, color: '#ef4444' }}>dbl-click to remove</p>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -900,7 +911,8 @@ function ZoneBlock({ zone, grid, position, zoneIdx, selected, cellSizeM, plantLi
 }
 
 // ── General overview canvas ───────────────────────────────────────────────────
-function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList, setup, onSelectZone, onUpdatePositions, onUpdateOverlayItems, onAddZone, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout }) {
+
+function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList, setup, onSelectZone, onUpdatePositions, onUpdateOverlayItems, onAddZone, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, proposedItems = [], proposedHoveredName = null, proposedSelectedNames = null }) {
     const { t } = useLanguage();
     const widthM = setup.widthM || 100;
     const heightM = setup.heightM || 60;
@@ -1121,6 +1133,42 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
     return (
         <div className="flex-1" style={{ position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <CompassLabels labels={t.canvas} />
+
+            {/* ── Proposed elements legend — fixed in viewport, shown only while preview is active ── */}
+            {proposedItems.length > 0 && (
+                <div style={{
+                    position:       'absolute',
+                    bottom:         14,
+                    left:           RULER_SIZE + 8,
+                    zIndex:         20,
+                    pointerEvents:  'none',
+                    background:     'rgba(15,12,40,0.72)',
+                    borderRadius:   8,
+                    padding:        '5px 11px 5px 9px',
+                    display:        'flex',
+                    alignItems:     'center',
+                    gap:            8,
+                    backdropFilter: 'blur(4px)',
+                    boxShadow:      '0 2px 8px rgba(0,0,0,0.3)',
+                }}>
+                    {/* Dashed line sample matching the proposed border style */}
+                    <svg width="22" height="10" style={{ flexShrink: 0 }}>
+                        <line x1="1" y1="5" x2="21" y2="5"
+                            stroke="#5b4ec0" strokeWidth="2" strokeDasharray="4 3"
+                            strokeLinecap="round" />
+                    </svg>
+                    <span style={{
+                        color:         'rgba(195,185,255,0.95)',
+                        fontSize:      10,
+                        fontWeight:    600,
+                        letterSpacing: 0.2,
+                        whiteSpace:    'nowrap',
+                    }}>
+                        Proposed — not yet saved
+                    </span>
+                </div>
+            )}
+
             {/* Scrollable map area */}
             <div
                 ref={containerRef}
@@ -1182,6 +1230,14 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
                                     />
                                 );
                             })}
+                            {/* Proposed permaculture elements — dashed, hover-aware, non-interactive */}
+                            <ProposedElementsOverlay
+                                items={proposedItems}
+                                pxPerM={pxPerM}
+                                hoveredName={proposedHoveredName}
+                                selectedNames={proposedSelectedNames}
+                            />
+
                             {overlayItems.map(item => {
                                 const lp = liveOverlayPos[item.id] || {};
                                 const ls = liveOverlaySize[item.id] || {};
@@ -1231,7 +1287,7 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
 }
 
 // ── Main canvas ───────────────────────────────────────────────────────────────
-export default function GardenCanvas({ zones, grids, positions, setup, currentZone, onSelectZone, onUpdateGrid, onUpdatePositions, onAddZone, onDeleteZone, onRenameZone, plantList, overlayItems = [], onUpdateOverlayItems, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, zoneItems, onUpdateZoneItems, onAddZoneItem }) {
+export default function GardenCanvas({ zones, grids, positions, setup, currentZone, onSelectZone, onUpdateGrid, onUpdatePositions, onAddZone, onDeleteZone, onRenameZone, plantList, overlayItems = [], onUpdateOverlayItems, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, zoneItems, onUpdateZoneItems, onAddZoneItem, onResetZone, proposedItems = [], proposedHoveredName = null, proposedSelectedNames = null }) {
     const { t } = useLanguage();
     const [resizeState, setResizeState] = useState(null);
     const [plantResizeState, setPlantResizeState] = useState(null);
@@ -1365,11 +1421,11 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
 
 
             <div className="bg-white border-b border-gray-200 px-3 py-2 flex-shrink-0">
-                <ZoneTabs zones={zones} currentZone={currentZone} setCurrentZone={onSelectZone} setZones={onRenameZone} onAddZone={() => setAddZoneOpen(true)} onDeleteZone={onDeleteZone} onRenameZone={onRenameZone} />
+                <ZoneTabs zones={zones} currentZone={currentZone} setCurrentZone={onSelectZone} setZones={onRenameZone} onAddZone={() => setAddZoneOpen(true)} onDeleteZone={onDeleteZone} onRenameZone={onRenameZone} onResetZone={onResetZone} />
             </div>
 
             {isGeneralView ? (
-                <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} onAddZone={onAddZone} selectedBedId={selectedBedId} onSelectBed={onSelectBed} selectedBedElementId={selectedBedElementId} onSelectBedElement={onSelectBedElement} bedLayouts={bedLayouts} onUpdateBedLayout={onUpdateBedLayout} />
+                <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} onAddZone={onAddZone} selectedBedId={selectedBedId} onSelectBed={onSelectBed} selectedBedElementId={selectedBedElementId} onSelectBedElement={onSelectBedElement} bedLayouts={bedLayouts} onUpdateBedLayout={onUpdateBedLayout} proposedItems={proposedItems} proposedHoveredName={proposedHoveredName} proposedSelectedNames={proposedSelectedNames} />
             ) : (
                 <div className="flex-1" style={{ position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <CompassLabels labels={t.canvas} />

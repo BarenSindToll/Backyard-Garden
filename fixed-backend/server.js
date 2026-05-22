@@ -13,9 +13,19 @@ import uploadRouter from './routes/uploadRoutes.js';
 import adminRouter from './routes/adminRoutes.js';
 import gardenStructureRouter from "./routes/gardenStructureRoutes.js";
 import aiRouter from './routes/aiRoutes.js';
+import permaculturePlanRouter from './routes/permaculturePlanRoutes.js';
 
 const app = express();
 const port = process.env.PORT || 4000
+
+import dns from 'dns';
+
+dns.setServers([
+    '8.8.8.8',
+    '8.8.4.4',
+    '2001:4860:4860::8888',
+    '2001:4860:4860::8844',
+]);
 
 connectDB();
 app.use(cors({
@@ -39,6 +49,7 @@ app.use('/api/blog', blogPostRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/gardenStructure', gardenStructureRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/permaculture-plans', permaculturePlanRouter);
 
 
 app.listen(port, () => console.log(`Server started on PORT: ${port}`));

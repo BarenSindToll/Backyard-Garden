@@ -12,7 +12,7 @@ const getZoneColor = (zone = '') => {
     return 'bg-gray-100';
 };
 
-export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones, onAddZone, onDeleteZone, onRenameZone }) {
+export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones, onAddZone, onDeleteZone, onRenameZone, onResetZone }) {
     const [editingIndex, setEditingIndex] = useState(null);
     const [editName, setEditName] = useState('');
     const { t } = useLanguage();
@@ -38,9 +38,10 @@ export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones,
     return (
         <div className="w-full bg-cream border border-gray-200 rounded-xl p-2">
             <div className="flex items-center gap-2 overflow-x-auto">
-                {/* General overview tab */}
+
+                {/* ── General overview tab ── */}
                 <div
-                    className={`relative flex-shrink-0 px-4 py-2 rounded-lg cursor-pointer flex items-center gap-1.5 transition-all ${
+                    className={`relative flex-shrink-0 px-3 py-2 rounded-lg cursor-pointer flex items-center gap-1.5 transition-all ${
                         currentZone === -1
                             ? 'ring-2 ring-forest font-semibold shadow-sm bg-forest text-white'
                             : 'bg-gray-100 text-gray-600 hover:bg-white/70'
@@ -50,12 +51,25 @@ export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones,
                 >
                     <span className="text-sm">🗺</span>
                     <span className="text-sm">{g.generalTab}</span>
+
+                    {/* Reset General button — only shown when General is active */}
+                    {currentZone === -1 && onResetZone && (
+                        <button
+                            title="Reset General Map"
+                            onClick={e => { e.stopPropagation(); onResetZone(-1); }}
+                            className="ml-0.5 text-white/60 hover:text-red-300 text-xs leading-none transition-colors flex-shrink-0"
+                            style={{ fontSize: 13 }}
+                        >
+                            ↺
+                        </button>
+                    )}
                 </div>
 
+                {/* ── Custom zone tabs ── */}
                 {zones.map((zone, index) => (
                     <div
                         key={index}
-                        className={`relative flex-shrink-0 px-4 py-2 rounded-lg cursor-pointer flex items-center group transition-all ${
+                        className={`relative flex-shrink-0 px-3 py-2 rounded-lg cursor-pointer flex items-center gap-1.5 group transition-all ${
                             currentZone === index
                                 ? 'ring-2 ring-forest font-semibold shadow-sm'
                                 : 'text-gray-600 hover:bg-white/70'
@@ -76,6 +90,19 @@ export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones,
                             <span className="text-sm">{zone}</span>
                         )}
 
+                        {/* Reset zone button — only shown when this zone is active */}
+                        {currentZone === index && onResetZone && (
+                            <button
+                                title={`Reset ${zone}`}
+                                onClick={e => { e.stopPropagation(); onResetZone(index); }}
+                                className="text-gray-400 hover:text-red-500 text-xs leading-none transition-colors flex-shrink-0"
+                                style={{ fontSize: 13 }}
+                            >
+                                ↺
+                            </button>
+                        )}
+
+                        {/* Delete button — visible on tab hover */}
                         <button
                             className="absolute -right-1 -top-1 w-4 h-4 bg-white text-red-400 hover:text-red-600 rounded-full shadow text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={e => { e.stopPropagation(); confirmDelete(index); }}

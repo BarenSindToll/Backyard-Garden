@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import { apiUrl } from '../utils/api';
 import 'react-toastify/dist/ReactToastify.css';
@@ -8,10 +8,11 @@ import PlantSidebar from '../components/garden-layout/PlantSidebar';
 import SetupPanel from '../components/garden-layout/SetupPanel';
 import GuildHealthBar from '../components/garden-layout/GuildHealthBar';
 import BedSidebar from '../components/garden-layout/BedSidebar';
+import PermaculturePlanWizard from '../components/permaculture/PermaculturePlanWizard';
+import PermaculturePlanSidePreview from '../components/permaculture/PermaculturePlanSidePreview';
 import { STRUCTURES } from '../components/garden-layout/gardenZoneConfig';
 import { fetchCurrentUser } from '../utils/fetchCurrentUser';
 import { useLanguage } from '../utils/languageContext';
-import GenerateGardenModal from '../components/garden-layout/GenerateGardenModal';
 
 const DEFAULT_SETUP = {
     gardenName: 'My Garden',
@@ -29,7 +30,6 @@ const STRUCTURE_MAP = Object.fromEntries(STRUCTURES.map(s => [s.name, s]));
 
 const createEmptyGrid = (rows = 10, cols = 10) =>
     Array.from({ length: rows }, () => Array(cols).fill(null));
-
 
 const enrichGrid = (grid, plants) =>
     grid.map(row =>
@@ -66,9 +66,42 @@ const defaultPositions = (count) =>
         shape: 'circle',
     }));
 
+// ── Reset confirmation dialog ─────────────────────────────────────────────────
+function ResetConfirmDialog({ confirm, onCancel, onConfirm }) {
+    if (!confirm) return null;
+    const isGeneral = confirm.type === 'general';
+    return (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+             onClick={e => e.target === e.currentTarget && onCancel()}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+                <h2 className="font-bold text-gray-800 text-base mb-2">
+                    {isGeneral ? 'Reset General Map?' : `Reset "${confirm.name}"?`}
+                </h2>
+                <p className="text-sm text-gray-600 leading-relaxed mb-5">
+                    {isGeneral
+                        ? 'This will remove all elements from the General Map. Your other zones will remain.'
+                        : 'This will remove all elements from this zone, but the zone itself will remain.'}
+                </p>
+                <div className="flex gap-3 justify-end">
+                    <button onClick={onCancel}
+                        className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button onClick={onConfirm}
+                        className="px-4 py-2 text-sm text-red-600 border border-red-200 rounded-xl hover:bg-red-50 font-medium transition-colors">
+                        Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function GardenLayout() {
     const { t } = useLanguage();
     const g = t.garden;
+
+    // ── Core layout state ─────────────────────────────────────────────────────
     const [setup, setSetup] = useState(DEFAULT_SETUP);
     const [zones, setZones] = useState(['Zone 1']);
     const [currentZone, setCurrentZone] = useState(-1);
@@ -78,19 +111,47 @@ export default function GardenLayout() {
     const [allPlants, setAllPlants] = useState([]);
     const [overlayItems, setOverlayItems] = useState([]);
     const [favoritePlants, setFavoritePlants] = useState([]);
-    const [generateOpen, setGenerateOpen] = useState(false);
     const [bedLayouts, setBedLayouts] = useState({});
     const [zoneItems, setZoneItems] = useState({});
+
+    // ── Bed selection state ───────────────────────────────────────────────────
     const [selectedBedId, setSelectedBedId] = useState(null);
     const [selectedBedElementId, setSelectedBedElementId] = useState(null);
     const [selectedBedZone, setSelectedBedZone] = useState(null);
+
+    // ── Zone reset state ─────────────────────────────────────────────────────
+    const [resetConfirm, setResetConfirm] = useState(null); // null | { type, index, name }
+    const undoSnapshotRef = useRef(null);                    // snapshot for one-level undo
+
+    // ── Permaculture wizard state ─────────────────────────────────────────────
+    const [generatePlanOpen, setGeneratePlanOpen] = useState(false);
+    const [wizardInitialStep, setWizardInitialStep] = useState(1);
+
+    // ── Permaculture preview state (side panel + map overlay) ─────────────────
+    const [permPlanDraft, setPermPlanDraft] = useState(null);
+    const [previewSelectedNames, setPreviewSelectedNames] = useState(null); // null = all selected
+    const [hoveredPreviewName, setHoveredPreviewName] = useState(null);
+    const [previewHidden, setPreviewHidden] = useState(false);
+
+    // ── Apply state (lifted from wizard, now owned by GardenLayout) ───────────
+    const [applying, setApplying] = useState(false);
+    const [applyWarning, setApplyWarning] = useState(null);
+    const [applyError, setApplyError] = useState('');
+    const [skippedElements, setSkippedElements] = useState([]);
 
     const placedPlantNames = useMemo(
         () => grids.flat(2).map(c => c?.plant).filter(Boolean),
         [grids]
     );
 
-    const saveToBackend = async (gridsToSave, zonesToSave, setupToSave, positionsToSave, overlayItemsToSave, bedLayoutsToSave = bedLayouts, zoneItemsToSave = zoneItems, showToast = false) => {
+    // ── Save ──────────────────────────────────────────────────────────────────
+    const saveToBackend = async (
+        gridsToSave, zonesToSave, setupToSave, positionsToSave,
+        overlayItemsToSave,
+        bedLayoutsToSave = bedLayouts,
+        zoneItemsToSave = zoneItems,
+        showToast = false
+    ) => {
         try {
             const res = await fetch(apiUrl('/api/gardenLayout/save-layout'), {
                 method: 'POST',
@@ -108,19 +169,18 @@ export default function GardenLayout() {
             });
             const data = await res.json();
             if (!res.ok || data.success === false) {
-                console.error('Save failed:', data.message);
                 if (showToast) toast.error('Save failed. Please try again.', { position: 'top-center', autoClose: 3000 });
                 return false;
             }
             if (showToast) toast.success(g.layoutSaved, { position: 'top-center', autoClose: 2000 });
             return true;
-        } catch (err) {
-            console.error('Save failed:', err);
+        } catch {
             if (showToast) toast.error('Save failed. Please try again.', { position: 'top-center', autoClose: 3000 });
             return false;
         }
     };
 
+    // ── Load ──────────────────────────────────────────────────────────────────
     useEffect(() => {
         const load = async () => {
             const user = await fetchCurrentUser();
@@ -148,17 +208,12 @@ export default function GardenLayout() {
                             ? layoutData.positions.map(p => ({ inGeneral: false, shape: 'circle', ...p }))
                             : defaultPositions(loadedZones.length)
                     );
-                    // Normalise overlayItems — ensure every item has a stable id
-                const normalizedOverlay = (layoutData.overlayItems || []).map(it =>
-                    it.id != null ? it : { ...it, id: Date.now() + Math.random() }
-                );
-                if (normalizedOverlay.length) setOverlayItems(normalizedOverlay);
-                if (layoutData.bedLayouts && typeof layoutData.bedLayouts === 'object') {
-                    setBedLayouts(layoutData.bedLayouts);
-                }
-                if (layoutData.zoneItems && typeof layoutData.zoneItems === 'object') {
-                    setZoneItems(layoutData.zoneItems);
-                }
+                    const normalizedOverlay = (layoutData.overlayItems || []).map(it =>
+                        it.id != null ? it : { ...it, id: Date.now() + Math.random() }
+                    );
+                    if (normalizedOverlay.length) setOverlayItems(normalizedOverlay);
+                    if (layoutData.bedLayouts && typeof layoutData.bedLayouts === 'object') setBedLayouts(layoutData.bedLayouts);
+                    if (layoutData.zoneItems && typeof layoutData.zoneItems === 'object') setZoneItems(layoutData.zoneItems);
                     if (layoutData.setup && Object.keys(layoutData.setup).length > 0) {
                         setSetup({ ...DEFAULT_SETUP, ...layoutData.setup });
                     } else if (user.zone) {
@@ -167,13 +222,12 @@ export default function GardenLayout() {
                 } else if (user.zone) {
                     setSetup(s => ({ ...s, hardinessZone: user.zone }));
                 }
-            } catch (err) {
-                console.error('Load failed:', err);
-            }
+            } catch (err) { console.error('Load failed:', err); }
         };
         load();
     }, []);
 
+    // ── Zone handlers ─────────────────────────────────────────────────────────
     const handleSetupSave = (newSetup) => {
         setSetup(newSetup);
         if (userId) saveToBackend(grids, zones, newSetup, positions, overlayItems);
@@ -188,9 +242,7 @@ export default function GardenLayout() {
             ? { x: canvasPos.x, y: canvasPos.y, inGeneral: true, shape: 'rect', w: canvasPos.w, h: canvasPos.h }
             : { x: 200 + (newIdx % 4) * 180, y: 120 + Math.floor(newIdx / 4) * 160, inGeneral, shape: 'circle' };
         const updatedPositions = [...positions, newPos];
-        setZones(updatedZones);
-        setGrids(updatedGrids);
-        setPositions(updatedPositions);
+        setZones(updatedZones); setGrids(updatedGrids); setPositions(updatedPositions);
         setCurrentZone(canvasPos || inGeneral ? -1 : updatedZones.length - 1);
         if (userId) saveToBackend(updatedGrids, updatedZones, setup, updatedPositions, overlayItems);
     };
@@ -207,7 +259,6 @@ export default function GardenLayout() {
         const updatedZones = zones.filter((_, i) => i !== index);
         const updatedGrids = grids.filter((_, i) => i !== index);
         const updatedPositions = positions.filter((_, i) => i !== index);
-
         const deletedZoneItems = zoneItems[deletedZoneName] || [];
         const deletedBedIds = new Set(deletedZoneItems.map(it => String(it.id)));
         const updatedZoneItems = { ...zoneItems };
@@ -215,17 +266,12 @@ export default function GardenLayout() {
         const updatedBedLayouts = Object.fromEntries(
             Object.entries(bedLayouts).filter(([id]) => !deletedBedIds.has(id))
         );
-
-        setZones(updatedZones);
-        setGrids(updatedGrids);
-        setPositions(updatedPositions);
-        setZoneItems(updatedZoneItems);
-        setBedLayouts(updatedBedLayouts);
+        setZones(updatedZones); setGrids(updatedGrids); setPositions(updatedPositions);
+        setZoneItems(updatedZoneItems); setBedLayouts(updatedBedLayouts);
         if (selectedBedZone === deletedZoneName) { setSelectedBedId(null); setSelectedBedElementId(null); setSelectedBedZone(null); }
         setCurrentZone(prev => {
             if (updatedZones.length === 0 || prev === index) return -1;
-            if (prev > index) return prev - 1;
-            return prev;
+            return prev > index ? prev - 1 : prev;
         });
         if (userId) saveToBackend(updatedGrids, updatedZones, setup, updatedPositions, overlayItems, updatedBedLayouts, updatedZoneItems);
     };
@@ -245,14 +291,8 @@ export default function GardenLayout() {
         try {
             const formData = new FormData();
             formData.append('favoritePlants', JSON.stringify(newFavorites));
-            await fetch(apiUrl('/api/user/update-profile'), {
-                method: 'POST',
-                body: formData,
-                credentials: 'include',
-            });
-        } catch (err) {
-            console.error('Failed to save favourites:', err);
-        }
+            await fetch(apiUrl('/api/user/update-profile'), { method: 'POST', body: formData, credentials: 'include' });
+        } catch (err) { console.error('Failed to save favourites:', err); }
     };
 
     const handleUpdateOverlayItems = (newItems) => {
@@ -260,6 +300,7 @@ export default function GardenLayout() {
         if (userId) saveToBackend(grids, zones, setup, positions, newItems);
     };
 
+    // ── Bed handlers ──────────────────────────────────────────────────────────
     const handleUpdateBedLayout = (bedId, newLayout) => {
         const updated = { ...bedLayouts, [bedId]: newLayout };
         setBedLayouts(updated);
@@ -277,22 +318,16 @@ export default function GardenLayout() {
         const sizeDefaults = { 'Raised Bed': { wM: 3, hM: 1.2 }, 'Path': { wM: 4, hM: 1 } };
         const { wM, hM } = sizeDefaults[type] || { wM: 2, hM: 2 };
         const newItem = {
-            id: Date.now() + Math.random(),
-            name: type,
-            type,
-            xM: 0.5,
-            yM: 0.5,
-            wM,
-            hM,
-            color: def.color || null,
-            iconData: def.icon || null,
-            isStructure: true,
+            id: Date.now() + Math.random(), name: type, type,
+            xM: 0.5, yM: 0.5, wM, hM,
+            color: def.color || null, iconData: def.icon || null, isStructure: true,
         };
         const updated = { ...zoneItems, [zoneName]: [...(zoneItems[zoneName] || []), newItem] };
         setZoneItems(updated);
         if (userId) saveToBackend(grids, zones, setup, positions, overlayItems, bedLayouts, updated);
     };
 
+    // ── Escape to close bed editor ────────────────────────────────────────────
     useEffect(() => {
         const onKeyDown = (e) => {
             if (e.key !== 'Escape') return;
@@ -303,96 +338,205 @@ export default function GardenLayout() {
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [selectedBedId, selectedBedElementId]);
 
-    // Build a grid pre-populated with plants from the AI plan, distributed in horizontal bands
-    const buildGridFromPlants = (plantNames, rows = 6, cols = 8) => {
-        const grid = Array.from({ length: rows }, () => Array(cols).fill(null));
-        const validPlants = plantNames
-            .map(name => allPlants.find(p => p.name === name))
-            .filter(Boolean);
-        if (!validPlants.length) return grid;
+    // ── Zone reset helpers ────────────────────────────────────────────────────
 
-        validPlants.forEach((plant, idx) => {
-            const startRow = Math.floor(idx * rows / validPlants.length);
-            const endRow = Math.floor((idx + 1) * rows / validPlants.length);
-            for (let r = startRow; r < endRow; r++) {
-                for (let c = 0; c < cols; c++) {
-                    grid[r][c] = { plant: plant.name, iconData: plant.iconData, spanCols: 1, spanRows: 1 };
-                }
-            }
+    /** Called by ZoneTabs when the ↺ button is clicked — opens the confirm dialog. */
+    const handleResetZoneRequest = (zoneIndex) => {
+        const isGeneral = zoneIndex === -1;
+        setResetConfirm({
+            type:  isGeneral ? 'general' : 'zone',
+            index: zoneIndex,
+            name:  isGeneral ? 'General' : (zones[zoneIndex] || 'Zone'),
         });
-        return grid;
     };
 
-    // Spread generated zones across the general map in a grid layout
-    const generatedPositions = (count) =>
-        Array.from({ length: count }, (_, i) => ({
-            x: 130 + (i % 3) * 170,
-            y: 130 + Math.floor(i / 3) * 155,
-            inGeneral: true,
-            shape: 'circle',
-        }));
+    /** Executed after the user confirms the dialog. */
+    const executeReset = () => {
+        // Capture before clearing state
+        const { type, index, name } = resetConfirm;
+        setResetConfirm(null);
 
-    const estimatePxPerM = (widthM, heightM) => {
-        if (!widthM || !heightM) return 10;
-        const estW = Math.max(600, (window.innerWidth || 1200) - 286);
-        const estH = Math.max(400, (window.innerHeight || 800) - 160);
-        return Math.max(4, Math.min(estW / widthM, estH / heightM));
-    };
+        // Store one-level undo snapshot (deep-copy mutable structures)
+        undoSnapshotRef.current = {
+            overlayItems: [...overlayItems],
+            grids:        grids.map(g => g.map(row => [...row])),
+            zoneItems:    JSON.parse(JSON.stringify(zoneItems)),
+            bedLayouts:   JSON.parse(JSON.stringify(bedLayouts)),
+        };
 
-    const handleApplyGeneratedPlan = async (plan, mode) => {
-        const newZoneNames = plan.zones.map(z => z.name);
-        const newGrids = plan.zones.map(z => buildGridFromPlants(z.plants));
-
-        let finalZones, finalGrids, finalPositions;
-
-        if (mode === 'replace') {
-            finalZones = newZoneNames;
-            finalGrids = newGrids;
-            finalPositions = generatedPositions(newZoneNames.length);
+        if (type === 'general') {
+            // Build updated bedLayouts without entries for General overlay beds
+            const overlayBedIds = new Set(overlayItems.map(it => String(it.id)));
+            const newBedLayouts = Object.fromEntries(
+                Object.entries(bedLayouts).filter(([id]) => !overlayBedIds.has(id))
+            );
+            setOverlayItems([]);
+            setBedLayouts(newBedLayouts);
+            // Deselect any bed that was on General
+            if (!selectedBedZone) {
+                setSelectedBedId(null);
+                setSelectedBedElementId(null);
+            }
+            clearPreview();
+            if (userId) saveToBackend(grids, zones, setup, positions, [], newBedLayouts, zoneItems);
         } else {
-            finalZones = [...zones, ...newZoneNames];
-            finalGrids = [...grids, ...newGrids];
-            finalPositions = [...positions, ...generatedPositions(newZoneNames.length)];
+            const zoneName = zones[index];
+            // Preserve grid dimensions, clear only cell contents
+            const existing = grids[index] || [];
+            const rows = existing.length     || 10;
+            const cols = existing[0]?.length || 10;
+            const newGrids = grids.map((g, i) =>
+                i === index ? createEmptyGrid(rows, cols) : g
+            );
+            // Remove zoneItems for this zone and corresponding bedLayouts
+            const zoneItemsList = zoneItems[zoneName] || [];
+            const zoneBedIds    = new Set(zoneItemsList.map(it => String(it.id)));
+            const newZoneItems  = { ...zoneItems, [zoneName]: [] };
+            const newBedLayouts = Object.fromEntries(
+                Object.entries(bedLayouts).filter(([id]) => !zoneBedIds.has(id))
+            );
+            setGrids(newGrids);
+            setZoneItems(newZoneItems);
+            setBedLayouts(newBedLayouts);
+            // Deselect any bed that was inside this zone
+            if (selectedBedZone === zoneName) {
+                setSelectedBedId(null);
+                setSelectedBedElementId(null);
+                setSelectedBedZone(null);
+            }
+            if (userId) saveToBackend(newGrids, zones, setup, positions, overlayItems, newBedLayouts, newZoneItems);
         }
 
-        // Convert suggested structures from metres → base pixels and add to existing overlayItems
-        // Existing structures are always kept regardless of replace/add mode
-        let finalOverlayItems = overlayItems;
-        if (plan.structures?.length > 0) {
-            const pxPerM = estimatePxPerM(setup.widthM, setup.heightM);
-            const newStructureItems = plan.structures.map(s => {
-                const def = STRUCTURE_MAP[s.name] || {};
-                return {
-                    id: Date.now() + Math.random(),
-                    name: s.name,
-                    x: Math.round(s.xM * pxPerM),
-                    y: Math.round(s.yM * pxPerM),
-                    wM: s.wM,
-                    hM: s.hM,
-                    isStructure: true,
-                    iconData: def.icon ?? null,
-                    color: def.color ?? '#888',
-                    rotation: 0,
-                };
-            });
-            finalOverlayItems = [...overlayItems, ...newStructureItems];
-        }
-
-        setZones(finalZones);
-        setGrids(finalGrids);
-        setPositions(finalPositions);
-        setOverlayItems(finalOverlayItems);
-        setCurrentZone(-1);
-        setGenerateOpen(false);
-        if (userId) await saveToBackend(finalGrids, finalZones, setup, finalPositions, finalOverlayItems, bedLayouts, zoneItems, true);
+        // Toast with inline Undo action
+        toast.info(
+            <span className="flex items-center gap-3 text-sm">
+                <span>{type === 'general' ? 'General map reset.' : `"${name}" zone reset.`}</span>
+                <button
+                    className="underline font-medium text-forest"
+                    onClick={() => handleUndo()}
+                >Undo</button>
+            </span>,
+            { position: 'top-center', autoClose: 5000 }
+        );
     };
 
+    /** Restore the layout from the undo snapshot. */
+    const handleUndo = () => {
+        const snap = undoSnapshotRef.current;
+        if (!snap) return;
+        undoSnapshotRef.current = null;
+        setOverlayItems(snap.overlayItems);
+        setGrids(snap.grids);
+        setZoneItems(snap.zoneItems);
+        setBedLayouts(snap.bedLayouts);
+        if (userId) saveToBackend(snap.grids, zones, setup, positions, snap.overlayItems, snap.bedLayouts, snap.zoneItems);
+        toast.success('Reset undone.', { position: 'top-center', autoClose: 2000 });
+    };
+
+    // ── Permaculture preview helpers ──────────────────────────────────────────
+
+    const clearPreview = () => {
+        setPermPlanDraft(null);
+        setPreviewSelectedNames(null);
+        setHoveredPreviewName(null);
+        setPreviewHidden(false);
+        setApplyWarning(null);
+        setApplyError('');
+        setSkippedElements([]);
+    };
+
+    // Called by wizard when generation succeeds — closes wizard, opens side panel
+    const handleDraftChange = (plan) => {
+        if (plan) {
+            setPermPlanDraft(plan);
+            setPreviewSelectedNames(null); // select all by default
+            setHoveredPreviewName(null);
+            setPreviewHidden(false);
+            setApplyWarning(null);
+            setApplyError('');
+            setSkippedElements([]);
+            setGeneratePlanOpen(false);   // close the wizard modal
+        } else {
+            clearPreview();
+        }
+    };
+
+    // Called when user explicitly cancels the wizard without generating
+    const handlePlanWizardClose = () => {
+        setGeneratePlanOpen(false);
+    };
+
+    // Apply plan — called from side panel
+    const handleApply = async (force = false) => {
+        if (!permPlanDraft?._id) return;
+        const selectedArr = previewSelectedNames === null ? null : [...previewSelectedNames];
+        setApplying(true);
+        setApplyError('');
+        try {
+            const url  = apiUrl(`/api/permaculture-plans/${permPlanDraft._id}/apply${force ? '?force=true' : ''}`);
+            const body = selectedArr ? JSON.stringify({ selectedElementNames: selectedArr }) : undefined;
+            const res  = await fetch(url, {
+                method: 'POST',
+                credentials: 'include',
+                ...(body ? { headers: { 'Content-Type': 'application/json' }, body } : {}),
+            });
+            const data = await res.json();
+
+            if (data.requiresForce) {
+                setApplyWarning({ warning: data.warning });
+                return;
+            }
+            if (data.success) {
+                setApplyWarning(null);
+                setSkippedElements(data.skipped || []);
+                setOverlayItems(data.layout?.overlayItems || []);
+                if (!data.skipped?.length) {
+                    clearPreview();
+                    toast.success('Plan applied to your garden map.', { position: 'top-center', autoClose: 3000 });
+                } else {
+                    toast.success(
+                        `Plan applied — ${data.skipped.length} element(s) could not be placed. See panel for details.`,
+                        { position: 'top-center', autoClose: 4000 }
+                    );
+                }
+            } else {
+                setApplyError(data.message || 'Apply failed. Please try again.');
+            }
+        } catch {
+            setApplyError('Network error. Please try again.');
+        } finally {
+            setApplying(false);
+        }
+    };
+
+    // Reject plan
+    const handlePreviewReject = async () => {
+        if (permPlanDraft?._id) {
+            try {
+                await fetch(apiUrl(`/api/permaculture-plans/${permPlanDraft._id}/status`), {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ status: 'rejected' }),
+                });
+            } catch { /* non-critical */ }
+        }
+        clearPreview();
+    };
+
+    // Reopen wizard (initialStep = 1 for "New plan", 2 for "Edit requirements")
+    const handlePreviewRegenerate = (initialStep = 1) => {
+        clearPreview();
+        setWizardInitialStep(initialStep);
+        setGeneratePlanOpen(true);
+    };
+
+    // ── Render ────────────────────────────────────────────────────────────────
     return (
-        /* Full viewport — no outer scroll */
         <div className="h-screen flex flex-col overflow-hidden bg-gray-100">
             <DashboardHeader />
 
-            {/* ── Compact app toolbar ── */}
+            {/* ── Compact toolbar ── */}
             <div className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-200 flex-shrink-0">
                 <span className="text-sm font-bold text-forest truncate max-w-[160px]">{setup.gardenName}</span>
                 <span className="text-gray-300 text-xs">|</span>
@@ -401,27 +545,19 @@ export default function GardenLayout() {
                 </span>
                 <span className="text-gray-300 text-xs hidden sm:inline">|</span>
 
-                {/* Guild health — compact dots */}
-                <GuildHealthBar
-                    placedPlantNames={placedPlantNames}
-                    allPlants={allPlants}
-                    compact
-                />
+                <GuildHealthBar placedPlantNames={placedPlantNames} allPlants={allPlants} compact />
 
                 <div className="flex-1" />
 
-                {/* Generate permaculture plan */}
                 <button
-                    onClick={() => setGenerateOpen(true)}
+                    onClick={() => { setWizardInitialStep(1); setGeneratePlanOpen(true); }}
                     className="flex items-center gap-1.5 text-xs text-forest border border-forest px-3 py-1.5 rounded-lg hover:bg-forest hover:text-white transition-colors flex-shrink-0 font-medium"
                 >
-                    {g.generateBtn}
+                    🌿 {g.generateBtn}
                 </button>
 
-                {/* Setup button (opens slide-over) */}
                 <SetupPanel setup={setup} onSave={handleSetupSave} />
 
-                {/* Save */}
                 <button
                     onClick={() => saveToBackend(grids, zones, setup, positions, overlayItems, bedLayouts, zoneItems, true)}
                     className="bg-forest text-white text-xs px-4 py-1.5 rounded-lg font-medium hover:bg-green-800 transition-colors flex-shrink-0"
@@ -430,9 +566,10 @@ export default function GardenLayout() {
                 </button>
             </div>
 
-            {/* ── Main content row ── */}
+            {/* ── Main content ── */}
             <div className="flex flex-1 overflow-hidden">
-                {/* Garden canvas — always visible */}
+
+                {/* Canvas area */}
                 <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
                     <GardenCanvas
                         zones={zones}
@@ -458,12 +595,37 @@ export default function GardenLayout() {
                         zoneItems={zoneItems}
                         onUpdateZoneItems={handleUpdateZoneItems}
                         onAddZoneItem={handleAddZoneItem}
+                        onResetZone={handleResetZoneRequest}
+                        proposedItems={previewHidden ? [] : (permPlanDraft?.proposedElements ?? [])}
+                        proposedHoveredName={hoveredPreviewName}
+                        proposedSelectedNames={previewSelectedNames}
                     />
                 </div>
 
-                {/* Contextual sidebar */}
-                <div className="w-64 border-l border-gray-200 bg-white flex-shrink-0 flex flex-col overflow-hidden">
-                    {selectedBedId ? (
+                {/* Right column — side preview panel OR normal sidebar */}
+                <div
+                    className="border-l border-gray-200 bg-white flex-shrink-0 flex flex-col overflow-hidden"
+                    style={{ width: permPlanDraft ? 390 : 256 }}
+                >
+                    {permPlanDraft ? (
+                        <PermaculturePlanSidePreview
+                            plan={permPlanDraft}
+                            selectedNames={previewSelectedNames}
+                            onSelectionChange={setPreviewSelectedNames}
+                            hoveredName={hoveredPreviewName}
+                            onHover={setHoveredPreviewName}
+                            applying={applying}
+                            onApply={handleApply}
+                            onReject={handlePreviewReject}
+                            onRegenerate={handlePreviewRegenerate}
+                            onClose={clearPreview}
+                            applyWarning={applyWarning}
+                            applyError={applyError}
+                            skipped={skippedElements}
+                            previewHidden={previewHidden}
+                            onToggleHide={() => setPreviewHidden(h => !h)}
+                        />
+                    ) : selectedBedId ? (
                         <BedSidebar
                             bed={
                                 selectedBedZone
@@ -490,15 +652,25 @@ export default function GardenLayout() {
                 </div>
             </div>
 
-            {generateOpen && (
-                <GenerateGardenModal
+            {/* Reset zone confirmation dialog */}
+            <ResetConfirmDialog
+                confirm={resetConfirm}
+                onCancel={() => setResetConfirm(null)}
+                onConfirm={executeReset}
+            />
+
+            {/* 2-step permaculture plan wizard (centered modal, Steps 1 & 2 only) */}
+            {generatePlanOpen && (
+                <PermaculturePlanWizard
                     setup={setup}
                     favoritePlants={favoritePlants}
                     overlayItems={overlayItems}
-                    onApply={handleApplyGeneratedPlan}
-                    onClose={() => setGenerateOpen(false)}
+                    initialStep={wizardInitialStep}
+                    onDraftChange={handleDraftChange}
+                    onClose={handlePlanWizardClose}
                 />
             )}
+
             <ToastContainer />
         </div>
     );

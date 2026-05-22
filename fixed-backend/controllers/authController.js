@@ -2,9 +2,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
-import transporter from '../config/nodemailer.js';
+import { sendEmail } from '../config/nodemailer.js';
 
-// REGISTER
+// ── REGISTER ──────────────────────────────────────────────────────────────────
 export const register = async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -28,18 +28,26 @@ export const register = async (req, res) => {
       { expiresIn: '15m' }
     );
 
-    await transporter.sendMail({
-      from: process.env.SENDER_EMAIL,
-      to: email,
+    // Registration requires email delivery — if SMTP is unavailable, abort clearly.
+    const sent = await sendEmail({
+      from:    process.env.SENDER_EMAIL,
+      to:      email,
       subject: 'Verify your Backyard Garden account',
-      text: `Your OTP is: ${otp}. Use this code to verify and complete your registration.`,
+      text:    `Your OTP is: ${otp}. Use this code to verify and complete your registration.`,
     });
+
+    if (!sent) {
+      return res.json({
+        success: false,
+        message: 'Email service is currently unavailable. Cannot send verification code. Please try again later.',
+      });
+    }
 
     res.cookie('preUserToken', preUserToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure:   process.env.NODE_ENV === 'production',
       sameSite: 'Strict',
-      maxAge: 15 * 60 * 1000,
+      maxAge:   15 * 60 * 1000,
     });
 
     return res.json({ success: true, message: 'OTP sent to your email.' });
@@ -49,7 +57,7 @@ export const register = async (req, res) => {
 };
 
 
-// LOGIN
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
 export const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -74,17 +82,23 @@ export const login = async (req, res) => {
       user.verifyOtpExpireAt = Date.now() + 24 * 60 * 60 * 1000;
       await user.save();
 
-      const mailOption = {
-        from: process.env.SENDER_EMAIL,
-        to: user.email,
+      const sent = await sendEmail({
+        from:    process.env.SENDER_EMAIL,
+        to:      user.email,
         subject: 'Verify your Backyard Garden account',
-        text: `Your OTP is: ${otp}. Verify your Backyard Garden account using this code.`,
-      };
-      await transporter.sendMail(mailOption);
+        text:    `Your OTP is: ${otp}. Verify your Backyard Garden account using this code.`,
+      });
+
+      if (!sent) {
+        return res.json({
+          success: false,
+          message: 'Your account is not verified and the email service is currently unavailable. Please contact support.',
+        });
+      }
 
       return res.json({
-        success: false,
-        message: 'Account not verified. A new OTP has been sent to your email.',
+        success:      false,
+        message:      'Account not verified. A new OTP has been sent to your email.',
         shouldVerify: true,
       });
     }
@@ -93,9 +107,9 @@ export const login = async (req, res) => {
 
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure:   process.env.NODE_ENV === 'production',
       sameSite: 'Strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge:   7 * 24 * 60 * 60 * 1000,
     });
 
     return res.json({ success: true });
@@ -104,12 +118,12 @@ export const login = async (req, res) => {
   }
 };
 
-// LOGOUT
+// ── LOGOUT ────────────────────────────────────────────────────────────────────
 export const logout = async (req, res) => {
   try {
     res.clearCookie('token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure:   process.env.NODE_ENV === 'production',
       sameSite: 'Strict',
     });
 
@@ -119,14 +133,14 @@ export const logout = async (req, res) => {
   }
 };
 
-// SEND OTP
+// ── SEND VERIFY OTP ───────────────────────────────────────────────────────────
 export const sendVerifyOtp = async (req, res) => {
   try {
     const { userId } = req.body;
     const user = await userModel.findById(userId);
 
     if (user.isAccountVerified) {
-      return res.json({ success: false, message: "Account already verified" });
+      return res.json({ success: false, message: 'Account already verified' });
     }
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
@@ -134,22 +148,25 @@ export const sendVerifyOtp = async (req, res) => {
     user.verifyOtpExpireAt = Date.now() + 24 * 60 * 60 * 1000;
     await user.save();
 
-    const mailOption = {
-      from: process.env.SENDER_EMAIL,
-      to: user.email,
+    const sent = await sendEmail({
+      from:    process.env.SENDER_EMAIL,
+      to:      user.email,
       subject: 'Account verification OTP',
-      text: `Welcome to Backyard Garden! To verify your email and log in, use this OTP: ${otp}.`
-    };
+      text:    `Welcome to Backyard Garden! To verify your email and log in, use this OTP: ${otp}.`,
+    });
 
-    await transporter.sendMail(mailOption);
-    res.json({ success: true, message: "Verification OTP sent on email" });
+    if (!sent) {
+      return res.json({ success: false, message: 'Email service is currently unavailable. Please try again later.' });
+    }
+
+    res.json({ success: true, message: 'Verification OTP sent on email' });
   } catch (error) {
     console.error('[sendVerifyOtp] Failed:', error.message);
-    res.json({ success: false, message: "Could not send verification email. Please try again later." });
+    res.json({ success: false, message: 'Could not send verification email. Please try again later.' });
   }
 };
 
-// VERIFY EMAIL
+// ── VERIFY EMAIL ──────────────────────────────────────────────────────────────
 export const verifyEmail = async (req, res) => {
   const { otp } = req.body;
   const { preUserToken } = req.cookies;
@@ -166,7 +183,6 @@ export const verifyEmail = async (req, res) => {
       return res.json({ success: false, message: 'Invalid OTP.' });
     }
 
-
     const existingUser = await userModel.findOne({ email });
     if (existingUser) {
       return res.json({ success: false, message: 'Account already exists.' });
@@ -179,9 +195,9 @@ export const verifyEmail = async (req, res) => {
 
     res.cookie('token', authToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure:   process.env.NODE_ENV === 'production',
       sameSite: 'Strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge:   7 * 24 * 60 * 60 * 1000,
     });
 
     res.clearCookie('preUserToken');
@@ -192,7 +208,7 @@ export const verifyEmail = async (req, res) => {
 };
 
 
-// AUTH CHECK
+// ── AUTH CHECK ────────────────────────────────────────────────────────────────
 export const isAuthenticated = async (req, res) => {
   try {
     return res.json({ success: true });
@@ -201,38 +217,40 @@ export const isAuthenticated = async (req, res) => {
   }
 };
 
-// RESET PASSWORD FLOW
+// ── RESET PASSWORD FLOW ───────────────────────────────────────────────────────
 export const sendResetOtp = async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
-    return res.json({ success: false, message: "Email is required!" });
+    return res.json({ success: false, message: 'Email is required!' });
   }
 
   try {
     const user = await userModel.findOne({ email });
     if (!user) {
-      return res.json({ success: false, message: "User not found!" });
+      return res.json({ success: false, message: 'User not found!' });
     }
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     user.resetOtp = otp;
     user.resetOtpExpireAt = Date.now() + 15 * 60 * 1000;
+    await user.save();   // DB write succeeds regardless of email
 
-    await user.save();
-
-    const mailOption = {
-      from: process.env.SENDER_EMAIL,
-      to: user.email,
+    const sent = await sendEmail({
+      from:    process.env.SENDER_EMAIL,
+      to:      user.email,
       subject: 'Password reset OTP',
-      text: `Your OTP for resetting your password is: ${otp}. Use it to proceed with resetting your password.`
-    };
+      text:    `Your OTP for resetting your password is: ${otp}. Use it to proceed with resetting your password.`,
+    });
 
-    await transporter.sendMail(mailOption);
-    res.json({ success: true, message: "Reset OTP sent on email" });
+    if (!sent) {
+      return res.json({ success: false, message: 'Email service is currently unavailable. Password reset cannot proceed.' });
+    }
+
+    res.json({ success: true, message: 'Reset OTP sent on email' });
   } catch (error) {
     console.error('[sendResetOtp] Failed:', error.message);
-    res.json({ success: false, message: "Could not send reset email. Please try again later." });
+    res.json({ success: false, message: 'Could not send reset email. Please try again later.' });
   }
 };
 
@@ -240,17 +258,17 @@ export const resetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
 
   if (!email || !otp || !newPassword) {
-    return res.json({ success: false, message: "Email, OTP and new password are required." });
+    return res.json({ success: false, message: 'Email, OTP and new password are required.' });
   }
 
   try {
     const user = await userModel.findOne({ email });
     if (!user) {
-      return res.json({ success: false, message: "User not found." });
+      return res.json({ success: false, message: 'User not found.' });
     }
 
     if (user.resetOtp !== otp || user.resetOtpExpireAt < Date.now()) {
-      return res.json({ success: false, message: "Invalid or expired OTP!" });
+      return res.json({ success: false, message: 'Invalid or expired OTP!' });
     }
 
     user.password = await bcrypt.hash(newPassword, 10);
@@ -258,7 +276,7 @@ export const resetPassword = async (req, res) => {
     user.resetOtpExpireAt = 0;
     await user.save();
 
-    return res.json({ success: true, message: "Password has been reset." });
+    return res.json({ success: true, message: 'Password has been reset.' });
   } catch (err) {
     return res.json({ success: false, message: err.message });
   }
