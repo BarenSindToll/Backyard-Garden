@@ -128,7 +128,9 @@ export default function GardenLayout() {
     const [wizardInitialStep, setWizardInitialStep] = useState(1);
 
     // ── Permaculture preview state (side panel + map overlay) ─────────────────
-    const [permPlanDraft, setPermPlanDraft] = useState(null);
+    const [permPlanDraft, setPermPlanDraft] = useState(null);           // active plan (shown on map + panel)
+    const [permPlanVariants, setPermPlanVariants] = useState([]);        // [planA, planB] when two variants generated
+    const [activeVariantIndex, setActiveVariantIndex] = useState(0);    // which variant is displayed
     const [previewSelectedNames, setPreviewSelectedNames] = useState(null); // null = all selected
     const [hoveredPreviewName, setHoveredPreviewName] = useState(null);
     const [previewHidden, setPreviewHidden] = useState(false);
@@ -437,6 +439,8 @@ export default function GardenLayout() {
 
     const clearPreview = () => {
         setPermPlanDraft(null);
+        setPermPlanVariants([]);
+        setActiveVariantIndex(0);
         setPreviewSelectedNames(null);
         setHoveredPreviewName(null);
         setPreviewHidden(false);
@@ -445,19 +449,38 @@ export default function GardenLayout() {
         setSkippedElements([]);
     };
 
-    // Called by wizard when generation succeeds — closes wizard, opens side panel
-    const handleDraftChange = (plan) => {
-        if (plan) {
-            setPermPlanDraft(plan);
-            setPreviewSelectedNames(null); // select all by default
+    // Called by wizard when generation succeeds.
+    // planA is the food-production variant; planB is the biodiversity variant (may be null).
+    const handleDraftChange = (planA, planB = null) => {
+        const primary = planA || planB;
+        if (primary) {
+            const variants = [planA, planB].filter(Boolean);
+            setPermPlanVariants(variants);
+            setPermPlanDraft(primary);
+            setActiveVariantIndex(0);
+            setPreviewSelectedNames(null);
             setHoveredPreviewName(null);
             setPreviewHidden(false);
             setApplyWarning(null);
             setApplyError('');
             setSkippedElements([]);
-            setGeneratePlanOpen(false);   // close the wizard modal
+            setGeneratePlanOpen(false);
         } else {
             clearPreview();
+        }
+    };
+
+    // Switch between Variant A and B in the side panel
+    const handleVariantSwitch = (index) => {
+        const plan = permPlanVariants[index];
+        if (plan) {
+            setPermPlanDraft(plan);
+            setActiveVariantIndex(index);
+            setPreviewSelectedNames(null);  // reset selection for the new variant
+            setHoveredPreviewName(null);
+            setApplyWarning(null);
+            setApplyError('');
+            setSkippedElements([]);
         }
     };
 

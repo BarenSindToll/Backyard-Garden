@@ -87,6 +87,9 @@ function ConfidenceBar({ value = 0.8 }) {
  *   skipped             – [{ element, reason }]
  *   previewHidden       – bool
  *   onToggleHide        – () => void
+ *   variants            – array of plan objects (A and B)
+ *   activeVariantIndex  – 0 | 1
+ *   onVariantSwitch     – (index: number) => void
  */
 export default function PermaculturePlanSidePreview({
     plan,
@@ -104,6 +107,9 @@ export default function PermaculturePlanSidePreview({
     skipped = [],
     previewHidden,
     onToggleHide,
+    variants = [],
+    activeVariantIndex = 0,
+    onVariantSwitch,
 }) {
     if (!plan) return null;
 
@@ -176,6 +182,28 @@ export default function PermaculturePlanSidePreview({
                     </div>
                 </div>
             </div>
+
+            {/* ── Variant A / B tabs ── */}
+            {variants.length > 1 && (
+                <div className="flex-shrink-0 flex gap-1.5 px-3 py-2 border-b border-gray-200 bg-gray-50">
+                    {variants.map((v, i) => {
+                        const labels = ['🌽 Food Focus', '🦋 Biodiversity'];
+                        const isActive = activeVariantIndex === i;
+                        return (
+                            <button key={i}
+                                onClick={() => onVariantSwitch?.(i)}
+                                disabled={applying}
+                                className={`flex-1 text-[11px] py-1.5 rounded-lg font-semibold transition-colors disabled:opacity-50 ${
+                                    isActive
+                                        ? 'bg-forest text-white shadow-sm'
+                                        : 'text-gray-500 border border-gray-200 bg-white hover:bg-gray-50'
+                                }`}>
+                                {labels[i] ?? `Variant ${i + 1}`}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* ── Preview active banner ── */}
             <div className="flex-shrink-0 px-3 py-1.5 border-b border-green-100 bg-green-50 flex items-center gap-2">

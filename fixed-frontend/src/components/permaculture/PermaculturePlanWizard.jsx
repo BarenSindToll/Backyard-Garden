@@ -132,13 +132,13 @@ export default function PermaculturePlanWizard({
     const stableItems  = (overlayItems || []).filter(i => STABLE_NAMES.has(i.name));
     const regularItems = (overlayItems || []).filter(i => !STABLE_NAMES.has(i.name));
 
-    // ── Generate ──────────────────────────────────────────────────────────────
+    // ── Generate — two variants in parallel ──────────────────────────────────
     const handleGenerate = async () => {
         setGenerating(true);
         setGenError('');
         try {
             const problemParts = [...problems].map(p => `Problem: ${p}`);
-            const freeText = [
+            const baseFreeText = [
                 `Terrain: ${TERRAIN[terrainIdx]}`,
                 `Water source: ${WATER_SOURCE[waterIdx]}`,
                 `Sun exposure: ${SUN_EXPOSURE[sunIdx]}`,
@@ -149,35 +149,47 @@ export default function PermaculturePlanWizard({
                 notes,
             ].filter(Boolean).join('. ');
 
-            const res = await fetch(apiUrl('/api/permaculture-plans/generate-draft'), {
+            const locationContext = {
+                country:       setup.country       || '',
+                hardinessZone: setup.hardinessZone || '7b',
+                climateNotes: [
+                    setup.climate || '',
+                    SUN_EXPOSURE[sunIdx],
+                    TERRAIN[terrainIdx] !== 'Flat' ? TERRAIN[terrainIdx] : '',
+                ].filter(Boolean).join(', '),
+            };
+
+            // Build a request body for a specific variant
+            const makeBody = (variantType) => JSON.stringify({
+                variantType,
+                userRequirements: {
+                    freeText:        baseFreeText,
+                    goals:           [MAIN_GOALS[goalIdx]],
+                    focusAreas:      [DESIGN_STYLES[styleIdx]],
+                    preferredPlants: preferred.split(',').map(s => s.trim()).filter(Boolean),
+                    excludedPlants:  disliked.split(',').map(s => s.trim()).filter(Boolean),
+                },
+                locationContext,
+            });
+
+            const POST = (variantType) => fetch(apiUrl('/api/permaculture-plans/generate-draft'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({
-                    userRequirements: {
-                        freeText,
-                        goals:           [MAIN_GOALS[goalIdx]],
-                        focusAreas:      [DESIGN_STYLES[styleIdx]],
-                        preferredPlants: preferred.split(',').map(s => s.trim()).filter(Boolean),
-                        excludedPlants:  disliked.split(',').map(s => s.trim()).filter(Boolean),
-                    },
-                    locationContext: {
-                        country:       setup.country       || '',
-                        hardinessZone: setup.hardinessZone || '7b',
-                        climateNotes: [
-                            setup.climate || '',
-                            SUN_EXPOSURE[sunIdx],
-                            TERRAIN[terrainIdx] !== 'Flat' ? TERRAIN[terrainIdx] : '',
-                        ].filter(Boolean).join(', '),
-                    },
-                }),
-            });
-            const data = await res.json();
-            if (data.success) {
-                // Hand draft to parent — parent will close this wizard and open the side panel
-                onDraftChange?.(data.plan);
+                body: makeBody(variantType),
+            }).then(r => r.json()).catch(() => ({ success: false }));
+
+            // Fire both variants in parallel; partial failure is acceptable
+            const [dataA, dataB] = await Promise.all([POST('A'), POST('B')]);
+
+            const planA = dataA.success ? dataA.plan : null;
+            const planB = dataB.success ? dataB.plan : null;
+
+            if (planA || planB) {
+                // Pass both to parent — parent stores them and shows variant tabs
+                onDraftChange?.(planA || planB, planB || null);
             } else {
-                setGenError(data.message || 'Generation failed. Please try again.');
+                setGenError(dataA.message || dataB.message || 'Generation failed. Please try again.');
             }
         } catch {
             setGenError('Network error. Please try again.');
@@ -222,9 +234,9 @@ export default function PermaculturePlanWizard({
                     <div className="flex-1 flex flex-col items-center justify-center gap-5 py-16 px-8">
                         <div className="w-14 h-14 rounded-full border-4 border-forest border-t-transparent animate-spin" />
                         <div className="text-center">
-                            <p className="text-sm text-gray-700 font-semibold">Generating your permaculture plan…</p>
+                            <p className="text-sm text-gray-700 font-semibold">Generating two plan variants…</p>
                             <p className="text-xs text-gray-400 mt-1.5 max-w-xs leading-relaxed">
-                                Analysing site context, applying zone & sector logic, selecting companion guilds
+                                Creating Variant A (food production) and Variant B (biodiversity) based on your existing garden layout
                             </p>
                         </div>
                         <div className="flex gap-1.5 mt-2">

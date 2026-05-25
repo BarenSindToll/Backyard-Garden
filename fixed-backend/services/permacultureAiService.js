@@ -286,6 +286,10 @@ USER REQUIREMENTS
   Problems: ${(norm.inferredProblems || []).join(', ') || 'None'}
   Notes: ${raw.freeText || 'None'}
 
+DESIGN VARIANT: ${siteContext.variantType === 'B'
+    ? 'B — BIODIVERSITY / LOW MAINTENANCE. Prioritise: wildlife pond, native plantings, perennial guilds, hedgerow, fruit tree guilds, meadow strips, minimal annual inputs. Deprioritise: intensive annual vegetable beds, access paths.'
+    : 'A — FOOD PRODUCTION. Prioritise: raised beds near house, kitchen herbs, vegetable companions, compost close to beds, access paths for daily harvest. Deprioritise: wildlife-only features unless they also produce food.'}
+
 Output ONLY the JSON object — no markdown, no text outside the JSON.`;
     } catch (err) {
         console.error('[permacultureAiService] buildContextMessage error:', err.message);
