@@ -28,6 +28,38 @@ function makeBedLayoutFromPlants(plants, bedItem) {
     return { rows, blocks: [], layoutMode: 'rows' };
 }
 
+// ── Orientation helpers ───────────────────────────────────────────────────────
+
+function getCompassMapping(northDirection = 'top') {
+    switch (northDirection) {
+        case 'right':  return { top: 'W', right: 'N', bottom: 'E', left: 'S' };
+        case 'bottom': return { top: 'S', right: 'W', bottom: 'N', left: 'E' };
+        case 'left':   return { top: 'E', right: 'S', bottom: 'W', left: 'N' };
+        default:       return { top: 'N', right: 'E', bottom: 'S', left: 'W' };
+    }
+}
+
+function getEdgeForDirection(compassDir, northDirection = 'top') {
+    const m = getCompassMapping(northDirection);
+    return Object.keys(m).find(edge => m[edge] === compassDir) || null;
+}
+
+function getSunniestEdge(northDirection = 'top', hemisphere = 'northern') {
+    return getEdgeForDirection(hemisphere === 'northern' ? 'S' : 'N', northDirection);
+}
+
+// Returns a {x, y} fractional position (0–1) biased toward the sunniest edge.
+function sunnyBiasPosition(northDirection = 'top') {
+    const edge = getSunniestEdge(northDirection);
+    switch (edge) {
+        case 'bottom': return { xFrac: 0.45, yFrac: 0.65 };
+        case 'top':    return { xFrac: 0.45, yFrac: 0.15 };
+        case 'right':  return { xFrac: 0.65, yFrac: 0.45 };
+        case 'left':   return { xFrac: 0.15, yFrac: 0.45 };
+        default:       return { xFrac: 0.45, yFrac: 0.65 };
+    }
+}
+
 // ── Placement helpers ─────────────────────────────────────────────────────────
 // Clamp a proposed element so it stays within garden bounds.
 function clampToGarden(xM, yM, wM, hM, widthM, heightM) {
@@ -56,6 +88,11 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
     const heightM = setup.heightM || 10;
     const areaM2  = widthM * heightM;
 
+    const northDirection = setup.northDirection || locationContext?.northDirection || 'top';
+    const sunEdge        = getSunniestEdge(northDirection);
+    const compassMap     = getCompassMapping(northDirection);
+    const sunnyPos       = sunnyBiasPosition(northDirection);
+
     // ── Catalog-aware existing structure lookup ───────────────────────────────
     const existingMapStructures = sourceContext.existingMapStructures || [];
     const existingNames = overlayItems.map(it => it.name).filter(Boolean);
@@ -66,6 +103,16 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
     const hasByCanon = (canon) =>
         existingMapStructures.some(s => s.canonicalType === canon) ||
         existingNames.some(n => resolveCanonicalType(n) === canon);
+
+    // Generation-request constraints — what the user allows to be added
+    const genReq  = sourceContext.generationRequest || {};
+    const allowed = genReq.allowedAdditions || {};
+    const canAddRaisedBed  = allowed.raisedBeds  !== false;
+    const canAddGreenhouse = allowed.greenhouse  === true;
+    const canAddPond       = allowed.pond        === true;
+    const canAddCompost    = allowed.compost     !== false;
+    const canAddPaths      = allowed.paths       !== false;
+    const canAddGuilds     = allowed.guilds      !== false;
 
     const hasCompost    = hasByCanon('compost');
     const hasPond       = hasByCanon('pond');
@@ -88,18 +135,38 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
 
     // ── Site analysis ─────────────────────────────────────────────────────────
     const isVariantB = variantType === 'B';
+    const saved = sourceContext.savedSiteAnalysis || null;
+
+    // Pull richer context from the saved site analysis form if available
+    const slopeNote = saved?.topography?.slopeType
+        ? `Terrain is ${saved.topography.slopeType}${saved.topography.slopeDirection ? `, facing ${saved.topography.slopeDirection}` : ''}. ${saved.topography.drainageNotes || ''}`.trim()
+        : 'No slope data provided; assumed relatively flat site. Add contour information to refine swale placement.';
+    const soilNote = saved?.soil?.soilType
+        ? `Soil type: ${saved.soil.soilType}. pH: ${saved.soil.soilPH || 'unknown'}. Drainage: ${saved.soil.soilDrainage || 'unknown'}. Fertility: ${saved.soil.soilFertility || 'unknown'}. ${saved.soil.notes || ''}`.trim()
+        : 'Build soil biology through mulching and composting. Sheet-mulch new beds with cardboard + 15 cm wood chip before planting perennials.';
+    const windNote = saved?.sectors?.dominantWind
+        ? `Dominant wind from ${saved.sectors.dominantWind}. ${saved.sectors.notes || ''} A mixed native hedgerow on the windward boundary reduces wind speed by 50–80% for a downwind distance of 10× its height.`.trim()
+        : 'A mixed native hedgerow on the windward boundary reduces wind speed by 50–80% for a downwind distance of 10× its height.';
+    const waterNote = saved?.topography?.waterSources?.length
+        ? `Water sources: ${saved.topography.waterSources.join(', ')}. ${saved.topography.rainwaterHarvesting ? 'Rainwater harvesting system in place.' : 'No rainwater harvesting installed.'} ${saved.topography.drainageNotes || ''}`.trim()
+        : 'Design swales or rain gardens to slow, spread, and sink water. A single contour swale can reduce irrigation needs by 30–50%.';
+
     const siteAnalysis = {
         existingStructures: existingNames,
         stableElements: zones.filter(Boolean),
-        slopeNotes: 'No slope data provided; assumed relatively flat site. Add contour information to refine swale placement.',
-        sunExposureNotes: 'South-facing orientation assumed for northern hemisphere. Keep tall elements (trees, trellises) to the north to avoid shading food beds.',
-        windNotes: 'A mixed native hedgerow on the windward boundary reduces wind speed by 50–80% for a downwind distance of 10× its height.',
-        waterFlowNotes: 'Design swales or rain gardens to slow, spread, and sink water. A single contour swale can reduce irrigation needs by 30–50%.',
-        soilNotes: 'Build soil biology through mulching and composting. Sheet-mulch new beds with cardboard + 15 cm wood chip before planting perennials.',
+        slopeNotes: slopeNote,
+        sunExposureNotes: `North is set to the ${northDirection} of the map. The ${sunEdge}-facing side (compass ${compassMap[sunEdge]}) receives the most sun in the northern hemisphere — food beds are positioned toward this side. Keep tall elements (trees, trellises) away from the ${sunEdge} side to avoid shading productive areas.`,
+        windNotes: windNote,
+        waterFlowNotes: waterNote,
+        soilNotes: soilNote,
         constraints: [
             !hasCompost ? 'No composting system detected — nutrient cycling is incomplete and the garden depends on bought-in inputs.' : null,
             !hasPath    ? 'No defined access paths — design paths to all productive areas to prevent soil compaction in beds.' : null,
             widthM < 5  ? 'Limited width constrains zone depth; prioritise vertical growing (trellises, espalier).' : null,
+            saved?.constraints?.localRules     ? `Local rules: ${saved.constraints.localRules}` : null,
+            saved?.constraints?.irrigationLimits ? `Irrigation limits: ${saved.constraints.irrigationLimits}` : null,
+            saved?.constraints?.pests          ? `Known pests/diseases: ${saved.constraints.pests}` : null,
+            saved?.goals?.childrenPets         ? 'Avoid toxic plants — children or pets present on site.' : null,
         ].filter(Boolean),
         opportunities: [
             !hasPond       ? 'A wildlife pond is the single highest-yield permaculture feature per m² — supports frogs, dragonflies, and birds that provide natural pest control.' : null,
@@ -159,29 +226,31 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
                     bedLayoutSuggestion: makeBedLayoutFromPlants(plants, bed),
                 });
             });
-        } else {
-            // No raised beds — create one (or two for larger gardens)
-            const pos1 = clampToGarden(Math.max(1, anchor.xM - 4), Math.max(1, anchor.yM + 2), 3.0, 1.2, widthM, heightM);
+        } else if (canAddRaisedBed) {
+            // No raised beds — create one (or two for larger gardens), biased toward the sunniest edge.
+            const bedX = Math.max(1, Math.min(widthM * sunnyPos.xFrac, widthM - 4));
+            const bedY = Math.max(1, Math.min(heightM * sunnyPos.yFrac, heightM - 2.5));
+            const pos1 = clampToGarden(bedX, bedY, 3.0, 1.2, widthM, heightM);
             console.log('[buildMockDraft] Variant A: no raised bed → create_new');
             proposed.push({
                 action: 'create_new', catalogKey: 'raised_bed', canonicalType: 'raised_bed',
                 type: 'structure', name: 'Tomato & Herb Bed', targetZone: '1',
                 x: pos1.x, y: pos1.y, width: 3.0, height: 1.2, rotation: 0,
                 plants: ['Tomato', 'Basil', 'Marigold', 'Parsley'],
-                reason: 'A raised bed close to the house ensures daily access for watering and harvesting. Tomato + basil + marigold guild maximises space and deters pests.',
+                reason: `Placed toward the ${sunEdge}-facing side of the garden for maximum sun exposure. Tomato + basil + marigold guild maximises space and deters pests.`,
                 confidence: 0.92, warnings: [],
                 bedLayoutSuggestion: makeBedLayoutFromPlants(['Tomato', 'Basil', 'Marigold', 'Parsley'], { wM: 3.0, hM: 1.2 }),
             });
 
             if (areaM2 > 80) {
-                // Second raised bed for vegetables if space allows
-                const pos2 = clampToGarden(Math.max(1, anchor.xM - 4), Math.max(1, anchor.yM + 4.5), 3.0, 1.2, widthM, heightM);
+                // Second raised bed offset from the first
+                const pos2 = clampToGarden(pos1.x, Math.min(pos1.y + 2.5, heightM - 2.5), 3.0, 1.2, widthM, heightM);
                 proposed.push({
                     action: 'create_new', catalogKey: 'raised_bed', canonicalType: 'raised_bed',
                     type: 'structure', name: 'Salad & Leaf Bed', targetZone: '1',
                     x: pos2.x, y: pos2.y, width: 3.0, height: 1.2, rotation: 0,
                     plants: ['Lettuce', 'Spinach', 'Radish', 'Chives'],
-                    reason: 'A second bed dedicated to cut-and-come-again salads and leaves ensures a continuous supply from spring through autumn with minimal effort.',
+                    reason: `A second bed toward the sunniest (${sunEdge}) side for cut-and-come-again salads — continuous supply from spring through autumn with minimal effort.`,
                     confidence: 0.89, warnings: [],
                     bedLayoutSuggestion: makeBedLayoutFromPlants(['Lettuce', 'Spinach', 'Radish', 'Chives'], { wM: 3.0, hM: 1.2 }),
                 });
@@ -203,21 +272,21 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
                 confidence: 0.94, warnings: [],
                 bedLayoutSuggestion: makeBedLayoutFromPlants(['Tomato (Greenhouse)', 'Pepper', 'Cucumber'], gh),
             });
-        } else if (areaM2 > 120) {
-            const ghPos = clampToGarden(widthM * 0.60, heightM * 0.15, 5.0, 4.0, widthM, heightM);
+        } else if (areaM2 > 120 && canAddGreenhouse) {
+            const ghPos = clampToGarden(widthM * sunnyPos.xFrac, heightM * sunnyPos.yFrac, 5.0, 4.0, widthM, heightM);
             proposed.push({
                 action: 'create_new', catalogKey: 'greenhouse', canonicalType: 'greenhouse',
                 type: 'structure', name: 'Productive Greenhouse', targetZone: '1',
                 x: ghPos.x, y: ghPos.y, width: 5.0, height: 4.0, rotation: 0,
                 plants: ['Tomato (Greenhouse)', 'Pepper', 'Cucumber'],
-                reason: 'With a garden of this size, a greenhouse or polytunnel would extend the productive season significantly and allow heat-loving crops that cannot succeed outdoors.',
+                reason: `Placed toward the ${sunEdge}-facing (sunniest) side of the garden. A greenhouse here extends the productive season significantly and allows heat-loving crops that cannot succeed outdoors.`,
                 confidence: 0.78,
-                warnings: ['Requires adequate water supply. Orient with the long axis east–west for maximum light. Secure planning permission if required.'],
+                warnings: [`Requires adequate water supply. Orient the long axis toward the sunniest (${sunEdge}) side for maximum light. Secure planning permission if required.`],
             });
         }
 
         // Compost — close to raised beds for easy access
-        if (!hasCompost) {
+        if (!hasCompost && canAddCompost) {
             const cPos = clampToGarden(Math.min(widthM - 3, anchor.xM + 3), Math.max(0, anchor.yM - 3), 2.0, 1.5, widthM, heightM);
             proposed.push({
                 action: 'create_new', catalogKey: 'compost', canonicalType: 'compost',
@@ -243,7 +312,7 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
         }
 
         // Access path connecting raised beds to house (Variant A specific)
-        if (!hasPath) {
+        if (!hasPath && canAddPaths) {
             const pathPos = clampToGarden(Math.max(0, anchor.xM - 0.5), Math.max(0, anchor.yM + 0.5), 8.0, 1.0, widthM, heightM);
             proposed.push({
                 action: 'create_new', catalogKey: 'path', canonicalType: 'path',
@@ -271,7 +340,7 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
     // ──────────────────────────────────────────────────────────────────────────
     } else {
         // Wildlife pond — top priority for Variant B
-        if (!hasPond) {
+        if (!hasPond && canAddPond) {
             const pondPos = clampToGarden(widthM * 0.62, heightM * 0.58, 4.0, 4.0, widthM, heightM);
             console.log('[buildMockDraft] Variant B: no pond → create_new');
             proposed.push({
@@ -314,8 +383,9 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
         });
 
         // Fruit tree guild (perennial, low effort once established)
-        const guildPos = clampToGarden(widthM * 0.55, heightM * 0.20, 6.0, 6.0, widthM, heightM);
-        proposed.push({
+        if (canAddGuilds) {
+            const guildPos = clampToGarden(widthM * 0.55, heightM * 0.20, 6.0, 6.0, widthM, heightM);
+            proposed.push({
             action: 'recommendation_only', canonicalType: 'unknown',
             type: 'planting-strip', name: 'Apple Guild — Perennial Layer', targetZone: '2',
             x: guildPos.x, y: guildPos.y, width: 6.0, height: 6.0, rotation: 0,
@@ -323,7 +393,8 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             reason: 'A permaculture fruit tree guild combines a central apple with dynamic accumulators (comfrey), insect attractors (yarrow), pest deterrents (nasturtium), and living mulch (clover, strawberry). After establishment, this system is largely self-maintaining.',
             confidence: 0.88,
             warnings: ['This is a design recommendation requiring manual implementation. Choose a disease-resistant apple variety appropriate to your hardiness zone.'],
-        });
+            });
+        }
 
         // Existing raised beds — suggest perennial herbs/edibles for Variant B
         if (existingBeds.length > 0) {
@@ -344,7 +415,7 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
         }
 
         // Compost — enhance or create
-        if (!hasCompost) {
+        if (!hasCompost && canAddCompost) {
             const cPos = clampToGarden(widthM * 0.82, heightM * 0.68, 2.0, 2.0, widthM, heightM);
             proposed.push({
                 action: 'create_new', catalogKey: 'compost', canonicalType: 'compost',
@@ -368,14 +439,23 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             });
         }
 
-        // Native hedgerow (Variant B priority — wildlife corridor)
+        // Native hedgerow (Variant B priority — wildlife corridor, placed on north/shadiest edge)
         if (!hasFence) {
+            // northDirection is exactly the canvas edge where North is, so it is the shadiest side
+            const shadeEdge = northDirection;
+            const hedgePos = shadeEdge === 'bottom'
+                ? { x: 0, y: heightM - 2.0, width: widthM, height: 2.0 }
+                : shadeEdge === 'right'
+                    ? { x: widthM - 2.0, y: 0, width: 2.0, height: heightM }
+                    : shadeEdge === 'left'
+                        ? { x: 0, y: 0, width: 2.0, height: heightM }
+                        : { x: 0, y: 0, width: widthM, height: 2.0 };
             proposed.push({
                 action: 'create_new', catalogKey: 'fence', canonicalType: 'fence',
                 type: 'planting-strip', name: 'Native Wildlife Hedgerow', targetZone: '3',
-                x: 0, y: 0, width: widthM, height: 2.0, rotation: 0,
+                x: hedgePos.x, y: hedgePos.y, width: hedgePos.width, height: hedgePos.height, rotation: 0,
                 plants: ['Hawthorn', 'Blackthorn', 'Hazel', 'Dog Rose', 'Elderflower', 'Spindle'],
-                reason: 'A mixed native hedgerow supports over 600 invertebrate species and acts as a wildlife corridor, windbreak, and productive source of berries, nuts, and flowers. It increases in value every decade.',
+                reason: `Placed along the ${shadeEdge} (north-facing/shadier) boundary. A mixed native hedgerow acts as windbreak and wildlife corridor without shading the garden's sunniest (${sunEdge}) side. Supports 600+ invertebrate species.`,
                 confidence: 0.93,
                 warnings: ['Choose native provenance species. Trim only in late winter (Feb–March) to protect nesting birds. Minimum 2 m wide for full wildlife benefit.'],
             });
@@ -402,12 +482,12 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
     const planNarrative = `## Permaculture Plan — Variant ${variantType}: ${variantLabel}
 
 **Site Overview**
-Your garden covers ${widthM} m × ${heightM} m (${areaM2} m²) with ${zones.length} defined planting ${zoneWord} and ${overlayItems.length} existing ${itemWord}${bedCount > 0 ? ` including ${bedCount} raised bed(s)` : ''}.
+Your garden covers ${widthM} m × ${heightM} m (${areaM2} m²) with ${zones.length} defined planting ${zoneWord} and ${overlayItems.length} existing ${itemWord}${bedCount > 0 ? ` including ${bedCount} raised bed(s)` : ''}. North is set to the **${northDirection}** of the map; the sunniest side is the **${sunEdge}** edge.
 
 **Variant Focus**
 ${isVariantB
     ? 'This plan prioritises biodiversity, wildlife habitat, and long-term resilience. Elements are chosen for perennial yields, low annual maintenance, and ecological function. A wildlife pond is the centrepiece — statistically the highest-yield permaculture intervention per square metre.'
-    : 'This plan prioritises immediate food production: raised beds, kitchen herbs, and access paths for daily harvest. Every element is chosen for practical daily-use functionality and rapid yield.'}
+    : `This plan prioritises immediate food production: raised beds, kitchen herbs, and access paths for daily harvest. Food beds are positioned toward the ${sunEdge}-facing (sunniest) side of the garden. Every element is chosen for practical daily-use functionality and rapid yield.`}
 
 **Design Principles Applied**
 This draft applies key Holmgren (2002) permaculture principles: observe and interact; catch and store energy; obtain a yield; use and value diversity; integrate rather than segregate; use edges and value the marginal.
@@ -417,7 +497,11 @@ ${existingNames.length > 0
     ? `Detected on map: ${existingNames.join(', ')}. These have been used as the foundation for this plan — new elements work with, not against, existing investments.`
     : 'No structures detected on the map. All proposed elements are new placements.'}
 
-**Next Steps**
+${saved ? `**Site Analysis Inputs**
+${saved.goals?.mainGoal ? `Primary goal: ${saved.goals.mainGoal}.` : ''}${saved.goals?.maintenanceTime ? ` Available maintenance time: ${saved.goals.maintenanceTime}.` : ''}${saved.goals?.experienceLevel ? ` Experience level: ${saved.goals.experienceLevel}.` : ''}
+${saved.soil?.soilType ? `Soil: ${saved.soil.soilType}` : ''}${saved.soil?.soilDrainage ? `, drainage: ${saved.soil.soilDrainage}` : ''}${saved.topography?.slopeType ? `. Terrain: ${saved.topography.slopeType}` : ''}.
+${saved.goals?.preferredPlants ? `Plants you want to include: ${saved.goals.preferredPlants}.` : ''}${saved.goals?.avoidedPlants ? ` Plants to avoid: ${saved.goals.avoidedPlants}.` : ''}
+` : ''}**Next Steps**
 Review and select individual elements before applying. The plan is advisory — your direct observation of the site should always take precedence. Apply only what you have the capacity to implement and maintain this season.`.trim();
 
     // ── Bibliography ──────────────────────────────────────────────────────────
@@ -446,9 +530,8 @@ export const generateDraft = async (req, res) => {
     try {
         const userId = req.user.id;
         const {
-            userRequirements = {},
-            locationContext  = {},
-            variantType      = 'A',   // 'A' = food production, 'B' = biodiversity
+            generationRequest = {},           // new — generation intent from the wizard
+            variantType       = 'A',          // 'A' = food production, 'B' = biodiversity
         } = req.body;
 
         // Load the current layout so we can snapshot it
@@ -457,15 +540,33 @@ export const generateDraft = async (req, res) => {
             ? { zones: layout.zones, setup: layout.setup, overlayItems: layout.overlayItems || [], bedLayouts: layout.bedLayouts || {}, zoneItems: layout.zoneItems || {} }
             : {};
 
-        // Merge location context: prefer request body, fall back to layout setup
+        // All location / site data comes from saved layout — never from the request body
+        const savedSiteAnalysis = layout?.siteAnalysis || null;
         const mergedLocation = {
-            country:       locationContext.country       || layout?.setup?.country       || '',
-            city:          locationContext.city          || '',
-            latitude:      locationContext.latitude      ?? null,
-            longitude:     locationContext.longitude     ?? null,
-            altitude:      locationContext.altitude      ?? null,
-            hardinessZone: locationContext.hardinessZone || layout?.setup?.hardinessZone || '',
-            climateNotes:  locationContext.climateNotes  || layout?.setup?.climate       || '',
+            country:        layout?.setup?.country        || '',
+            city:           '',
+            latitude:       null,
+            longitude:      null,
+            altitude:       savedSiteAnalysis?.climate?.altitude
+                                ? parseFloat(savedSiteAnalysis.climate.altitude) || null
+                                : null,
+            hardinessZone:  savedSiteAnalysis?.climate?.climateZone || layout?.setup?.hardinessZone || '',
+            climateNotes:   layout?.setup?.climate || '',
+            northDirection: savedSiteAnalysis?.sectors?.northDirection || layout?.setup?.northDirection || 'top',
+        };
+
+        // Map generationRequest into userRequirements for buildPermacultureContext
+        const plantPrefs     = generationRequest.plantPreferences || {};
+        const userRequirements = {
+            freeText: [
+                generationRequest.taskType    ? `Task: ${generationRequest.taskType}`           : '',
+                generationRequest.changeLevel ? `Change level: ${generationRequest.changeLevel}` : '',
+                generationRequest.notes       || '',
+            ].filter(Boolean).join('. '),
+            goals:           [generationRequest.designFocus].filter(Boolean),
+            focusAreas:      [generationRequest.taskType].filter(Boolean),
+            preferredPlants: plantPrefs.prioritizePlants || [],
+            excludedPlants:  plantPrefs.avoidPlants      || [],
         };
 
         // Build rich context object (synchronous analysis — no external calls)
@@ -475,6 +576,10 @@ export const generateDraft = async (req, res) => {
             userRequirements,
             locationContext: mergedLocation,
         });
+
+        // Attach saved site analysis and generation request so downstream generators can use them
+        if (savedSiteAnalysis) sourceContext.savedSiteAnalysis = savedSiteAnalysis;
+        sourceContext.generationRequest = generationRequest;
 
         // ── Try AI, fall back to rule-based mock ─────────────────────────────
         // Inject variantType into sourceContext so the AI prompt includes the variant hint.

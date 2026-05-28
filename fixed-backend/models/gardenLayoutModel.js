@@ -21,6 +21,7 @@ const setupSchema = new mongoose.Schema({
     cellSizeM: { type: Number, default: 1 },
     focusAreas: { type: [String], default: [] },
     goals: { type: [String], default: [] },
+    northDirection: { type: String, enum: ['top', 'right', 'bottom', 'left'], default: 'top' },
 }, { _id: false });
 
 const gardenLayoutSchema = new mongoose.Schema({
@@ -36,6 +37,7 @@ const gardenLayoutSchema = new mongoose.Schema({
     overlayItems: { type: [mongoose.Schema.Types.Mixed], default: [] },
     bedLayouts: { type: mongoose.Schema.Types.Mixed, default: {} },
     zoneItems: { type: mongoose.Schema.Types.Mixed, default: {} },
+    siteAnalysis: { type: mongoose.Schema.Types.Mixed, default: null },
 });
 
 export default mongoose.models.gardenLayout || mongoose.model('gardenLayout', gardenLayoutSchema);

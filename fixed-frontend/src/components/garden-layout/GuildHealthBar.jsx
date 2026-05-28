@@ -17,30 +17,26 @@ export default function GuildHealthBar({ placedPlantNames = [], allPlants = [], 
     });
     const missing = GUILD_ROLES.filter(r => counts[r.key] === 0);
 
-    /* ── Compact mode: single row of coloured dots for the toolbar ── */
+    /* ── Compact mode: prototype-style bar indicator ── */
     if (compact) {
+        const filledCount = GUILD_ROLES.filter(r => counts[r.key] > 0).length;
+        const missingLabels = missing.map(r => r.label).join(', ');
         return (
-            <div className="flex items-center gap-2.5" title="Guild balance">
-                {GUILD_ROLES.map(({ key, label, dot }) => {
-                    const count = counts[key];
-                    return (
-                        <div
-                            key={key}
-                            className="flex items-center gap-0.5"
-                            title={`${label}: ${count}`}
-                        >
-                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot} ${count === 0 ? 'opacity-20' : ''}`} />
-                            <span className={`text-[10px] font-semibold tabular-nums ${count === 0 ? 'text-gray-300' : 'text-gray-600'}`}>
-                                {count}
-                            </span>
-                        </div>
-                    );
-                })}
-                {missing.length > 0 && (
-                    <span className="text-[10px] text-amber-500 ml-0.5" title={`Missing: ${missing.map(r => r.label).join(', ')}`}>
-                        ⚠ {missing.length}
-                    </span>
-                )}
+            <div className="flex items-center gap-2" title={missing.length ? `Missing: ${missingLabels}` : 'All guild roles covered'}>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7c857a' }}>
+                    Guild health
+                </span>
+                <div style={{ display: 'flex', gap: 2 }}>
+                    {GUILD_ROLES.map(({ key }) => (
+                        <span key={key} style={{
+                            display: 'inline-block', width: 14, height: 4, borderRadius: 2,
+                            background: counts[key] > 0 ? '#3d6b34' : '#d3cdb8',
+                        }} />
+                    ))}
+                </div>
+                <span style={{ fontSize: 11, color: '#485547' }}>
+                    {filledCount} of {GUILD_ROLES.length}
+                </span>
             </div>
         );
     }

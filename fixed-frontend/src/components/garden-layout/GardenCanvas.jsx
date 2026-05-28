@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { STRUCTURES, ZONE_TYPES, detectZoneType } from './gardenZoneConfig';
+import ZoneDetailCanvas from './zoneDetails/ZoneDetailCanvas';
+import { detectDetailType, DETAIL_REGISTRY } from './zoneDetails/ZoneDetailRegistry';
 import PlantingModal from './PlantingModal';
 import AddZoneModal from './AddZoneModal';
 import ZoneTabs from './ZoneTabs';
@@ -39,42 +41,72 @@ const STRUCTURE_DEFAULTS = {
 const DEFAULT_PLANT_SIZE = { wM: 1, hM: 1 };
 
 const ZONE_STYLES = {
-    raised: { border: '#8B5E3C', bg: '#f5ead0', headerBg: '#7a4e2c', gridLine: 'rgba(139,94,60,0.18)', bw: 5 },
-    vegetable: { border: '#4a7c3f', bg: '#eef5e4', headerBg: '#3d6b34', gridLine: 'rgba(74,124,63,0.15)', bw: 3 },
-    orchard: { border: '#7a5030', bg: '#f5ede0', headerBg: '#6a4020', gridLine: 'rgba(122,80,48,0.15)', bw: 3 },
-    herb: { border: '#2d7a5a', bg: '#e4f5ec', headerBg: '#226848', gridLine: 'rgba(45,122,90,0.15)', bw: 3 },
-    flower: { border: '#b05878', bg: '#fdf0f5', headerBg: '#904868', gridLine: 'rgba(176,88,120,0.15)', bw: 3 },
-    forest: { border: '#2d5a30', bg: '#e0f0dc', headerBg: '#245028', gridLine: 'rgba(45,90,48,0.15)', bw: 3 },
-    greenhouse: { border: '#5aab44', bg: '#f0fae8', headerBg: '#489a34', gridLine: 'rgba(90,171,68,0.18)', bw: 4 },
-    guild: { border: '#6040a0', bg: '#f0ecf8', headerBg: '#503090', gridLine: 'rgba(96,64,160,0.15)', bw: 3 },
-    compost: { border: '#7a4020', bg: '#f5e8dc', headerBg: '#6a3010', gridLine: 'rgba(122,64,32,0.15)', bw: 3 },
-    pond: { border: '#1a70c0', bg: '#dceef8', headerBg: '#1060a8', gridLine: 'rgba(26,112,192,0.18)', bw: 4 },
-    kids: { border: '#b09010', bg: '#fdf8d4', headerBg: '#a08000', gridLine: 'rgba(176,144,16,0.15)', bw: 3 },
-    seating: { border: '#5060b8', bg: '#eceef8', headerBg: '#4050a0', gridLine: 'rgba(80,96,184,0.15)', bw: 3 },
-    building: { border: '#606060', bg: '#f0f0f0', headerBg: '#484848', gridLine: 'rgba(96,96,96,0.15)', bw: 4 },
-    path: { border: '#a08050', bg: '#f5f0e4', headerBg: '#887040', gridLine: 'rgba(160,128,80,0.15)', bw: 3 },
-    general: { border: '#4a7050', bg: '#eaf0e4', headerBg: '#3a6040', gridLine: 'rgba(74,112,80,0.15)', bw: 3 },
+    raised:     { border: '#b09060', bg: '#ede0c4', headerBg: '#7a5c30', gridLine: 'rgba(160,128,72,0.18)', bw: 5 },
+    vegetable:  { border: '#7a9860', bg: '#d8e49a', headerBg: '#4a6830', gridLine: 'rgba(100,140,72,0.15)', bw: 3 },
+    orchard:    { border: '#8a9060', bg: '#c8d88a', headerBg: '#5a6830', gridLine: 'rgba(120,140,72,0.15)', bw: 3 },
+    herb:       { border: '#70a870', bg: '#c4d8b8', headerBg: '#3a7050', gridLine: 'rgba(80,148,80,0.15)', bw: 3 },
+    flower:     { border: '#c08890', bg: '#e8bcc0', headerBg: '#8a5060', gridLine: 'rgba(180,100,110,0.15)', bw: 3 },
+    forest:     { border: '#6a9060', bg: '#c4dc9a', headerBg: '#3a5828', gridLine: 'rgba(90,130,70,0.15)', bw: 3 },
+    greenhouse: { border: '#80b070', bg: '#cfe6b1', headerBg: '#4a7838', gridLine: 'rgba(100,160,80,0.18)', bw: 4 },
+    guild:      { border: '#8888a8', bg: '#d0d0e0', headerBg: '#505070', gridLine: 'rgba(100,100,150,0.15)', bw: 3 },
+    compost:    { border: '#a07050', bg: '#a57151', headerBg: '#7a4830', gridLine: 'rgba(130,90,60,0.15)', bw: 3 },
+    pond:       { border: '#60a8c8', bg: '#9fd0e4', headerBg: '#3070a0', gridLine: 'rgba(60,140,180,0.18)', bw: 4 },
+    kids:       { border: '#c8a848', bg: '#edce80', headerBg: '#907030', gridLine: 'rgba(180,148,56,0.15)', bw: 3 },
+    seating:    { border: '#9898a8', bg: '#d0cdbc', headerBg: '#606070', gridLine: 'rgba(120,120,140,0.15)', bw: 3 },
+    building:   { border: '#a09068', bg: '#dab884', headerBg: '#6a5838', gridLine: 'rgba(140,120,80,0.15)', bw: 4 },
+    path:       { border: '#a09068', bg: '#d0cdbc', headerBg: '#807050', gridLine: 'rgba(140,120,80,0.15)', bw: 3 },
+    general:    { border: '#7a9868', bg: '#c4dc9a', headerBg: '#4a6838', gridLine: 'rgba(100,140,80,0.15)', bw: 3 },
 };
 const ROLE_BG = {
-    'Producer': 'rgba(144,220,80,0.35)',
-    'Nitrogen fixer': 'rgba(80,160,240,0.35)',
-    'Pollinator attractor': 'rgba(248,220,80,0.35)',
-    'Dynamic accumulator': 'rgba(200,140,240,0.35)',
-    'Pest repellent': 'rgba(248,160,80,0.35)',
-    'Groundcover': 'rgba(80,220,200,0.35)',
+    'Producer':             'rgba(160,200,100,0.32)',
+    'Nitrogen fixer':       'rgba(100,160,210,0.32)',
+    'Pollinator attractor': 'rgba(220,195,100,0.32)',
+    'Dynamic accumulator':  'rgba(185,155,210,0.32)',
+    'Pest repellent':       'rgba(215,150,90,0.32)',
+    'Groundcover':          'rgba(100,195,175,0.32)',
 };
 const ROLE_BORDER = {
-    'Producer': 'rgba(100,180,40,0.7)',
-    'Nitrogen fixer': 'rgba(40,120,200,0.7)',
-    'Pollinator attractor': 'rgba(200,160,20,0.7)',
-    'Dynamic accumulator': 'rgba(140,80,200,0.7)',
-    'Pest repellent': 'rgba(200,100,20,0.7)',
-    'Groundcover': 'rgba(20,160,140,0.7)',
+    'Producer':             'rgba(110,160,60,0.60)',
+    'Nitrogen fixer':       'rgba(60,120,180,0.60)',
+    'Pollinator attractor': 'rgba(180,150,40,0.60)',
+    'Dynamic accumulator':  'rgba(140,100,180,0.60)',
+    'Pest repellent':       'rgba(185,110,50,0.60)',
+    'Groundcover':          'rgba(50,150,130,0.60)',
 };
 const STRUCTURE_MAP = Object.fromEntries(STRUCTURES.map(s => [s.name, s]));
 
+const NON_OPENABLE_STRUCTURES = new Set(['House', 'Compost', 'Shed', 'Coop']);
+const MAP_ACTION_BUTTON_STYLE = { background: '#fff4cf', border: '1px solid #c8a96c', color: '#4b3117', borderRadius: 4, padding: '2px 8px', fontSize: 9, fontWeight: 700, cursor: 'pointer', boxShadow: '0 1px 3px rgba(75,49,23,0.18)' };
+
+const PAPER_LABEL_STYLE = {
+    background: '#fff4cf',
+    border: '1px solid #c8a96c',
+    boxShadow: '0 2px 4px rgba(80,55,20,0.18)',
+    color: '#4b3117',
+    fontFamily: 'Georgia, "Times New Roman", serif',
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    padding: '3px 10px',
+    borderRadius: 2,
+    whiteSpace: 'nowrap',
+    pointerEvents: 'none',
+};
+
 // ── Compass labels overlay ────────────────────────────────────────────────────
-function CompassLabels({ labels }) {
+function resolveCompassPositions(labels, northDirection = 'top') {
+    const { north, south, east, west } = labels;
+    switch (northDirection) {
+        case 'right':   return { top: west,  right: north, bottom: east,  left: south };
+        case 'bottom':  return { top: south, right: west,  bottom: north, left: east  };
+        case 'left':    return { top: east,  right: south, bottom: west,  left: north };
+        default:        return { top: north, right: east,  bottom: south, left: west  };
+    }
+}
+
+function CompassLabels({ labels, northDirection = 'top' }) {
+    const positioned = resolveCompassPositions(labels, northDirection);
     const style = {
         position: 'absolute', zIndex: 90, pointerEvents: 'none',
         background: 'rgba(0,0,0,0.52)', color: '#fff',
@@ -85,21 +117,17 @@ function CompassLabels({ labels }) {
     };
     return (
         <>
-            {/* North */}
             <div style={{ ...style, top: 8, left: '50%', transform: 'translateX(-50%)' }}>
-                {labels.north}
+                {positioned.top}
             </div>
-            {/* South */}
             <div style={{ ...style, bottom: 8, left: '50%', transform: 'translateX(-50%)' }}>
-                {labels.south}
+                {positioned.bottom}
             </div>
-            {/* West */}
             <div style={{ ...style, left: 8, top: '50%', transform: 'translateY(-50%)' }}>
-                {labels.west}
+                {positioned.left}
             </div>
-            {/* East */}
             <div style={{ ...style, right: 8, top: '50%', transform: 'translateY(-50%)' }}>
-                {labels.east}
+                {positioned.right}
             </div>
         </>
     );
@@ -144,7 +172,7 @@ function HorizontalRuler({ widthM, pxPerM }) {
         );
     }
     return (
-        <svg width={totalPx} height={RULER_SIZE} style={{ display: 'block', flexShrink: 0, background: '#1e3320' }}>
+        <svg width={totalPx} height={RULER_SIZE} style={{ display: 'block', flexShrink: 0, background: '#1d3a20' }}>
             <line x1={0} y1={RULER_SIZE - 1} x2={totalPx} y2={RULER_SIZE - 1} stroke="rgba(255,255,255,0.18)" strokeWidth={1} />
             {marks}
         </svg>
@@ -172,7 +200,7 @@ function VerticalRuler({ heightM, pxPerM }) {
         );
     }
     return (
-        <svg width={RULER_SIZE} height={totalPx} style={{ display: 'block', flexShrink: 0, background: '#1e3320' }}>
+        <svg width={RULER_SIZE} height={totalPx} style={{ display: 'block', flexShrink: 0, background: '#1d3a20' }}>
             <line x1={RULER_SIZE - 1} y1={0} x2={RULER_SIZE - 1} y2={totalPx} stroke="rgba(255,255,255,0.18)" strokeWidth={1} />
             {marks}
         </svg>
@@ -454,12 +482,12 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
 
             <div style={{
                 position: 'relative', width: '100%', height: '100%',
-                borderRadius: isCircular ? '50%' : isLinear ? 4 : 8,
-                background: item.color ? item.color + '66' : 'rgba(255,255,255,0.88)',
-                border: isSelectedBed ? '3px solid #a8d870' : hovered ? '2px solid white' : '1.5px solid rgba(255,255,255,0.5)',
+                borderRadius: isCircular ? '50%' : isLinear ? 4 : 10,
+                background: item.color ? item.color + '28' : 'rgba(61,107,52,0.10)',
+                border: isSelectedBed ? '2px solid #a8d870' : hovered ? `1.5px dashed ${item.color || '#3d6b34'}aa` : `1.5px dashed ${item.color || '#3d6b34'}60`,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                boxShadow: isSelectedBed ? '0 0 0 2px rgba(168,216,112,0.4), 0 4px 14px rgba(0,0,0,0.35)' : hovered ? '0 4px 14px rgba(0,0,0,0.35)' : '0 2px 7px rgba(0,0,0,0.22)',
-                overflow: 'hidden', transition: 'border-color 0.1s, box-shadow 0.1s', gap: 2,
+                boxShadow: isSelectedBed ? '0 0 0 2px rgba(168,216,112,0.35), 0 4px 14px rgba(0,0,0,0.18)' : hovered ? '0 4px 14px rgba(0,0,0,0.15)' : '0 2px 6px rgba(0,0,0,0.10)',
+                overflow: 'hidden', transition: 'border-color 0.1s, box-shadow 0.1s', gap: 4,
             }}>
                 {isRotatable && (
                     <div title="Drag to rotate" style={{ width: 18, height: 18, flexShrink: 0, borderRadius: '50%', background: hovered ? 'white' : 'rgba(255,255,255,0.4)', border: '1.5px solid rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'crosshair', transition: 'background 0.15s', position: 'relative', zIndex: 2 }}
@@ -492,6 +520,16 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
                         ))}
                     </div>
                 )}
+                {/* Always-visible paper label */}
+                {!hasBedContent && pxH >= 48 && (
+                    <div style={{
+                        ...PAPER_LABEL_STYLE,
+                        fontSize: Math.max(8, Math.min(11, pxW * 0.14)),
+                        padding: pxH < 70 ? '2px 7px' : '3px 10px',
+                        maxWidth: pxW - 10, overflow: 'hidden', textOverflow: 'ellipsis',
+                        position: 'relative', zIndex: 2,
+                    }}>{item.name}</div>
+                )}
             </div>
 
             {(hovered || isSelectedBed) && (
@@ -512,11 +550,16 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
                         </p>
                         {isBedLike ? (
                             <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                                <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onSelectBed?.(item.id); }} style={{ background: '#4a7c3f', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 9, cursor: 'pointer', fontWeight: 700 }}>{isSelectedBed ? '✓ Editing' : 'Edit bed'}</button>
+                                <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onSelectBed?.(item.id); }} style={{ ...MAP_ACTION_BUTTON_STYLE }}>{isSelectedBed ? '✓ Editing' : 'Open'}</button>
                                 <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onRemove(item.id); onSelectBed?.(null); }} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 9, cursor: 'pointer' }}>Remove</button>
                             </div>
-                        ) : (
+                        ) : NON_OPENABLE_STRUCTURES.has(item.name) ? (
                             <p style={{ fontSize: 9, color: '#ef4444' }}>dbl-click to remove</p>
+                        ) : (
+                            <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                                <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onSelectBed?.(item.id); }} style={{ ...MAP_ACTION_BUTTON_STYLE }}>Open</button>
+                                <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onRemove(item.id); }} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 9, cursor: 'pointer' }}>Remove</button>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -618,15 +661,20 @@ function ZoneItemLayer({ items = [], pxPerM, zoneName, selectedBedId, onSelectBe
                         )}
                         <div style={{
                             position: 'relative', width: '100%', height: '100%',
-                            background: item.color ? item.color + '66' : 'rgba(139,94,60,0.55)',
-                            border: isSelected ? '3px solid #a8d870' : '1.5px solid rgba(255,255,255,0.6)',
-                            borderRadius: 6,
-                            boxShadow: isSelected ? '0 0 0 2px rgba(168,216,112,0.4), 0 4px 14px rgba(0,0,0,0.35)' : '0 2px 7px rgba(0,0,0,0.22)',
+                            background: item.color ? item.color + '28' : 'rgba(139,94,60,0.15)',
+                            border: isSelected ? '2px solid #a8d870' : `1.5px dashed ${item.color || '#8B5E3C'}70`,
+                            borderRadius: 8,
+                            boxShadow: isSelected ? '0 0 0 2px rgba(168,216,112,0.35), 0 4px 14px rgba(0,0,0,0.18)' : '0 2px 6px rgba(0,0,0,0.10)',
                             overflow: 'hidden',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
                         }}>
                             {!hasBedContent && (
-                                <span style={{ fontSize: Math.max(8, Math.min(wPx, hPx) * 0.22), color: '#fff', fontWeight: 700, textAlign: 'center', padding: '2px 4px', lineHeight: 1.2, textShadow: '0 1px 3px rgba(0,0,0,0.4)', pointerEvents: 'none' }}>{item.name}</span>
+                                <div style={{
+                                    ...PAPER_LABEL_STYLE,
+                                    fontSize: Math.max(8, Math.min(11, Math.min(wPx, hPx) * 0.18)),
+                                    padding: hPx < 50 ? '2px 6px' : '3px 10px',
+                                    maxWidth: wPx - 8, overflow: 'hidden', textOverflow: 'ellipsis',
+                                }}>{item.name}</div>
                             )}
                             {hasBedContent && (
                                 <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
@@ -684,14 +732,14 @@ function ZoneCircle({ zone, zoneIdx, position, selected, pxPerM, zoom = 1, onMou
                 left: position.x * zoom - w / 2,
                 top: position.y * zoom - h / 2,
                 width: w, height: h,
-                borderRadius: isRect ? 10 : '50%',
-                background: style.bg,
-                border: `4px solid ${selected ? '#a8d870' : style.border}`,
+                borderRadius: isRect ? 12 : '50%',
+                background: style.bg + 'cc',
+                border: selected ? `2px solid #a8d870` : `1.5px dashed ${style.border}88`,
                 boxShadow: selected
-                    ? '0 0 0 3px #a8d870, 0 6px 20px rgba(0,0,0,0.3)'
-                    : hovered ? '0 4px 16px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.2)',
+                    ? '0 0 0 2px rgba(168,216,112,0.35), 0 4px 16px rgba(0,0,0,0.18)'
+                    : hovered ? '0 4px 14px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.10)',
                 cursor: 'grab',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
                 userSelect: 'none', zIndex: selected ? 10 : hovered ? 8 : 5,
                 transition: 'box-shadow 0.12s',
             }}
@@ -712,13 +760,10 @@ function ZoneCircle({ zone, zoneIdx, position, selected, pxPerM, zoom = 1, onMou
                 onClick(zoneIdx);
             }}
         >
-            <span style={{ fontSize: 22, pointerEvents: 'none' }}>{typeConfig.emoji}</span>
-            <span style={{
-                fontSize: 11, fontWeight: 700, color: style.headerBg,
-                textAlign: 'center', padding: '0 8px',
-                maxWidth: w - 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                pointerEvents: 'none',
-            }}>{zone}</span>
+            <div style={{
+                ...PAPER_LABEL_STYLE,
+                maxWidth: w - 20, overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{zone}</div>
 
             {hovered && (
                 <>
@@ -732,6 +777,14 @@ function ZoneCircle({ zone, zoneIdx, position, selected, pxPerM, zoom = 1, onMou
                         {isRect ? `${Math.round(rw / pxPerM)}m × ${Math.round(rh / pxPerM)}m · ` : ''}
                         Drag to move · click to edit
                     </div>
+
+                    {/* Open zone detail */}
+                    <button
+                        title="Open zone"
+                        style={{ ...MAP_ACTION_BUTTON_STYLE, position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)', zIndex: 20, whiteSpace: 'nowrap' }}
+                        onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }}
+                        onClick={e => { e.stopPropagation(); onClick(zoneIdx); }}
+                    >Open</button>
 
                     {/* Remove from General map (keeps zone tab) */}
                     <button
@@ -1132,7 +1185,7 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
 
     return (
         <div className="flex-1" style={{ position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <CompassLabels labels={t.canvas} />
+            <CompassLabels labels={t.canvas} northDirection={setup?.northDirection || 'top'} />
 
             {/* ── Proposed elements legend — fixed in viewport, shown only while preview is active ── */}
             {proposedItems.length > 0 && (
@@ -1180,7 +1233,7 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
                 <div style={{ display: 'inline-flex', flexDirection: 'column', margin: 'auto' }}>
                     {/* Row 1: corner + horizontal ruler (sticky top) */}
                     <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 25 }}>
-                        <div style={{ width: RULER_SIZE, height: RULER_SIZE, flexShrink: 0, background: '#1e3320', position: 'sticky', left: 0, zIndex: 30 }} />
+                        <div style={{ width: RULER_SIZE, height: RULER_SIZE, flexShrink: 0, background: '#1d3a20', position: 'sticky', left: 0, zIndex: 30 }} />
                         <HorizontalRuler widthM={widthM} pxPerM={pxPerM} />
                     </div>
 
@@ -1192,21 +1245,16 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
                         <div
                             style={{
                                 position: 'relative', width: canvasW, height: canvasH,
-                                background: '#3a6632',
-                                backgroundImage: [
-                                    'linear-gradient(rgba(255,255,255,0.13) 1px, transparent 1px)',
-                                    'linear-gradient(90deg, rgba(255,255,255,0.13) 1px, transparent 1px)',
-                                    'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',
-                                    'linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
-                                ].join(', '),
-                                backgroundSize: `${largeGrid}px ${largeGrid}px, ${largeGrid}px ${largeGrid}px, ${smallGrid}px ${smallGrid}px, ${smallGrid}px ${smallGrid}px`,
+                                background: '#fbf4df',
+                                backgroundImage: 'radial-gradient(circle, rgba(94,80,45,0.10) 1.5px, transparent 1.5px)',
+                                backgroundSize: `${smallGrid}px ${smallGrid}px`,
                             }}
                             onClick={() => { onSelectZone(-1); if (onSelectBed) { onSelectBed(null); if (onSelectBedElement) onSelectBedElement(null); } }}
                         >
                             {generalZones.length === 0 && overlayItems.length === 0 && (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none">
-                                    <p className="text-white/50 text-sm">No zones on the map yet.</p>
-                                    <p className="text-white/30 text-xs text-center px-8">
+                                    <p style={{ color: 'rgba(72,85,71,0.45)', fontSize: 13 }}>No zones on the map yet.</p>
+                                    <p style={{ color: 'rgba(72,85,71,0.3)', fontSize: 11, textAlign: 'center', padding: '0 32px' }}>
                                         When adding a new area, toggle "Add to General" to place it here as a circle.<br />
                                         Drop any plant or structure from the sidebar to place it freely.
                                     </p>
@@ -1288,12 +1336,13 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
 
 // ── Main canvas ───────────────────────────────────────────────────────────────
 export default function GardenCanvas({ zones, grids, positions, setup, currentZone, onSelectZone, onUpdateGrid, onUpdatePositions, onAddZone, onDeleteZone, onRenameZone, plantList, overlayItems = [], onUpdateOverlayItems, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, zoneItems, onUpdateZoneItems, onAddZoneItem, onResetZone, proposedItems = [], proposedHoveredName = null, proposedSelectedNames = null }) {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const [resizeState, setResizeState] = useState(null);
     const [plantResizeState, setPlantResizeState] = useState(null);
     const [resizePreview, setResizePreview] = useState(null);
     const [generalZoom, setGeneralZoom] = useState(1);
     const [zoomMap, setZoomMap] = useState({});
+    const [detailModeMap, setDetailModeMap] = useState({});
     const detailContainerRef = useRef(null);
     const detailZoom = zoomMap[currentZone] ?? 1;
     const setDetailZoom = (val) => setZoomMap(prev => ({ ...prev, [currentZone]: typeof val === 'function' ? val(prev[currentZone] ?? 1) : val }));
@@ -1416,11 +1465,16 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
     const currentZoneStyle = currentZoneName ? (ZONE_STYLES[detectZoneType(currentZoneName)] || ZONE_STYLES.general) : ZONE_STYLES.general;
     const zonePxPerM = CELL_PX * detailZoom;
 
+    const currentDetailType = currentZoneName ? detectDetailType(currentZoneName) : null;
+    const hasDetailView = !!(currentDetailType && DETAIL_REGISTRY[currentDetailType]);
+    const detailMode = detailModeMap[currentZoneName] ?? (hasDetailView ? 'illustrative' : 'grid');
+    const setDetMode = (mode) => setDetailModeMap(prev => ({ ...prev, [currentZoneName]: mode }));
+
     return (
         <div className="flex flex-col h-full overflow-hidden">
 
 
-            <div className="bg-white border-b border-gray-200 px-3 py-2 flex-shrink-0">
+            <div style={{ background: '#fbf7ea', borderBottom: '1px solid #e8e2cc', padding: '8px 16px', flexShrink: 0 }}>
                 <ZoneTabs zones={zones} currentZone={currentZone} setCurrentZone={onSelectZone} setZones={onRenameZone} onAddZone={() => setAddZoneOpen(true)} onDeleteZone={onDeleteZone} onRenameZone={onRenameZone} onResetZone={onResetZone} />
             </div>
 
@@ -1428,63 +1482,83 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
                 <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} onAddZone={onAddZone} selectedBedId={selectedBedId} onSelectBed={onSelectBed} selectedBedElementId={selectedBedElementId} onSelectBedElement={onSelectBedElement} bedLayouts={bedLayouts} onUpdateBedLayout={onUpdateBedLayout} proposedItems={proposedItems} proposedHoveredName={proposedHoveredName} proposedSelectedNames={proposedSelectedNames} />
             ) : (
                 <div className="flex-1" style={{ position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    <CompassLabels labels={t.canvas} />
+                    <CompassLabels labels={t.canvas} northDirection={setup?.northDirection || 'top'} />
                     {/* Zone item toolbar */}
-                    <div style={{ background: '#1e3320', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '4px 10px', display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, zIndex: 5 }}>
-                        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>Add to zone:</span>
-                        <button onClick={() => onAddZoneItem?.(currentZoneName, 'Raised Bed')} style={{ fontSize: 11, background: '#7a4e2c', color: 'white', border: 'none', borderRadius: 5, padding: '3px 9px', cursor: 'pointer', fontWeight: 600 }}>+ Raised Bed</button>
-                        <button onClick={() => onAddZoneItem?.(currentZoneName, 'Path')} style={{ fontSize: 11, background: '#6b5030', color: 'white', border: 'none', borderRadius: 5, padding: '3px 9px', cursor: 'pointer', fontWeight: 600 }}>+ Path</button>
-                    </div>
-                    {/* Scrollable zone area */}
-                    <div
-                        ref={detailContainerRef}
-                        className="overflow-auto flex-1"
-                        style={{
-                            cursor: resizeState || plantResizeState ? 'crosshair' : 'default',
-                            background: '#3d6b34',
-                            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
-                            backgroundSize: '40px 40px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            padding: '28px',
-                        }}
-                    >
-                        {currentZoneName && (
-                            <div style={{ position: 'relative' }}>
-                                <ZoneBlock zone={currentZoneName} grid={grids[currentZone] || []} position={{ x: 0, y: 0 }} zoneIdx={currentZone} selected detailView zoom={detailZoom} cellSizeM={cellSizeM} plantList={plantList} onResizeMouseDown={handleResizeMouseDown} onZoneDrop={handleZoneDrop} onRemovePlant={handleRemovePlant} onPlantResizeStart={handlePlantResizeStart} onDelete={onDeleteZone} onStartRename={(idx, value) => setRenaming({ idx, value })} renameValue={renaming?.value || ''} onRenameChange={e => setRenaming(r => ({ ...r, value: e.target.value }))} onRenameConfirm={handleRenameConfirm} onRenameCancel={() => setRenaming(null)} isRenaming={renaming?.idx === currentZone} resizePreview={resizePreview} plantResizePreview={plantResizePreview} />
-                                <ZoneItemLayer
-                                    items={currentZoneItems}
-                                    pxPerM={zonePxPerM}
-                                    zoneName={currentZoneName}
-                                    selectedBedId={selectedBedId}
-                                    onSelectBed={onSelectBed}
-                                    onUpdateItems={items => onUpdateZoneItems?.(currentZoneName, items)}
-                                    onRemoveItem={id => onUpdateZoneItems?.(currentZoneName, currentZoneItems.filter(it => it.id !== id))}
-                                    bedLayouts={bedLayouts}
-                                    selectedBedElementId={selectedBedElementId}
-                                    onSelectBedElement={onSelectBedElement}
-                                    onUpdateBedLayout={onUpdateBedLayout}
-                                    borderW={currentZoneStyle.bw}
-                                />
-                            </div>
+                    <div style={{ background: '#1f3a18', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '4px 12px', display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, zIndex: 5 }}>
+                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Add to zone:</span>
+                        <button onClick={() => onAddZoneItem?.(currentZoneName, 'Raised Bed')} style={{ fontSize: 11, background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>+ Raised Bed</button>
+                        <button onClick={() => onAddZoneItem?.(currentZoneName, 'Path')} style={{ fontSize: 11, background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>+ Path</button>
+                        {hasDetailView && (
+                            <button
+                                onClick={() => setDetMode(detailMode === 'illustrative' ? 'grid' : 'illustrative')}
+                                style={{ marginLeft: 'auto', fontSize: 11, background: detailMode === 'illustrative' ? 'rgba(247,236,208,0.18)' : 'rgba(255,255,255,0.12)', color: detailMode === 'illustrative' ? '#f7ecd0' : 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.28)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}
+                            >
+                                {detailMode === 'illustrative' ? (t.canvas?.editGrid || 'Edit Grid') : (t.canvas?.illustration || 'Illustration')}
+                            </button>
                         )}
                     </div>
+                    {detailMode === 'illustrative' && hasDetailView ? (
+                        <div className="flex-1" style={{ position: 'relative', overflow: 'hidden' }}>
+                            <ZoneDetailCanvas
+                                zoneName={currentZoneName}
+                                language={language}
+                                onEditGrid={() => setDetMode('grid')}
+                            />
+                        </div>
+                    ) : (
+                        <>
+                            {/* Scrollable zone area */}
+                            <div
+                                ref={detailContainerRef}
+                                className="overflow-auto flex-1"
+                                style={{
+                                    cursor: resizeState || plantResizeState ? 'crosshair' : 'default',
+                                    background: '#3d6b34',
+                                    backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
+                                    backgroundSize: '40px 40px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    padding: '28px',
+                                }}
+                            >
+                                {currentZoneName && (
+                                    <div style={{ position: 'relative' }}>
+                                        <ZoneBlock zone={currentZoneName} grid={grids[currentZone] || []} position={{ x: 0, y: 0 }} zoneIdx={currentZone} selected detailView zoom={detailZoom} cellSizeM={cellSizeM} plantList={plantList} onResizeMouseDown={handleResizeMouseDown} onZoneDrop={handleZoneDrop} onRemovePlant={handleRemovePlant} onPlantResizeStart={handlePlantResizeStart} onDelete={onDeleteZone} onStartRename={(idx, value) => setRenaming({ idx, value })} renameValue={renaming?.value || ''} onRenameChange={e => setRenaming(r => ({ ...r, value: e.target.value }))} onRenameConfirm={handleRenameConfirm} onRenameCancel={() => setRenaming(null)} isRenaming={renaming?.idx === currentZone} resizePreview={resizePreview} plantResizePreview={plantResizePreview} />
+                                        <ZoneItemLayer
+                                            items={currentZoneItems}
+                                            pxPerM={zonePxPerM}
+                                            zoneName={currentZoneName}
+                                            selectedBedId={selectedBedId}
+                                            onSelectBed={onSelectBed}
+                                            onUpdateItems={items => onUpdateZoneItems?.(currentZoneName, items)}
+                                            onRemoveItem={id => onUpdateZoneItems?.(currentZoneName, currentZoneItems.filter(it => it.id !== id))}
+                                            bedLayouts={bedLayouts}
+                                            selectedBedElementId={selectedBedElementId}
+                                            onSelectBedElement={onSelectBedElement}
+                                            onUpdateBedLayout={onUpdateBedLayout}
+                                            borderW={currentZoneStyle.bw}
+                                        />
+                                    </div>
+                                )}
+                            </div>
 
-                    {/* Zoom pill — sibling of scroll container, always stays in corner */}
-                    <div style={{
-                        position: 'absolute', bottom: 12, right: 12,
-                        background: 'rgba(0,0,0,0.55)', borderRadius: 20,
-                        display: 'flex', alignItems: 'center', gap: 2,
-                        padding: '3px 6px', zIndex: 100, userSelect: 'none',
-                    }}>
-                        <button onClick={() => setDetailZoom(z => Math.max(0.05, z / 1.25))}
-                            style={{ color: 'white', fontSize: 16, cursor: 'pointer', background: 'none', border: 'none', lineHeight: 1, padding: '0 4px' }}>−</button>
-                        <span onClick={() => setDetailZoom(computeFitZoom())} title="Click to fit zone in view"
-                            style={{ color: 'white', fontSize: 11, cursor: 'pointer', minWidth: 38, textAlign: 'center' }}>
-                            {Math.round(detailZoom * 100)}%
-                        </span>
-                        <button onClick={() => setDetailZoom(z => Math.min(5, z * 1.25))}
-                            style={{ color: 'white', fontSize: 16, cursor: 'pointer', background: 'none', border: 'none', lineHeight: 1, padding: '0 4px' }}>+</button>
-                    </div>
+                            {/* Zoom pill — sibling of scroll container, always stays in corner */}
+                            <div style={{
+                                position: 'absolute', bottom: 12, right: 12,
+                                background: 'rgba(0,0,0,0.55)', borderRadius: 20,
+                                display: 'flex', alignItems: 'center', gap: 2,
+                                padding: '3px 6px', zIndex: 100, userSelect: 'none',
+                            }}>
+                                <button onClick={() => setDetailZoom(z => Math.max(0.05, z / 1.25))}
+                                    style={{ color: 'white', fontSize: 16, cursor: 'pointer', background: 'none', border: 'none', lineHeight: 1, padding: '0 4px' }}>−</button>
+                                <span onClick={() => setDetailZoom(computeFitZoom())} title="Click to fit zone in view"
+                                    style={{ color: 'white', fontSize: 11, cursor: 'pointer', minWidth: 38, textAlign: 'center' }}>
+                                    {Math.round(detailZoom * 100)}%
+                                </span>
+                                <button onClick={() => setDetailZoom(z => Math.min(5, z * 1.25))}
+                                    style={{ color: 'white', fontSize: 16, cursor: 'pointer', background: 'none', border: 'none', lineHeight: 1, padding: '0 4px' }}>+</button>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
 

@@ -1,17 +1,6 @@
 import { useState } from 'react';
 import { useLanguage } from '../../utils/languageContext';
 
-const getZoneColor = (zone = '') => {
-    const z = zone.toLowerCase();
-    if (z.includes('guild') || z.includes('breasl')) return 'bg-green-100';
-    if (z.includes('bed') || z.includes('strat')) return 'bg-yellow-100';
-    if (z.includes('pond') || z.includes('iaz')) return 'bg-blue-100';
-    if (z.includes('compost')) return 'bg-amber-200';
-    if (z.includes('greenhouse') || z.includes('ser')) return 'bg-lime-100';
-    if (z.includes('forest') || z.includes('food') || z.includes('pădure')) return 'bg-emerald-100';
-    return 'bg-gray-100';
-};
-
 export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones, onAddZone, onDeleteZone, onRenameZone, onResetZone }) {
     const [editingIndex, setEditingIndex] = useState(null);
     const [editName, setEditName] = useState('');
@@ -30,52 +19,63 @@ export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones,
 
     const confirmDelete = (index) => {
         const msg = g.deleteZoneConfirm.replace('{name}', zones[index]);
-        if (window.confirm(msg)) {
-            onDeleteZone(index);
-        }
+        if (window.confirm(msg)) onDeleteZone(index);
     };
 
     return (
-        <div className="w-full bg-cream border border-gray-200 rounded-xl p-2">
-            <div className="flex items-center gap-2 overflow-x-auto">
+        <div className="flex items-center gap-2 overflow-x-auto min-w-0">
+            {/* ZONE label */}
+            <span style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 9.5, letterSpacing: '0.15em', textTransform: 'uppercase',
+                color: '#7c857a', flexShrink: 0, marginRight: 4,
+            }}>
+                Zone
+            </span>
 
-                {/* ── General overview tab ── */}
-                <div
-                    className={`relative flex-shrink-0 px-3 py-2 rounded-lg cursor-pointer flex items-center gap-1.5 transition-all ${
-                        currentZone === -1
-                            ? 'ring-2 ring-forest font-semibold shadow-sm bg-forest text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-white/70'
-                    }`}
-                    onClick={() => setCurrentZone(-1)}
-                    title={g.overviewTitle}
-                >
-                    <span className="text-sm">🗺</span>
-                    <span className="text-sm">{g.generalTab}</span>
+            {/* General tab */}
+            <button
+                onClick={() => setCurrentZone(-1)}
+                title={g.overviewTitle}
+                style={{
+                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '5px 12px', borderRadius: 9999, fontSize: 12,
+                    background: currentZone === -1 ? '#3d6b34' : 'transparent',
+                    color: currentZone === -1 ? '#f4f1e6' : '#485547',
+                    border: `1px solid ${currentZone === -1 ? '#3d6b34' : '#d3cdb8'}`,
+                    fontWeight: currentZone === -1 ? 500 : 400,
+                    cursor: 'pointer', transition: 'all 0.12s',
+                }}
+            >
+                {g.generalTab}
+                {currentZone === -1 && onResetZone && (
+                    <span
+                        role="button"
+                        onClick={e => { e.stopPropagation(); onResetZone(-1); }}
+                        style={{ marginLeft: 2, color: 'rgba(244,241,230,0.6)', fontSize: 13, lineHeight: 1, cursor: 'pointer' }}
+                        title="Reset General Map"
+                    >
+                        ↺
+                    </span>
+                )}
+            </button>
 
-                    {/* Reset General button — only shown when General is active */}
-                    {currentZone === -1 && onResetZone && (
-                        <button
-                            title="Reset General Map"
-                            onClick={e => { e.stopPropagation(); onResetZone(-1); }}
-                            className="ml-0.5 text-white/60 hover:text-red-300 text-xs leading-none transition-colors flex-shrink-0"
-                            style={{ fontSize: 13 }}
-                        >
-                            ↺
-                        </button>
-                    )}
-                </div>
-
-                {/* ── Custom zone tabs ── */}
-                {zones.map((zone, index) => (
-                    <div
-                        key={index}
-                        className={`relative flex-shrink-0 px-3 py-2 rounded-lg cursor-pointer flex items-center gap-1.5 group transition-all ${
-                            currentZone === index
-                                ? 'ring-2 ring-forest font-semibold shadow-sm'
-                                : 'text-gray-600 hover:bg-white/70'
-                        } ${getZoneColor(zone)}`}
+            {/* Custom zone tabs */}
+            {zones.map((zone, index) => (
+                <div key={index} style={{ position: 'relative', flexShrink: 0 }}
+                    className="group">
+                    <button
                         onClick={() => setCurrentZone(index)}
                         onDoubleClick={() => { setEditingIndex(index); setEditName(zone); }}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: '5px 12px', borderRadius: 9999, fontSize: 12,
+                            background: currentZone === index ? '#3d6b34' : 'transparent',
+                            color: currentZone === index ? '#f4f1e6' : '#485547',
+                            border: `1px solid ${currentZone === index ? '#3d6b34' : '#d3cdb8'}`,
+                            fontWeight: currentZone === index ? 500 : 400,
+                            cursor: 'pointer', transition: 'all 0.12s',
+                        }}
                     >
                         {editingIndex === index ? (
                             <input
@@ -84,42 +84,55 @@ export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones,
                                 onBlur={handleBlur}
                                 onKeyDown={e => e.key === 'Enter' && handleBlur()}
                                 autoFocus
-                                className="bg-white border-b border-gray-400 focus:outline-none text-sm w-24"
+                                onClick={e => e.stopPropagation()}
+                                style={{
+                                    background: 'transparent', outline: 'none', border: 'none',
+                                    width: 80, fontSize: 12, color: 'inherit', fontFamily: 'inherit',
+                                }}
                             />
-                        ) : (
-                            <span className="text-sm">{zone}</span>
-                        )}
-
-                        {/* Reset zone button — only shown when this zone is active */}
-                        {currentZone === index && onResetZone && (
-                            <button
-                                title={`Reset ${zone}`}
+                        ) : zone}
+                        {currentZone === index && onResetZone && editingIndex !== index && (
+                            <span
+                                role="button"
                                 onClick={e => { e.stopPropagation(); onResetZone(index); }}
-                                className="text-gray-400 hover:text-red-500 text-xs leading-none transition-colors flex-shrink-0"
-                                style={{ fontSize: 13 }}
+                                style={{ marginLeft: 2, color: 'rgba(244,241,230,0.6)', fontSize: 13, lineHeight: 1, cursor: 'pointer' }}
+                                title={`Reset ${zone}`}
                             >
                                 ↺
-                            </button>
+                            </span>
                         )}
+                    </button>
 
-                        {/* Delete button — visible on tab hover */}
-                        <button
-                            className="absolute -right-1 -top-1 w-4 h-4 bg-white text-red-400 hover:text-red-600 rounded-full shadow text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={e => { e.stopPropagation(); confirmDelete(index); }}
-                            title={g.deleteZoneConfirm.replace('{name}', zone)}
-                        >
-                            ×
-                        </button>
-                    </div>
-                ))}
+                    {/* Delete × on hover */}
+                    <button
+                        className="absolute -right-1 -top-1 w-4 h-4 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{
+                            background: '#fbf7ea', color: '#7c857a', border: '1px solid #d3cdb8',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.12)', zIndex: 10, cursor: 'pointer',
+                        }}
+                        onClick={e => { e.stopPropagation(); confirmDelete(index); }}
+                        title={g.deleteZoneConfirm.replace('{name}', zone)}
+                    >
+                        ×
+                    </button>
+                </div>
+            ))}
 
-                <button
-                    onClick={onAddZone}
-                    className="flex-shrink-0 px-3 py-2 text-sm text-forest hover:bg-white rounded-lg whitespace-nowrap border border-dashed border-forest/30 hover:border-forest transition-colors"
-                >
-                    {g.addZone}
-                </button>
-            </div>
+            {/* Add zone */}
+            <button
+                onClick={onAddZone}
+                style={{
+                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '5px 10px', borderRadius: 9999, fontSize: 12,
+                    background: 'transparent', color: '#7c857a',
+                    border: '1px dashed #d3cdb8',
+                    cursor: 'pointer', transition: 'all 0.12s', whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#3d6b34'; e.currentTarget.style.color = '#3d6b34'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#d3cdb8'; e.currentTarget.style.color = '#7c857a'; }}
+            >
+                + {g.addZone}
+            </button>
         </div>
     );
 }

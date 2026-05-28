@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 body {
-  @apply bg-cream text-green-900;
+  @apply bg-paper text-ink;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Blog post content styling */

@@ -10,6 +10,7 @@ import GuildHealthBar from '../components/garden-layout/GuildHealthBar';
 import BedSidebar from '../components/garden-layout/BedSidebar';
 import PermaculturePlanWizard from '../components/permaculture/PermaculturePlanWizard';
 import PermaculturePlanSidePreview from '../components/permaculture/PermaculturePlanSidePreview';
+import SiteAnalysisWizard from '../components/garden-layout/SiteAnalysisWizard';
 import { STRUCTURES } from '../components/garden-layout/gardenZoneConfig';
 import { fetchCurrentUser } from '../utils/fetchCurrentUser';
 import { useLanguage } from '../utils/languageContext';
@@ -24,6 +25,7 @@ const DEFAULT_SETUP = {
     cellSizeM: 1,
     focusAreas: [],
     goals: [],
+    northDirection: 'top',
 };
 
 const STRUCTURE_MAP = Object.fromEntries(STRUCTURES.map(s => [s.name, s]));
@@ -73,18 +75,18 @@ function ResetConfirmDialog({ confirm, onCancel, onConfirm }) {
     return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
              onClick={e => e.target === e.currentTarget && onCancel()}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-                <h2 className="font-bold text-gray-800 text-base mb-2">
+            <div className="bg-paper rounded-2xl shadow-xl border border-line w-full max-w-sm p-6">
+                <h2 className="font-display font-medium text-ink text-base mb-2">
                     {isGeneral ? 'Reset General Map?' : `Reset "${confirm.name}"?`}
                 </h2>
-                <p className="text-sm text-gray-600 leading-relaxed mb-5">
+                <p className="text-sm text-ink-soft leading-relaxed mb-5">
                     {isGeneral
                         ? 'This will remove all elements from the General Map. Your other zones will remain.'
                         : 'This will remove all elements from this zone, but the zone itself will remain.'}
                 </p>
                 <div className="flex gap-3 justify-end">
                     <button onClick={onCancel}
-                        className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                        className="px-4 py-2 text-sm text-ink-soft border border-line rounded-xl hover:bg-cream/60 transition-colors">
                         Cancel
                     </button>
                     <button onClick={onConfirm}
@@ -123,6 +125,10 @@ export default function GardenLayout() {
     const [resetConfirm, setResetConfirm] = useState(null); // null | { type, index, name }
     const undoSnapshotRef = useRef(null);                    // snapshot for one-level undo
 
+    // ── Site analysis state ───────────────────────────────────────────────────
+    const [siteAnalysis, setSiteAnalysis] = useState(null);
+    const [siteAnalysisOpen, setSiteAnalysisOpen] = useState(false);
+
     // ── Permaculture wizard state ─────────────────────────────────────────────
     const [generatePlanOpen, setGeneratePlanOpen] = useState(false);
     const [wizardInitialStep, setWizardInitialStep] = useState(1);
@@ -152,22 +158,25 @@ export default function GardenLayout() {
         overlayItemsToSave,
         bedLayoutsToSave = bedLayouts,
         zoneItemsToSave = zoneItems,
-        showToast = false
+        showToast = false,
+        siteAnalysisToSave = undefined
     ) => {
         try {
+            const body = {
+                grids: cleanForSave(gridsToSave),
+                zones: zonesToSave,
+                setup: setupToSave,
+                positions: positionsToSave,
+                overlayItems: overlayItemsToSave,
+                bedLayouts: bedLayoutsToSave,
+                zoneItems: zoneItemsToSave,
+            };
+            if (siteAnalysisToSave !== undefined) body.siteAnalysis = siteAnalysisToSave;
             const res = await fetch(apiUrl('/api/gardenLayout/save-layout'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({
-                    grids: cleanForSave(gridsToSave),
-                    zones: zonesToSave,
-                    setup: setupToSave,
-                    positions: positionsToSave,
-                    overlayItems: overlayItemsToSave,
-                    bedLayouts: bedLayoutsToSave,
-                    zoneItems: zoneItemsToSave,
-                }),
+                body: JSON.stringify(body),
             });
             const data = await res.json();
             if (!res.ok || data.success === false) {
@@ -216,6 +225,7 @@ export default function GardenLayout() {
                     if (normalizedOverlay.length) setOverlayItems(normalizedOverlay);
                     if (layoutData.bedLayouts && typeof layoutData.bedLayouts === 'object') setBedLayouts(layoutData.bedLayouts);
                     if (layoutData.zoneItems && typeof layoutData.zoneItems === 'object') setZoneItems(layoutData.zoneItems);
+                    if (layoutData.siteAnalysis) setSiteAnalysis(layoutData.siteAnalysis);
                     if (layoutData.setup && Object.keys(layoutData.setup).length > 0) {
                         setSetup({ ...DEFAULT_SETUP, ...layoutData.setup });
                     } else if (user.zone) {
@@ -313,6 +323,12 @@ export default function GardenLayout() {
         const updated = { ...zoneItems, [zoneName]: newItems };
         setZoneItems(updated);
         if (userId) saveToBackend(grids, zones, setup, positions, overlayItems, bedLayouts, updated);
+    };
+
+    const handleSaveSiteAnalysis = (data) => {
+        setSiteAnalysis(data);
+        setSiteAnalysisOpen(false);
+        if (userId) saveToBackend(grids, zones, setup, positions, overlayItems, bedLayouts, zoneItems, false, data);
     };
 
     const handleAddZoneItem = (zoneName, type) => {
@@ -556,34 +572,98 @@ export default function GardenLayout() {
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div className="h-screen flex flex-col overflow-hidden bg-gray-100">
+        <div className="h-screen flex flex-col overflow-hidden bg-paper">
             <DashboardHeader />
 
-            {/* ── Compact toolbar ── */}
-            <div className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-200 flex-shrink-0">
-                <span className="text-sm font-bold text-forest truncate max-w-[160px]">{setup.gardenName}</span>
-                <span className="text-gray-300 text-xs">|</span>
-                <span className="text-xs text-gray-400 hidden sm:inline">
-                    {setup.widthM}m × {setup.heightM}m · Zone {setup.hardinessZone}
+            {/* ── Compact toolbar — matches prototype TopBar ── */}
+            <div style={{
+                display: 'flex', alignItems: 'center', padding: '10px 20px',
+                background: '#fbf7ea', borderBottom: '1px solid #d3cdb8',
+                gap: 14, flexShrink: 0,
+            }}>
+                {/* Garden icon + name */}
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+                    <div style={{
+                        width: 22, height: 22, borderRadius: '50%', background: '#3d6b34',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#f4f1e6', fontSize: 11, flexShrink: 0,
+                    }}>
+                        🌿
+                    </div>
+                    <span style={{
+                        fontFamily: 'Newsreader, Georgia, serif', fontSize: 15,
+                        color: '#1f3a18', maxWidth: 160, overflow: 'hidden',
+                        textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                        {setup.gardenName}
+                    </span>
+                </div>
+
+                {/* Divider */}
+                <div style={{ width: 1, height: 16, background: '#d3cdb8', flexShrink: 0 }} />
+
+                {/* Dimensions */}
+                <span style={{
+                    fontFamily: 'JetBrains Mono, monospace', fontSize: 11,
+                    color: '#7c857a', letterSpacing: '0.06em', flexShrink: 0,
+                }} className="hidden sm:inline">
+                    {setup.widthM} × {setup.heightM} m · Zone {setup.hardinessZone}
                 </span>
-                <span className="text-gray-300 text-xs hidden sm:inline">|</span>
+
+                {/* Divider */}
+                <div style={{ width: 1, height: 16, background: '#d3cdb8', flexShrink: 0 }} className="hidden sm:block" />
 
                 <GuildHealthBar placedPlantNames={placedPlantNames} allPlants={allPlants} compact />
 
-                <div className="flex-1" />
+                <div style={{ flex: 1 }} />
 
+                {/* Site Analysis */}
                 <button
-                    onClick={() => { setWizardInitialStep(1); setGeneratePlanOpen(true); }}
-                    className="flex items-center gap-1.5 text-xs text-forest border border-forest px-3 py-1.5 rounded-lg hover:bg-forest hover:text-white transition-colors flex-shrink-0 font-medium"
+                    onClick={() => setSiteAnalysisOpen(true)}
+                    style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '6px 11px', borderRadius: 6, fontSize: 12, cursor: 'pointer',
+                        background: 'transparent', fontFamily: 'inherit',
+                        color: siteAnalysis ? '#3d6b34' : '#7c857a',
+                        border: `1px solid ${siteAnalysis ? 'rgba(61,107,52,0.4)' : '#d3cdb8'}`,
+                        flexShrink: 0, transition: 'all 0.12s',
+                    }}
                 >
-                    🌿 {g.generateBtn}
+                    🌍 {g.siteAnalysis?.btn || 'Site Analysis'}
+                    {siteAnalysis && (
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#3d6b34', display: 'inline-block' }} />
+                    )}
                 </button>
 
+                {/* Generate plan */}
+                <button
+                    onClick={() => { setWizardInitialStep(1); setGeneratePlanOpen(true); }}
+                    style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '7px 14px', background: 'transparent',
+                        color: '#3d6b34', border: '1px solid #3d6b34',
+                        borderRadius: 6, fontSize: 12.5, fontWeight: 500,
+                        cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+                        transition: 'all 0.12s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#d8e3c0'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                    ✦ {g.generateBtn}
+                </button>
+
+                {/* Setup */}
                 <SetupPanel setup={setup} onSave={handleSetupSave} />
 
+                {/* Save */}
                 <button
                     onClick={() => saveToBackend(grids, zones, setup, positions, overlayItems, bedLayouts, zoneItems, true)}
-                    className="bg-forest text-white text-xs px-4 py-1.5 rounded-lg font-medium hover:bg-green-800 transition-colors flex-shrink-0"
+                    style={{
+                        padding: '7px 16px', background: '#3d6b34',
+                        color: '#f4f1e6', border: 'none',
+                        borderRadius: 6, fontSize: 12.5, fontWeight: 500,
+                        cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+                    }}
                 >
                     {g.save}
                 </button>
@@ -592,8 +672,14 @@ export default function GardenLayout() {
             {/* ── Main content ── */}
             <div className="flex flex-1 overflow-hidden">
 
-                {/* Canvas area */}
-                <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
+                {/* Canvas area — outer cream bg + inner rounded map frame */}
+                <div className="flex-1 min-w-0 overflow-hidden flex flex-col" style={{ background: '#ece2c8', padding: 16 }}>
+                    <div style={{
+                        flex: 1, borderRadius: 10, overflow: 'hidden',
+                        border: '1px solid #d3cdb8',
+                        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.45), 0 2px 8px rgba(30,40,25,0.10)',
+                        display: 'flex', flexDirection: 'column', minHeight: 0,
+                    }}>
                     <GardenCanvas
                         zones={zones}
                         grids={grids}
@@ -623,12 +709,17 @@ export default function GardenLayout() {
                         proposedHoveredName={hoveredPreviewName}
                         proposedSelectedNames={previewSelectedNames}
                     />
+                    </div>
                 </div>
 
                 {/* Right column — side preview panel OR normal sidebar */}
                 <div
-                    className="border-l border-gray-200 bg-white flex-shrink-0 flex flex-col overflow-hidden"
-                    style={{ width: permPlanDraft ? 390 : 256 }}
+                    style={{
+                        borderLeft: '1px solid #d3cdb8',
+                        background: '#fbf7ea',
+                        flexShrink: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                        width: permPlanDraft ? 440 : 260,
+                    }}
                 >
                     {permPlanDraft ? (
                         <PermaculturePlanSidePreview
@@ -647,6 +738,9 @@ export default function GardenLayout() {
                             skipped={skippedElements}
                             previewHidden={previewHidden}
                             onToggleHide={() => setPreviewHidden(h => !h)}
+                            variants={permPlanVariants}
+                            activeVariantIndex={activeVariantIndex}
+                            onVariantSwitch={handleVariantSwitch}
                         />
                     ) : selectedBedId ? (
                         <BedSidebar
@@ -682,10 +776,23 @@ export default function GardenLayout() {
                 onConfirm={executeReset}
             />
 
+            {/* Site analysis 4-step wizard */}
+            {siteAnalysisOpen && (
+                <SiteAnalysisWizard
+                    setup={setup}
+                    overlayItems={overlayItems}
+                    zoneItems={zoneItems}
+                    initialData={siteAnalysis}
+                    onSave={handleSaveSiteAnalysis}
+                    onClose={() => setSiteAnalysisOpen(false)}
+                />
+            )}
+
             {/* 2-step permaculture plan wizard (centered modal, Steps 1 & 2 only) */}
             {generatePlanOpen && (
                 <PermaculturePlanWizard
                     setup={setup}
+                    siteAnalysis={siteAnalysis}
                     favoritePlants={favoritePlants}
                     overlayItems={overlayItems}
                     initialStep={wizardInitialStep}

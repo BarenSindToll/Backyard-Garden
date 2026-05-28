@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { useLanguage } from '../../utils/languageContext';
 
+const NORTH_DIRECTIONS = [
+    { key: 'top',    icon: '↑' },
+    { key: 'right',  icon: '→' },
+    { key: 'bottom', icon: '↓' },
+    { key: 'left',   icon: '←' },
+];
+
 const FOCUS_AREA_KEYS = [
     { key: 'Producer',             color: 'bg-green-100 border-green-400 text-green-800' },
     { key: 'Nitrogen fixer',       color: 'bg-blue-100 border-blue-400 text-blue-800' },
@@ -180,6 +187,26 @@ export default function SetupPanel({ setup, onSave }) {
                                                 key={goal} type="button" onClick={() => toggleGoal(goal)}
                                                 className={`text-xs px-3 py-1.5 rounded-full border transition-all ${selected ? 'bg-forest text-white border-forest font-semibold' : 'bg-white border-gray-300 text-gray-500 hover:border-gray-400'}`}
                                             >{g.goals[i]}</button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-medium text-gray-600 block mb-1">{g.gardenOrientation}</label>
+                                <p className="text-xs text-gray-400 mb-2">{g.northOrientationHelp}</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {NORTH_DIRECTIONS.map(({ key, icon }, i) => {
+                                        const selected = (form.northDirection || 'top') === key;
+                                        return (
+                                            <button
+                                                key={key} type="button"
+                                                onClick={() => setForm(f => ({ ...f, northDirection: key }))}
+                                                className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border transition-all ${selected ? 'bg-forest text-white border-forest font-semibold' : 'bg-white border-gray-300 text-gray-600 hover:border-forest hover:text-forest'}`}
+                                            >
+                                                <span className="text-base leading-none">{icon}</span>
+                                                <span>{g.northDirections[i]}</span>
+                                            </button>
                                         );
                                     })}
                                 </div>

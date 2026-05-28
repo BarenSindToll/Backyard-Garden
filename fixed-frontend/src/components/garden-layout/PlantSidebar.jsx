@@ -13,48 +13,15 @@ const GUILD_LABEL_COLOR = {
 
 function PlantInfo({ plant, g }) {
     return (
-        <div className="mt-1.5 mb-1 px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-xs space-y-1.5">
-            {plant.sunlight && (
-                <div className="flex items-center gap-1.5">
-                    <span>☀️</span>
-                    <span className="text-gray-600">{plant.sunlight}</span>
-                </div>
-            )}
-            {plant.spacingCm && (
-                <div className="flex items-center gap-1.5">
-                    <span>📏</span>
-                    <span className="text-gray-600">{plant.spacingCm} {g.cmSpacing}</span>
-                </div>
-            )}
-            {plant.season && (
-                <div className="flex items-center gap-1.5">
-                    <span>🗓</span>
-                    <span className="text-gray-600">{plant.season}</span>
-                </div>
-            )}
-            {plant.planting?.daysToMaturity && (
-                <div className="flex items-center gap-1.5">
-                    <span>⏳</span>
-                    <span className="text-gray-600">{plant.planting.daysToMaturity} {g.daysToMaturity}</span>
-                </div>
-            )}
+        <div style={{ margin: '4px 0 4px', padding: '8px 10px', background: 'rgba(0,0,0,0.03)', borderRadius: 6, fontSize: 11, lineHeight: 1.6 }}>
+            {plant.sunlight && <div style={{ color: '#485547' }}>☀ {plant.sunlight}</div>}
+            {plant.spacingCm && <div style={{ color: '#485547' }}>↔ {plant.spacingCm} {g.cmSpacing}</div>}
+            {plant.season && <div style={{ color: '#485547' }}>◷ {plant.season}</div>}
             {plant.companions?.length > 0 && (
-                <div>
-                    <span className="font-semibold text-green-700">{g.goodWith}</span>
-                    <span className="text-gray-600">{plant.companions.slice(0, 5).join(', ')}{plant.companions.length > 5 ? '…' : ''}</span>
-                </div>
+                <div><span style={{ color: '#3d6b34', fontWeight: 600 }}>{g.goodWith}</span><span style={{ color: '#485547' }}>{plant.companions.slice(0, 4).join(', ')}{plant.companions.length > 4 ? '…' : ''}</span></div>
             )}
             {plant.antagonists?.length > 0 && (
-                <div>
-                    <span className="font-semibold text-red-600">{g.avoidWith}</span>
-                    <span className="text-gray-600">{plant.antagonists.slice(0, 5).join(', ')}{plant.antagonists.length > 5 ? '…' : ''}</span>
-                </div>
-            )}
-            {plant.ecologicalFunctions?.length > 0 && (
-                <div>
-                    <span className="font-semibold text-forest">{g.functions}</span>
-                    <span className="text-gray-600">{plant.ecologicalFunctions.join(', ')}</span>
-                </div>
+                <div><span style={{ color: '#b55' , fontWeight: 600 }}>{g.avoidWith}</span><span style={{ color: '#485547' }}>{plant.antagonists.slice(0, 4).join(', ')}{plant.antagonists.length > 4 ? '…' : ''}</span></div>
             )}
         </div>
     );
@@ -108,34 +75,132 @@ export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNa
     }, [allPlants, search, zoneFilterOn, zone, focusAreas, activeRole, showFavoritesOnly, favoritePlants]);
 
     return (
-        <aside className="bg-cream rounded-xl border border-gray-200 text-forest w-full overflow-hidden flex flex-col">
-            {/* Tab bar */}
-            <div className="flex border-b border-gray-200 flex-shrink-0">
-                <button
-                    onClick={() => setTab('plants')}
-                    className={`flex-1 py-2.5 text-sm font-medium transition-colors ${tab === 'plants' ? 'bg-white text-forest border-b-2 border-forest' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                    {g.plantsTab}
-                </button>
-                <button
-                    onClick={() => setTab('structures')}
-                    className={`flex-1 py-2.5 text-sm font-medium transition-colors ${tab === 'structures' ? 'bg-white text-forest border-b-2 border-forest' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                    {g.structuresTab}
-                </button>
+        <div style={{
+            width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
+            background: '#fbf7ea', overflow: 'hidden',
+        }}>
+            {/* ── Header ── */}
+            <div style={{ padding: '14px 18px 10px', borderBottom: '1px solid #e8e2cc', flexShrink: 0 }}>
+                {/* Tab row */}
+                <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
+                    <button
+                        onClick={() => setTab('plants')}
+                        style={{
+                            padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer',
+                            fontFamily: 'JetBrains Mono, monospace', fontSize: 10,
+                            letterSpacing: '0.15em', textTransform: 'uppercase',
+                            color: tab === 'plants' ? '#3d6b34' : '#7c857a',
+                            borderBottom: tab === 'plants' ? '2px solid #3d6b34' : '2px solid transparent',
+                            transition: 'color 0.12s',
+                        }}
+                    >
+                        {g.plantsTab}
+                    </button>
+                    <button
+                        onClick={() => setTab('structures')}
+                        style={{
+                            padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer',
+                            fontFamily: 'JetBrains Mono, monospace', fontSize: 10,
+                            letterSpacing: '0.15em', textTransform: 'uppercase',
+                            color: tab === 'structures' ? '#3d6b34' : '#7c857a',
+                            borderBottom: tab === 'structures' ? '2px solid #3d6b34' : '2px solid transparent',
+                            transition: 'color 0.12s',
+                        }}
+                    >
+                        {g.structuresTab}
+                    </button>
+                </div>
+
+                {tab === 'plants' && (
+                    <>
+                        <h3 style={{
+                            fontFamily: 'Newsreader, Georgia, serif', fontSize: 18, fontWeight: 400,
+                            color: '#1f3a18', margin: '0 0 10px', lineHeight: 1.1,
+                        }}>
+                            Drag onto map
+                        </h3>
+
+                        {/* Search */}
+                        <input
+                            type="text"
+                            placeholder={g.searchPlants}
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            style={{
+                                width: '100%', padding: '7px 10px',
+                                border: '1px solid #d3cdb8', borderRadius: 6,
+                                fontSize: 12.5, fontFamily: 'inherit',
+                                background: '#fbf7ea', color: '#1d2a20',
+                                outline: 'none', boxSizing: 'border-box',
+                            }}
+                        />
+
+                        {/* Filter pills row */}
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center' }}>
+                            <button
+                                onClick={() => setZoneFilterOn(v => !v)}
+                                style={{
+                                    fontSize: 10, padding: '2px 8px', borderRadius: 999, cursor: 'pointer',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    background: zoneFilterOn ? '#3d6b34' : 'transparent',
+                                    color: zoneFilterOn ? '#f4f1e6' : '#7c857a',
+                                    border: `1px solid ${zoneFilterOn ? '#3d6b34' : '#d3cdb8'}`,
+                                }}
+                            >
+                                {zoneFilterOn ? `Zone ${zone} ✓` : g.allZones}
+                            </button>
+                            <button
+                                onClick={() => setShowFavoritesOnly(v => !v)}
+                                style={{
+                                    fontSize: 10, padding: '2px 8px', borderRadius: 999, cursor: 'pointer',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    background: showFavoritesOnly ? '#d8e3c0' : 'transparent',
+                                    color: showFavoritesOnly ? '#1f3a18' : '#7c857a',
+                                    border: `1px solid ${showFavoritesOnly ? '#5e9050' : '#d3cdb8'}`,
+                                }}
+                            >
+                                ♥ {favoritePlants.length}
+                            </button>
+                            {focusAreas.map(role => (
+                                <button
+                                    key={role}
+                                    onClick={() => setActiveRole(r => r === role ? null : role)}
+                                    style={{
+                                        fontSize: 10, padding: '2px 8px', borderRadius: 999, cursor: 'pointer',
+                                        background: activeRole === role ? '#3d6b34' : 'transparent',
+                                        color: activeRole === role ? '#f4f1e6' : '#7c857a',
+                                        border: `1px solid ${activeRole === role ? '#3d6b34' : '#d3cdb8'}`,
+                                    }}
+                                >
+                                    {g.guildRoles[role] || role}
+                                </button>
+                            ))}
+                        </div>
+                    </>
+                )}
+
+                {tab === 'structures' && (
+                    <p style={{ fontSize: 11, color: '#7c857a', margin: 0 }}>{g.dragInstruction}</p>
+                )}
             </div>
 
-            <div className="p-3 flex flex-col flex-1 min-h-0">
+            {/* ── Content ── */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0 16px' }}>
+
                 {/* ── STRUCTURES TAB ── */}
                 {tab === 'structures' && (
-                    <div className="space-y-2 overflow-y-auto">
-                        <p className="text-xs text-gray-500 mb-3">{g.dragInstruction}</p>
+                    <div style={{ padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {STRUCTURES.map((structure) => {
                             const tr = g.structures[structure.name] || { name: structure.name, description: structure.description };
                             return (
                                 <div
                                     key={structure.name}
-                                    className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl p-3 shadow-sm cursor-grab hover:shadow-md transition-shadow"
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 10,
+                                        background: 'rgba(0,0,0,0.03)', border: '1px solid #e8e2cc',
+                                        borderRadius: 8, padding: '8px 10px',
+                                        cursor: 'grab',
+                                    }}
                                     draggable
                                     onDragStart={e => e.dataTransfer.setData('plant', JSON.stringify({
                                         name: structure.name,
@@ -144,15 +209,17 @@ export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNa
                                         color: structure.color,
                                     }))}
                                 >
-                                    <div
-                                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
-                                        style={{ backgroundColor: structure.color + '44' }}
-                                    >
-                                        <img src={structure.icon} alt={tr.name} className="w-8 h-8" />
+                                    <div style={{
+                                        width: 34, height: 34, borderRadius: 6, flexShrink: 0,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        background: (structure.color || '#888') + '33',
+                                        overflow: 'hidden',
+                                    }}>
+                                        <img src={structure.icon} alt={tr.name} style={{ width: 26, height: 26 }} />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-semibold">{tr.name}</p>
-                                        <p className="text-xs text-gray-500">{tr.description}</p>
+                                        <p style={{ fontSize: 12.5, fontWeight: 600, color: '#1d2a20', margin: 0 }}>{tr.name}</p>
+                                        <p style={{ fontSize: 10.5, color: '#7c857a', margin: 0 }}>{tr.description}</p>
                                     </div>
                                 </div>
                             );
@@ -162,124 +229,110 @@ export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNa
 
                 {/* ── PLANTS TAB ── */}
                 {tab === 'plants' && (
-                    <>
-                        <div className="flex items-center justify-between mb-2 flex-shrink-0">
-                            <h2 className="text-sm font-bold">{g.plantsTab}</h2>
-                            <div className="flex items-center gap-1.5">
-                                <button
-                                    onClick={() => setShowFavoritesOnly(v => !v)}
-                                    className={`text-xs px-2 py-0.5 rounded-full border transition-colors flex items-center gap-1 ${showFavoritesOnly ? 'bg-amber-400 text-white border-amber-400' : 'bg-white text-gray-500 border-gray-300 hover:border-amber-300'}`}
-                                    title={g.noFavourites}
-                                >
-                                    ♥ {showFavoritesOnly ? favoritePlants.length : favoritePlants.length}
-                                </button>
-                                <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full border border-green-300 font-medium">
-                                    {g.zonePrefix} {zone}
-                                </span>
-                            </div>
-                        </div>
+                    <div style={{ padding: '2px 0' }}>
+                        {filteredPlants.length === 0 && (
+                            <p style={{ textAlign: 'center', color: '#7c857a', fontSize: 12, padding: '24px 16px' }}>
+                                {showFavoritesOnly ? g.noFavourites : g.noMatch}
+                            </p>
+                        )}
 
-                        {/* Filter pills */}
-                        <div className="flex items-center gap-1.5 flex-wrap mb-2 flex-shrink-0">
-                            <button
-                                onClick={() => setZoneFilterOn(v => !v)}
-                                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${zoneFilterOn ? 'bg-forest text-white border-forest' : 'bg-white text-gray-500 border-gray-300 hover:border-gray-400'}`}
-                            >
-                                {zoneFilterOn ? `${g.zonePrefix} ${zone} ✓` : g.allZones}
-                            </button>
-                            {focusAreas.map(role => (
-                                <button
-                                    key={role}
-                                    onClick={() => setActiveRole(r => r === role ? null : role)}
-                                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${activeRole === role ? 'bg-forest text-white border-forest' : `${GUILD_LABEL_COLOR[role] || 'bg-gray-100 text-gray-600'} border-transparent`}`}
-                                >
-                                    {g.guildRoles[role] || role}
-                                </button>
-                            ))}
-                        </div>
+                        {filteredPlants.map((plant, idx) => {
+                            const hasAntagonist = plant.antagonists?.some(a => placedPlantNames.includes(a));
+                            const isCompanion = !hasAntagonist && plant.companions?.some(c => placedPlantNames.includes(c));
+                            const primaryRole = plant.guildRole?.[0];
+                            const isFav = favoritePlants.includes(plant.name);
+                            const isExpanded = expandedPlant === plant.name;
+                            const iconSrc = plant.iconData ? `data:image/svg+xml;base64,${plant.iconData}` : null;
 
-                        <input
-                            type="text"
-                            placeholder={g.searchPlants}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-forest/20 flex-shrink-0"
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                        />
+                            return (
+                                <div key={idx}>
+                                    <div
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: 9,
+                                            padding: '7px 18px',
+                                            background: isFav ? '#d8e3c0' : hasAntagonist ? 'rgba(180,60,60,0.06)' : isCompanion ? 'rgba(61,107,52,0.06)' : 'transparent',
+                                            cursor: 'default',
+                                            borderBottom: '1px solid rgba(211,205,184,0.35)',
+                                        }}
+                                    >
+                                        {/* Favorite button */}
+                                        <button
+                                            onClick={e => toggleFavorite(e, plant.name)}
+                                            style={{
+                                                flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer',
+                                                fontSize: 13, lineHeight: 1, padding: 0,
+                                                color: isFav ? '#e09060' : 'rgba(124,133,122,0.35)',
+                                            }}
+                                        >♥</button>
 
-                        <p className="text-xs text-gray-400 mb-2 flex-shrink-0">
-                            {filteredPlants.length} {filteredPlants.length !== 1 ? g.plantPlural : g.plantSingular}
-                            {showFavoritesOnly && ` ${g.favouritesSuffix}`}
-                        </p>
+                                        {/* Icon */}
+                                        <div
+                                            style={{
+                                                width: 24, height: 24, borderRadius: 5, flexShrink: 0,
+                                                background: '#ece2c8',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                overflow: 'hidden', cursor: 'grab',
+                                            }}
+                                            draggable
+                                            onDragStart={e => e.dataTransfer.setData('plant', JSON.stringify({ name: plant.name, iconData: plant.iconData }))}
+                                            title={g.dragOntoTitle}
+                                        >
+                                            {iconSrc
+                                                ? <img src={iconSrc} alt={plant.name} style={{ width: 18, height: 18, objectFit: 'contain' }} draggable={false} />
+                                                : <span style={{ fontSize: 13 }}>🌱</span>
+                                            }
+                                        </div>
 
-                        <div className="space-y-1.5 overflow-y-auto flex-1 pr-0.5">
-                            {filteredPlants.length === 0 && (
-                                <p className="text-sm text-gray-400 text-center py-6">
-                                    {showFavoritesOnly ? g.noFavourites : g.noMatch}
-                                </p>
-                            )}
-
-                            {filteredPlants.map((plant, idx) => {
-                                const hasAntagonist = plant.antagonists?.some(a => placedPlantNames.includes(a));
-                                const isCompanion = !hasAntagonist && plant.companions?.some(c => placedPlantNames.includes(c));
-                                const primaryRole = plant.guildRole?.[0];
-                                const isFocus = focusAreas.length > 0 && plant.guildRole?.some(r => focusAreas.includes(r));
-                                const isFav = favoritePlants.includes(plant.name);
-                                const isExpanded = expandedPlant === plant.name;
-                                const iconSrc = plant.iconData ? `data:image/svg+xml;base64,${plant.iconData}` : null;
-
-                                return (
-                                    <div key={idx}>
-                                        <div className={`flex items-center gap-2 bg-white border rounded-xl px-2.5 py-2 shadow-sm transition-all ${
-                                            hasAntagonist ? 'border-red-300 bg-red-50/40' :
-                                            isCompanion   ? 'border-green-300 bg-green-50/40' :
-                                            isFocus       ? 'border-forest/25 bg-forest/5' :
-                                                            'border-gray-200'
-                                        }`}>
-                                            <button
-                                                onClick={e => toggleFavorite(e, plant.name)}
-                                                className={`flex-shrink-0 text-base leading-none transition-colors ${isFav ? 'text-amber-400' : 'text-gray-200 hover:text-amber-300'}`}
-                                            >♥</button>
-
-                                            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setExpandedPlant(p => p === plant.name ? null : plant.name)}>
-                                                <div className="flex items-center gap-1 flex-wrap">
-                                                    <span className="text-sm font-semibold truncate">{plant.name}</span>
-                                                    {hasAntagonist && <span title={g.antagonistTitle} className="text-sm">⚠️</span>}
-                                                    {isCompanion   && <span title={g.companionTitle} className="text-sm">🤝</span>}
-                                                    <span className="text-gray-400 text-xs ml-auto">{isExpanded ? '▲' : '▼'}</span>
-                                                </div>
-                                                {primaryRole && (
-                                                    <span className={`inline-block text-xs px-1.5 py-0.5 rounded-full mt-0.5 ${GUILD_LABEL_COLOR[primaryRole] || 'bg-gray-100 text-gray-600'}`}>
-                                                        {g.guildRoles[primaryRole] || primaryRole}
-                                                    </span>
-                                                )}
+                                        {/* Name + role */}
+                                        <div
+                                            style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
+                                            onClick={() => setExpandedPlant(p => p === plant.name ? null : plant.name)}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <span style={{ fontSize: 13, color: '#1d2a20', fontWeight: hasAntagonist || isCompanion ? 500 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {plant.name}
+                                                    {hasAntagonist && <span title={g.antagonistTitle} style={{ marginLeft: 3, fontSize: 11 }}>⚠️</span>}
+                                                    {isCompanion && <span title={g.companionTitle} style={{ marginLeft: 3, fontSize: 11 }}>🤝</span>}
+                                                </span>
                                             </div>
-
-                                            {iconSrc ? (
-                                                <img
-                                                    src={iconSrc} alt={plant.name}
-                                                    className="w-9 h-9 flex-shrink-0 cursor-grab"
-                                                    draggable
-                                                    onDragStart={e => e.dataTransfer.setData('plant', JSON.stringify({ name: plant.name, iconData: plant.iconData }))}
-                                                    title={g.dragOntoTitle}
-                                                />
-                                            ) : (
-                                                <div
-                                                    className="w-9 h-9 flex-shrink-0 rounded-full bg-green-100 flex items-center justify-center text-base cursor-grab"
-                                                    draggable
-                                                    onDragStart={e => e.dataTransfer.setData('plant', JSON.stringify({ name: plant.name }))}
-                                                    title={g.dragOntoTitle}
-                                                >🌱</div>
+                                            {primaryRole && (
+                                                <span className={`inline-block text-[9px] px-1.5 py-px rounded-full mt-0.5 ${GUILD_LABEL_COLOR[primaryRole] || 'bg-gray-100 text-gray-600'}`}>
+                                                    {g.guildRoles[primaryRole] || primaryRole}
+                                                </span>
                                             )}
                                         </div>
 
-                                        {isExpanded && <PlantInfo plant={plant} g={g} />}
+                                        {/* FAV badge */}
+                                        {isFav && (
+                                            <span style={{
+                                                fontFamily: 'JetBrains Mono, monospace', fontSize: 9,
+                                                color: '#3d6b34', letterSpacing: '0.1em', flexShrink: 0,
+                                                marginLeft: 'auto',
+                                            }}>
+                                                FAV
+                                            </span>
+                                        )}
+
+                                        {/* Expand chevron */}
+                                        <span
+                                            style={{ fontSize: 9, color: '#7c857a', flexShrink: 0, cursor: 'pointer' }}
+                                            onClick={() => setExpandedPlant(p => p === plant.name ? null : plant.name)}
+                                        >
+                                            {isExpanded ? '▲' : '▼'}
+                                        </span>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    </>
+
+                                    {isExpanded && (
+                                        <div style={{ padding: '0 18px' }}>
+                                            <PlantInfo plant={plant} g={g} />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 )}
             </div>
-        </aside>
+        </div>
     );
 }

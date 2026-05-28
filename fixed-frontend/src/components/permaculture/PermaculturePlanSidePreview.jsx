@@ -1,96 +1,264 @@
-import { useMemo } from 'react';
+/**
+ * PermaculturePlanSidePreview
+ * Right-side panel shown after the wizard generates a draft.
+ * Prototype-style: cream background, serif header, grouped sections,
+ * variant cards, sticky footer with Apply / Edit / Regenerate / Discard.
+ */
+import { useMemo, useState } from 'react';
 
-const TYPE_COLORS = {
-    'permaculture-zone': '#6040a0',
-    'structure':         '#8B5E3C',
-    'planting-strip':    '#4a7c3f',
-    'water-feature':     '#1a70c0',
-};
-const TYPE_ICONS = {
-    'permaculture-zone': '🔵',
-    'structure':         '🏗',
-    'planting-strip':    '🌿',
-    'water-feature':     '💧',
-};
-const TYPE_LABELS = {
-    'permaculture-zone': 'Conceptual zone',
-    'structure':         'Structure',
-    'planting-strip':    'Planting strip',
-    'water-feature':     'Water feature',
+// ── Design tokens ──────────────────────────────────────────────────────────────
+const C = {
+    paper:   '#fbf7ea',
+    cream:   '#ece2c8',
+    sage:    '#d8e3c0',
+    forest:  '#3d6b34',
+    deep:    '#1f3a18',
+    ink:     '#1d2a20',
+    inkSoft: '#485547',
+    muted:   '#7c857a',
+    line:    '#d3cdb8',
+    soft:    '#e8e2cc',
 };
 
-// Actions that produce a map element (can be checked/applied).
-// recommendation_only elements are panel-only.
+// ── Element classification ─────────────────────────────────────────────────────
 const APPLY_ACTIONS = new Set(['create_new', 'enhance_existing', 'plant_inside_existing', 'add_near_existing']);
 
-// Action badge styling
-const ACTION_META = {
-    create_new:            { label: 'Create new',         color: '#5b4ec0', bg: 'rgba(91,78,192,0.1)',   icon: '✚' },
-    enhance_existing:      { label: 'Enhance existing',   color: '#b06010', bg: 'rgba(176,96,16,0.1)',  icon: '⟳' },
-    plant_inside_existing: { label: 'Plant inside',       color: '#2e7d32', bg: 'rgba(46,125,50,0.1)',  icon: '🌱' },
-    add_near_existing:     { label: 'Add near existing',  color: '#5b4ec0', bg: 'rgba(91,78,192,0.1)',   icon: '⊕' },
-    recommendation_only:   { label: 'Recommendation',     color: '#6b7280', bg: 'rgba(107,114,128,0.1)', icon: '💡' },
-};
+const WATER_STRUCT_KEYWORDS = ['water', 'pond', 'path', 'greenhouse', 'compost', 'house', 'shed', 'coop', 'fence', 'wall', 'gate', 'building', 'structure'];
 
-function ActionBadge({ action }) {
-    const meta = ACTION_META[action] || ACTION_META.recommendation_only;
+function classifyEl(el) {
+    if (el.action === 'recommendation_only') return 'tips';
+    const type = (el.type || '').toLowerCase();
+    if (type === 'permaculture-zone' || type.includes('zone')) return 'zones';
+    if (WATER_STRUCT_KEYWORDS.some(k => type.includes(k))) return 'water_struct';
+    const name = (el.name || '').toLowerCase();
+    if (WATER_STRUCT_KEYWORDS.some(k => name.includes(k))) return 'water_struct';
+    return 'planting';
+}
+
+function groupElements(elements) {
+    const groups = { planting: [], water_struct: [], zones: [], tips: [] };
+    elements.forEach(el => {
+        const g = classifyEl(el);
+        (groups[g] = groups[g] || []).push(el);
+    });
+    return groups;
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function formatDim(el) {
+    const w = el.width;
+    const h = el.height;
+    if (!w) return null;
+    if (!h || w === h) return `⌀ ${w} m`;
+    return `${w} × ${h} m`;
+}
+
+function fitFromConf(confidence) {
+    if (confidence == null) return null;
+    const pct = confidence * 100;
+    if (pct >= 80) return { label: 'Strong fit',   color: '#2d5a45' };
+    if (pct >= 60) return { label: 'Worth trying',  color: '#a08465' };
+    return               { label: 'Optional',       color: '#79857f' };
+}
+
+function avgConf(elements = []) {
+    const cs = elements.filter(e => e.confidence != null).map(e => e.confidence);
+    if (!cs.length) return null;
+    return cs.reduce((a, b) => a + b, 0) / cs.length;
+}
+
+function getTitle(plan, variantIdx, totalVariants) {
+    if (totalVariants >= 2) return variantIdx === 0 ? 'Food Focus' : 'Biodiversity';
+    const s = (plan.summary || '').split('.')[0].trim();
+    return s.length > 0 && s.length <= 60 ? s : 'Permaculture Plan';
+}
+
+function getSubtitle(plan) {
+    const src = plan.summary || plan.planNarrative || '';
+    // find first non-heading line
+    const first = src.split('\n').find(l => l.trim() && !l.startsWith('#'))?.replace(/^\*\*|\*\*$/g, '').trim() || '';
+    if (first.length <= 140) return first || null;
+    return first.slice(0, 140).trim() + '…';
+}
+
+// ── Atoms ──────────────────────────────────────────────────────────────────────
+
+function PlanCheckbox({ checked, onChange, disabled }) {
     return (
-        <span style={{
-            display:      'inline-flex',
-            alignItems:   'center',
-            gap:          3,
-            fontSize:     9,
-            fontWeight:   700,
-            color:        meta.color,
-            background:   meta.bg,
-            borderRadius: 4,
-            padding:      '1px 5px',
-            lineHeight:   1.5,
-            flexShrink:   0,
-        }}>
-            <span>{meta.icon}</span>
-            <span>{meta.label}</span>
+        <button
+            onClick={onChange}
+            disabled={disabled}
+            style={{
+                width: 16, height: 16, marginTop: 2, flexShrink: 0,
+                borderRadius: 3, border: `1.5px solid ${checked ? C.forest : C.line}`,
+                background: checked ? C.forest : 'transparent',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                cursor: disabled ? 'not-allowed' : 'pointer', padding: 0,
+            }}
+        >
+            {checked && <span style={{ color: '#f4f1e6', fontSize: 9, lineHeight: 1, fontWeight: 700 }}>✓</span>}
+        </button>
+    );
+}
+
+function PlanTag({ children }) {
+    return (
+        <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 999, background: C.sage, color: C.forest, fontWeight: 500 }}>
+            {children}
         </span>
     );
 }
 
-function ConfidenceBar({ value = 0.8 }) {
-    const pct   = Math.round((value ?? 0.8) * 100);
-    const color = pct >= 85 ? '#4a7c3f' : pct >= 65 ? '#a07040' : '#b04040';
+function VariantCard({ label, sub, confidence, active, onClick }) {
     return (
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-            <div style={{ width: 36, height: 3, background: '#e5e7eb', borderRadius: 2, overflow: 'hidden' }}>
-                <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 2 }} />
+        <button onClick={onClick}
+            style={{
+                textAlign: 'left', flex: 1, padding: '8px 12px',
+                background: active ? C.paper : 'transparent',
+                border: `1px solid ${active ? C.forest : 'transparent'}`,
+                borderRadius: 6, cursor: 'pointer', transition: 'all 0.12s',
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', color: active ? C.forest : C.muted, fontWeight: 600 }}>
+                    {label}
+                </span>
+                {confidence != null && (
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9.5, color: active ? C.inkSoft : C.muted }}>
+                        {Math.round(confidence * 100)}%
+                    </span>
+                )}
             </div>
-            <span style={{ fontSize: 10, color, fontWeight: 600 }}>{pct}%</span>
+            {sub && (
+                <div style={{ fontSize: 10.5, color: C.muted, marginTop: 2, lineHeight: 1.3 }}>{sub}</div>
+            )}
+        </button>
+    );
+}
+
+// ── Element card ───────────────────────────────────────────────────────────────
+function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHoverLeave, applying }) {
+    const isApplyable = el.type !== 'permaculture-zone' && APPLY_ACTIONS.has(el.action || 'create_new');
+    const isTip       = el.action === 'recommendation_only';
+    const dim = formatDim(el);
+    const fit = fitFromConf(el.confidence);
+
+    return (
+        <div
+            onMouseEnter={onHoverEnter}
+            onMouseLeave={onHoverLeave}
+            style={{
+                padding: '12px 0',
+                borderTop: `1px solid ${C.soft}`,
+                background: hovered ? 'rgba(61,107,52,0.04)' : 'transparent',
+                opacity: isApplyable && !checked ? 0.45 : 1,
+                transition: 'background 0.12s, opacity 0.12s',
+            }}
+        >
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                {/* Checkbox / indicator */}
+                {isApplyable ? (
+                    <PlanCheckbox checked={checked} onChange={onToggle} disabled={applying} />
+                ) : (
+                    <span style={{ width: 16, height: 16, marginTop: 2, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: C.muted, fontSize: 11 }}>
+                        {isTip ? '·' : '○'}
+                    </span>
+                )}
+
+                {/* Content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 500, color: C.ink, lineHeight: 1.3 }}>
+                            {el.name}
+                        </span>
+                        {dim && (
+                            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10.5, color: C.muted, flexShrink: 0 }}>
+                                {dim}
+                            </span>
+                        )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
+                        {el.type && (
+                            <span style={{ fontSize: 11, color: C.muted }}>
+                                {el.type.replace(/-/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase())}
+                                {el.targetZone ? ` · Zone ${el.targetZone}` : ''}
+                            </span>
+                        )}
+                        {fit && (
+                            <>
+                                <span style={{ fontSize: 11, color: C.muted }}>·</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: fit.color, flexShrink: 0 }} />
+                                    <span style={{ fontSize: 11, color: fit.color, fontWeight: 500 }}>{fit.label}</span>
+                                </span>
+                            </>
+                        )}
+                    </div>
+
+                    {el.reason && (
+                        <p style={{ fontSize: 12, color: C.inkSoft, margin: '6px 0 0', lineHeight: 1.45 }}>
+                            {el.reason}
+                        </p>
+                    )}
+
+                    {el.plants?.length > 0 && (
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 7 }}>
+                            {el.plants.map((p, i) => <PlanTag key={i}>{p}</PlanTag>)}
+                        </div>
+                    )}
+
+                    {el.warnings?.length > 0 && (
+                        <div style={{ marginTop: 6 }}>
+                            {el.warnings.map((w, i) => (
+                                <p key={i} style={{ fontSize: 11, color: '#a05020', background: '#fef3e8', borderRadius: 4, padding: '3px 8px', margin: i > 0 ? '3px 0 0' : 0, display: 'flex', gap: 4 }}>
+                                    <span>⚠</span><span>{w}</span>
+                                </p>
+                            ))}
+                        </div>
+                    )}
+
+                    {isTip && (
+                        <p style={{ fontSize: 10.5, color: C.muted, fontStyle: 'italic', margin: '4px 0 0' }}>
+                            Panel recommendation — not drawn on map.
+                        </p>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
 
-/**
- * Right-side preview panel shown after the wizard generates a draft.
- * Replaces the normal sidebar column in GardenLayout.
- *
- * Props
- *   plan                – full plan object from the backend
- *   selectedNames       – Set | null (null = all selected)
- *   onSelectionChange   – (Set | null) => void
- *   hoveredName         – currently hovered element name (string | null)
- *   onHover             – (name | null) => void
- *   applying            – bool: apply request in progress
- *   onApply             – (force: bool) => void
- *   onReject            – () => void
- *   onRegenerate        – (initialStep: 1|2) => void — reopens wizard
- *   onClose             – () => void — close without saving
- *   applyWarning        – { warning: string } | null
- *   applyError          – string
- *   skipped             – [{ element, reason }]
- *   previewHidden       – bool
- *   onToggleHide        – () => void
- *   variants            – array of plan objects (A and B)
- *   activeVariantIndex  – 0 | 1
- *   onVariantSwitch     – (index: number) => void
- */
+// ── Section group ──────────────────────────────────────────────────────────────
+function PlanSection({ title, items, selected, onToggle, hoveredName, onHover, applying }) {
+    if (!items || items.length === 0) return null;
+    return (
+        <div style={{ marginBottom: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', paddingBottom: 6, marginBottom: 2 }}>
+                <h3 style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, margin: 0, color: C.deep, fontWeight: 500 }}>
+                    {title}
+                </h3>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.muted }}>
+                    {items.length} {items.length === 1 ? 'item' : 'items'}
+                </span>
+            </div>
+            {items.map((el, i) => (
+                <PlanElementCard
+                    key={i} el={el}
+                    checked={selected?.has(el.name) ?? true}
+                    onToggle={() => onToggle(el.name)}
+                    hovered={hoveredName === el.name}
+                    onHoverEnter={() => onHover(el.name)}
+                    onHoverLeave={() => onHover(null)}
+                    applying={applying}
+                />
+            ))}
+        </div>
+    );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
 export default function PermaculturePlanSidePreview({
     plan,
     selectedNames,
@@ -114,35 +282,23 @@ export default function PermaculturePlanSidePreview({
     if (!plan) return null;
 
     const {
-        siteAnalysis     = {},
         proposedElements = [],
         planNarrative    = '',
         summary          = '',
         planWarnings     = [],
-        bibliography     = [],
-        createdAt,
     } = plan;
 
-    // APPLY_ACTIONS is defined at module scope — used to distinguish map-renderable from panel-only elements.
-
     const applyableElements = useMemo(
-        () => proposedElements.filter(e =>
-            e.type !== 'permaculture-zone' && APPLY_ACTIONS.has(e.action || 'create_new')
-        ),
-        [proposedElements]
-    );
-
-    const recommendationElements = useMemo(
-        () => proposedElements.filter(e => e.action === 'recommendation_only'),
+        () => proposedElements.filter(e => e.type !== 'permaculture-zone' && APPLY_ACTIONS.has(e.action || 'create_new')),
         [proposedElements]
     );
 
     const selected = useMemo(
-        () => selectedNames === null ? new Set(applyableElements.map(e => e.name)) : selectedNames,
+        () => selectedNames === null ? new Set(applyableElements.map(e => e.name)) : (selectedNames || new Set()),
         [selectedNames, applyableElements]
     );
 
-    const allChecked  = selected.size === applyableElements.length;
+    const allChecked  = applyableElements.length > 0 && selected.size === applyableElements.length;
     const noneChecked = selected.size === 0;
 
     const toggleElement = (name) => {
@@ -150,332 +306,214 @@ export default function PermaculturePlanSidePreview({
         next.has(name) ? next.delete(name) : next.add(name);
         onSelectionChange(next);
     };
-
     const toggleAll = () => onSelectionChange(allChecked ? new Set() : null);
 
-    const narrative = summary || planNarrative;
+    const groups = useMemo(() => groupElements(proposedElements), [proposedElements]);
+
+    const totalVariants = variants.length;
+    const planTitle = getTitle(plan, activeVariantIndex, totalVariants);
+    const planSub   = getSubtitle(plan);
+
+    const confA = avgConf(variants[0]?.proposedElements);
+    const confB = avgConf(variants[1]?.proposedElements);
 
     return (
-        <div className="flex flex-col h-full overflow-hidden bg-white">
+        <div style={{ width: '100%', height: '100%', background: C.paper, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
             {/* ── Header ── */}
-            <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200"
-                 style={{ background: 'linear-gradient(135deg, #1a3a1a 0%, #2d5a28 100%)' }}>
-                <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                        <p className="text-white font-bold text-sm leading-tight">🌿 Permaculture Plan</p>
-                        <p className="text-green-300 text-[10px] mt-0.5">
-                            {applyableElements.length} element{applyableElements.length !== 1 ? 's' : ''}
-                            {createdAt ? ` · ${new Date(createdAt).toLocaleDateString()}` : ''}
-                        </p>
+            <div style={{ padding: '14px 22px 12px', borderBottom: `1px solid ${C.soft}`, background: C.paper, flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.muted, marginBottom: 2 }}>
+                            Draft plan
+                        </div>
+                        <h2 style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, margin: 0, color: C.deep, lineHeight: 1.1 }}>
+                            {planTitle}
+                        </h2>
+                        {planSub && (
+                            <p style={{ fontSize: 12.5, color: C.inkSoft, margin: '3px 0 0', lineHeight: 1.4 }}>{planSub}</p>
+                        )}
                     </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            plan.aiSource === 'ai'
-                                ? 'bg-forest/80 text-white'
-                                : 'bg-amber-400/90 text-amber-900'
-                        }`}>
-                            {plan.aiSource === 'ai' ? 'AI' : 'DRAFT'}
-                        </span>
-                        <button onClick={onClose}
-                            className="text-white/60 hover:text-white text-lg leading-none transition-colors">✕</button>
-                    </div>
+                    <button
+                        onClick={onClose || onReject}
+                        style={{ background: 'none', border: 'none', color: C.muted, padding: 4, cursor: 'pointer', fontSize: 18, marginTop: -2, flexShrink: 0 }}
+                    >✕</button>
                 </div>
+
+                {/* Variant cards */}
+                {variants.length > 1 && (
+                    <div style={{ display: 'flex', gap: 4, marginTop: 12, padding: 3, background: C.cream, borderRadius: 8 }}>
+                        <VariantCard
+                            label="Variant A" sub="Food focus"
+                            confidence={confA}
+                            active={activeVariantIndex === 0}
+                            onClick={() => onVariantSwitch?.(0)}
+                        />
+                        <VariantCard
+                            label="Variant B" sub="Biodiversity"
+                            confidence={confB}
+                            active={activeVariantIndex === 1}
+                            onClick={() => onVariantSwitch?.(1)}
+                        />
+                    </div>
+                )}
             </div>
 
-            {/* ── Variant A / B tabs ── */}
-            {variants.length > 1 && (
-                <div className="flex-shrink-0 flex gap-1.5 px-3 py-2 border-b border-gray-200 bg-gray-50">
-                    {variants.map((v, i) => {
-                        const labels = ['🌽 Food Focus', '🦋 Biodiversity'];
-                        const isActive = activeVariantIndex === i;
-                        return (
-                            <button key={i}
-                                onClick={() => onVariantSwitch?.(i)}
-                                disabled={applying}
-                                className={`flex-1 text-[11px] py-1.5 rounded-lg font-semibold transition-colors disabled:opacity-50 ${
-                                    isActive
-                                        ? 'bg-forest text-white shadow-sm'
-                                        : 'text-gray-500 border border-gray-200 bg-white hover:bg-gray-50'
-                                }`}>
-                                {labels[i] ?? `Variant ${i + 1}`}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* ── Preview active banner ── */}
-            <div className="flex-shrink-0 px-3 py-1.5 border-b border-green-100 bg-green-50 flex items-center gap-2">
-                <span className="text-[10px] text-green-700 font-semibold flex-1">
-                    {previewHidden ? '👁 Preview hidden from map' : '📍 Elements shown on map'}
-                </span>
+            {/* ── Toolbar ── */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 22px', borderBottom: `1px solid ${C.soft}`, background: C.paper, flexShrink: 0 }}>
+                <button onClick={toggleAll}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: C.forest, fontSize: 12, padding: 0, fontWeight: 500, cursor: 'pointer' }}>
+                    <span style={{
+                        width: 14, height: 14, borderRadius: 3,
+                        border: `1.5px solid ${C.forest}`,
+                        background: allChecked ? C.forest : 'transparent',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#f4f1e6', flexShrink: 0,
+                    }}>
+                        {allChecked && <span style={{ fontSize: 8, fontWeight: 700 }}>✓</span>}
+                    </span>
+                    {allChecked ? 'Deselect all' : 'Select all'} ({selected.size}/{applyableElements.length})
+                </button>
                 <button onClick={onToggleHide}
-                    className="text-[10px] text-forest border border-forest/30 rounded-md px-2 py-0.5 hover:bg-green-100 transition-colors font-medium">
-                    {previewHidden ? 'Show' : 'Hide'}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: `1px solid ${C.line}`, color: C.inkSoft, fontSize: 11.5, padding: '4px 10px', borderRadius: 999, cursor: 'pointer' }}>
+                    {previewHidden ? '👁 Show on map' : '⊘ Hide on map'}
                 </button>
             </div>
 
             {/* ── Scrollable body ── */}
-            <div className="flex-1 overflow-y-auto text-sm">
-
-                {/* Summary */}
-                {narrative && (
-                    <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Overview</p>
-                        <p className="text-xs text-gray-700 leading-relaxed">
-                            {narrative.split('\n').find(l => l.trim() && !l.startsWith('##'))?.replace(/^\*\*|\*\*$/g, '') || narrative.split('\n')[0]}
-                        </p>
-                        {plan.aiSource && (
-                            <span className={`inline-block mt-2 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                                plan.aiSource === 'ai' ? 'bg-forest/10 text-forest' : 'bg-gray-100 text-gray-500'
-                            }`}>
-                                {plan.aiSource === 'ai' ? '✦ AI Generated' : 'Rule-based plan'}
-                            </span>
-                        )}
-                    </div>
-                )}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '14px 22px 20px', minHeight: 0 }}>
 
                 {/* Plan warnings */}
                 {planWarnings.length > 0 && (
-                    <div className="px-4 py-3 border-b border-amber-100 bg-amber-50">
-                        <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1.5">Plan notes</p>
+                    <div style={{ background: '#fef3e8', border: '1px solid #fcd9a8', borderRadius: 8, padding: '12px 14px', marginBottom: 20 }}>
+                        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9.5, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#a06020', marginBottom: 6 }}>
+                            Notes
+                        </div>
                         {planWarnings.map((w, i) => (
-                            <p key={i} className="text-[11px] text-amber-800 leading-snug flex gap-1.5">
-                                <span className="flex-shrink-0 mt-0.5">•</span><span>{w}</span>
-                            </p>
+                            <p key={i} style={{ fontSize: 11.5, color: '#92400e', margin: i > 0 ? '4px 0 0' : 0, lineHeight: 1.4 }}>• {w}</p>
                         ))}
                     </div>
                 )}
 
-                {/* Site analysis — brief */}
-                {(siteAnalysis.opportunities?.length > 0 || siteAnalysis.constraints?.length > 0) && (
-                    <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Site Analysis</p>
-                        {siteAnalysis.opportunities?.slice(0, 2).map((o, i) => (
-                            <p key={i} className="flex gap-1.5 text-xs text-gray-700 mb-1">
-                                <span className="text-green-500 flex-shrink-0">✓</span><span>{o}</span>
-                            </p>
-                        ))}
-                        {siteAnalysis.constraints?.slice(0, 2).map((c, i) => (
-                            <p key={i} className="flex gap-1.5 text-xs text-gray-700 mb-1">
-                                <span className="text-amber-500 flex-shrink-0">⚠</span><span>{c}</span>
-                            </p>
-                        ))}
-                    </div>
-                )}
+                {/* Grouped sections */}
+                <PlanSection
+                    title="What will grow"
+                    items={groups.planting}
+                    selected={selected} onToggle={toggleElement}
+                    hoveredName={hoveredName} onHover={onHover}
+                    applying={applying}
+                />
+                <PlanSection
+                    title="Water & structures"
+                    items={groups.water_struct}
+                    selected={selected} onToggle={toggleElement}
+                    hoveredName={hoveredName} onHover={onHover}
+                    applying={applying}
+                />
+                <PlanSection
+                    title="Garden zones"
+                    items={groups.zones}
+                    selected={selected} onToggle={toggleElement}
+                    hoveredName={hoveredName} onHover={onHover}
+                    applying={applying}
+                />
+                <PlanSection
+                    title="Tips & recommendations"
+                    items={groups.tips}
+                    selected={selected} onToggle={toggleElement}
+                    hoveredName={hoveredName} onHover={onHover}
+                    applying={applying}
+                />
 
-                {/* Proposed elements with checkboxes */}
-                {proposedElements.length > 0 && (
-                    <div className="px-4 py-3 border-b border-gray-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                Proposed Elements
-                            </p>
-                            {applyableElements.length > 0 && (
-                                <button onClick={toggleAll}
-                                    className="text-[10px] text-forest hover:underline font-medium flex-shrink-0">
-                                    {allChecked ? 'Deselect all' : 'Select all'}
-                                </button>
-                            )}
-                        </div>
-                        {applyableElements.length > 0 && (
-                            <p className="text-[10px] text-gray-400 mb-2.5">
-                                {selected.size} of {applyableElements.length} selected for apply
-                            </p>
-                        )}
-
-                        <div className="space-y-2">
-                            {proposedElements.map((el, i) => {
-                                const color      = TYPE_COLORS[el.type] || '#4a7c3f';
-                                const icon       = TYPE_ICONS[el.type]  || '📍';
-                                const label      = TYPE_LABELS[el.type] || el.type;
-                                // recommendation_only and permaculture-zone elements cannot be applied
-                                const isApply    = el.type !== 'permaculture-zone' &&
-                                                   el.action !== 'recommendation_only';
-                                const isChecked  = !isApply || selected.has(el.name);
-                                const isHovered  = el.name === hoveredName;
-                                const isRecommendationOnly = el.action === 'recommendation_only';
-
-                                return (
-                                    <div key={i}
-                                        className={`rounded-xl border overflow-hidden transition-all cursor-default ${
-                                            !isChecked ? 'opacity-40' : ''
-                                        } ${isHovered ? 'ring-1' : ''}`}
-                                        style={{
-                                            borderColor: color + (isChecked ? '55' : '22'),
-                                            ringColor:   color,
-                                            boxShadow:   isHovered ? `0 0 0 2px ${color}40` : 'none',
-                                        }}
-                                        onMouseEnter={() => onHover(el.name)}
-                                        onMouseLeave={() => onHover(null)}
-                                    >
-                                        {/* Row header */}
-                                        <div className="flex items-start gap-2 px-3 py-2"
-                                             style={{ background: isRecommendationOnly ? '#f9f9f9' : color + (isChecked ? '0d' : '06') }}>
-                                            {isApply ? (
-                                                <input type="checkbox" checked={isChecked}
-                                                    onChange={() => toggleElement(el.name)}
-                                                    disabled={applying}
-                                                    className="mt-0.5 flex-shrink-0 accent-forest cursor-pointer" />
-                                            ) : (
-                                                /* recommendation_only and zone overlays: no checkbox, grey dash */
-                                                <span className="text-[10px] flex-shrink-0 mt-0.5 text-gray-300 font-medium w-3 text-center select-none">–</span>
-                                            )}
-                                            <span className="text-sm flex-shrink-0">{icon}</span>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between gap-1">
-                                                    <p className="font-semibold text-xs truncate" style={{ color }}>
-                                                        {el.name}
-                                                    </p>
-                                                    <ConfidenceBar value={el.confidence} />
-                                                </div>
-                                                <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                                                    <ActionBadge action={el.action || 'create_new'} />
-                                                    <span className="text-[10px] text-gray-400">
-                                                        {label}
-                                                        {el.targetZone ? ` · Zone ${el.targetZone}` : ''}
-                                                        {el.width && el.action !== 'recommendation_only' ? ` · ${el.width}×${el.height}m` : ''}
-                                                    </span>
-                                                </div>
-                                                {/* Target element note */}
-                                                {el.targetElementId && (
-                                                    <p className="text-[10px] text-gray-500 mt-0.5 italic">
-                                                        Targets existing map element
-                                                    </p>
-                                                )}
-                                                {/* Catalog key note */}
-                                                {el.catalogKey && (el.action === 'create_new' || el.action === 'add_near_existing') && (
-                                                    <p className="text-[10px] text-gray-400 mt-0.5">
-                                                        From catalog: <span className="font-medium text-gray-600">{el.catalogKey.replace(/_/g, ' ')}</span>
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Body */}
-                                        {(el.reason || el.plants?.length > 0 || el.warnings?.length > 0) && (
-                                            <div className="px-3 pb-2.5 pt-1.5 space-y-1.5">
-                                                {el.reason && (
-                                                    <p className="text-[11px] text-gray-600 leading-snug">{el.reason}</p>
-                                                )}
-                                                {el.plants?.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {el.plants.map((pl, pi) => (
-                                                            <span key={pi} className="text-[10px] px-1.5 py-0.5 rounded-full border"
-                                                                style={{ borderColor: color + '55', color, background: color + '10' }}>
-                                                                {pl}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {el.warnings?.map((w, wi) => (
-                                                    <p key={wi} className="text-[10px] text-amber-700 bg-amber-50 rounded px-2 py-1 flex gap-1">
-                                                        <span className="flex-shrink-0">⚠</span><span>{w}</span>
-                                                    </p>
-                                                ))}
-                                                {/* recommendation_only note — explains why there's no checkbox or map preview */}
-                                                {isRecommendationOnly && (
-                                                    <p className="text-[10px] text-gray-400 italic mt-1">
-                                                        💡 Panel-only recommendation — not drawn on map, not applied to layout.
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {/* Skipped elements after partial apply */}
+                {/* Skipped elements */}
                 {skipped.length > 0 && (
-                    <div className="px-4 py-3 border-b border-orange-200 bg-orange-50">
-                        <p className="text-[10px] font-bold text-orange-800 uppercase tracking-wider mb-1.5">
+                    <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '12px 14px', marginTop: 8 }}>
+                        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9.5, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c2410c', marginBottom: 6 }}>
                             {skipped.length} element{skipped.length !== 1 ? 's' : ''} skipped
-                        </p>
+                        </div>
                         {skipped.map((s, i) => (
-                            <p key={i} className="text-[11px] text-orange-900 leading-snug mb-1">
-                                <span className="font-semibold">{s.element}:</span> {s.reason}
+                            <p key={i} style={{ fontSize: 11.5, color: '#9a3412', margin: i > 0 ? '4px 0 0' : 0, lineHeight: 1.4 }}>
+                                <strong>{s.element}:</strong> {s.reason}
                             </p>
                         ))}
-                    </div>
-                )}
-
-                {/* Bibliography */}
-                {bibliography.length > 0 && (
-                    <div className="px-4 py-3">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">References</p>
-                        <ul className="space-y-1">
-                            {bibliography.map((b, i) => (
-                                <li key={i} className="text-[10px] text-gray-400 leading-snug pl-3 border-l-2 border-gray-200">{b}</li>
-                            ))}
-                        </ul>
                     </div>
                 )}
             </div>
 
             {/* ── Footer ── */}
-            <div className="flex-shrink-0 px-4 py-3 border-t border-gray-200 bg-gray-50 space-y-2">
+            <div style={{ padding: '12px 22px 14px', borderTop: `1px solid ${C.line}`, background: C.paper, flexShrink: 0 }}>
 
                 {/* Apply error */}
                 {applyError && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700 flex gap-1.5">
-                        <span className="flex-shrink-0">⚠</span><span>{applyError}</span>
+                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 11.5, color: '#dc2626' }}>
+                        ⚠ {applyError}
                     </div>
                 )}
 
-                {/* Layout-changed warning */}
+                {/* Apply warning */}
                 {applyWarning && (
-                    <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 space-y-2">
-                        <p className="text-[11px] text-amber-800 leading-snug">⚠ {applyWarning.warning}</p>
-                        <div className="flex gap-2">
+                    <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 12px', marginBottom: 10 }}>
+                        <p style={{ fontSize: 11.5, color: '#92400e', margin: '0 0 8px', lineHeight: 1.4 }}>⚠ {applyWarning.warning}</p>
+                        <div style={{ display: 'flex', gap: 8 }}>
                             <button onClick={() => onApply(true)} disabled={applying}
-                                className="flex-1 py-1.5 text-xs bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium disabled:opacity-50 transition-colors">
+                                style={{ flex: 1, padding: '7px', background: '#d97706', color: 'white', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                                 Apply Anyway
                             </button>
                             <button onClick={onClose} disabled={applying}
-                                className="flex-1 py-1.5 text-xs text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors">
+                                style={{ flex: 1, padding: '7px', background: 'none', border: `1px solid ${C.line}`, color: C.muted, borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>
                                 Cancel
                             </button>
                         </div>
                     </div>
                 )}
 
-                {/* Primary apply */}
+                {/* Primary apply button */}
                 {!applyWarning && (
                     <button
                         onClick={() => onApply(false)}
                         disabled={applying || noneChecked}
-                        className="w-full py-2.5 bg-forest text-white text-sm rounded-xl hover:bg-green-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                            width: '100%', padding: '13px 16px', borderRadius: 8,
+                            background: !noneChecked && !applying ? C.forest : C.line,
+                            color: !noneChecked && !applying ? '#f4f1e6' : C.muted,
+                            border: 'none', fontSize: 14, fontWeight: 500,
+                            cursor: !noneChecked && !applying ? 'pointer' : 'not-allowed',
+                            transition: 'background 0.12s',
+                        }}
                     >
                         {applying ? (
                             <>
-                                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                <svg width="14" height="14" viewBox="0 0 14 14" style={{ flexShrink: 0 }}>
+                                    <circle cx="7" cy="7" r="5.5" fill="none" stroke="rgba(244,241,230,0.35)" strokeWidth="1.5"/>
+                                    <circle cx="7" cy="7" r="5.5" fill="none" stroke="#f4f1e6" strokeWidth="1.5"
+                                        strokeDasharray="12 22" strokeLinecap="round" transform="rotate(-90 7 7)">
+                                        <animateTransform attributeName="transform" type="rotate" from="0 7 7" to="360 7 7" dur="1s" repeatCount="indefinite"/>
+                                    </circle>
+                                </svg>
                                 Applying…
                             </>
                         ) : noneChecked ? (
                             'Select elements to apply'
                         ) : (
-                            `✓ Apply ${selected.size} selected to map`
+                            `✓ Apply ${selected.size} element${selected.size !== 1 ? 's' : ''} to map`
                         )}
                     </button>
                 )}
 
                 {/* Secondary actions */}
-                <div className="flex gap-1.5">
+                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                     <button onClick={() => onRegenerate(2)} disabled={applying}
-                        className="flex-1 py-1.5 text-[11px] text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors">
-                        ← Edit
+                        style={{ flex: 1, padding: '8px', background: 'none', border: `1px solid ${C.line}`, color: C.inkSoft, fontSize: 12, borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                        ✏ Edit brief
                     </button>
                     <button onClick={() => onRegenerate(1)} disabled={applying}
-                        className="flex-1 py-1.5 text-[11px] text-forest border border-forest/30 rounded-xl hover:bg-green-50 disabled:opacity-50 transition-colors font-medium">
-                        ↺ New plan
+                        style={{ flex: 1, padding: '8px', background: 'none', border: `1px solid ${C.line}`, color: C.inkSoft, fontSize: 12, borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                        ↺ Regenerate
                     </button>
                     <button onClick={onReject} disabled={applying}
-                        className="flex-1 py-1.5 text-[11px] text-red-500 border border-red-200 rounded-xl hover:bg-red-50 disabled:opacity-50 transition-colors">
-                        Reject
+                        style={{ padding: '8px 12px', background: 'none', border: `1px solid ${C.line}`, color: C.muted, fontSize: 12, borderRadius: 6, cursor: 'pointer' }}>
+                        Discard
                     </button>
                 </div>
             </div>
