@@ -27,21 +27,56 @@ const siteAnalysisSchema = new mongoose.Schema({
     soilStrategy:         { type: String, default: '' },
     accessStrategy:       { type: String, default: '' },
     biodiversityStrategy: { type: String, default: '' },
+    // Structured summary of what site analysis data was used/missing
+    siteAnalysisSummary:  { type: mongoose.Schema.Types.Mixed, default: null },
 }, { _id: false });
 
 const proposedElementSchema = new mongoose.Schema({
-    type:        { type: String, default: 'structure' }, // 'permaculture-zone', 'structure', 'planting-strip', 'water-feature'
+    // ── Action & catalog linkage ──────────────────────────────────────────────
+    action:          { type: String, default: 'create_new' },
+    catalogKey:      { type: String, default: null },
+    targetElementId: { type: String, default: null },
+    enhancementType: { type: String, default: null },
+    canonicalType:   { type: String, default: 'unknown' },
+
+    // ── Type & identity ───────────────────────────────────────────────────────
+    type:        { type: String, default: 'structure' }, // 'permaculture-zone' | 'structure' | 'planting-strip' | 'water-feature'
     name:        { type: String, required: true },
-    targetZone:  { type: String, default: '' },          // permaculture design zone: '0','1','2','3','4','5'
-    x:           { type: Number, default: 0 },           // metres from garden top-left
+
+    // ── Permaculture zone (integer 0-5) ───────────────────────────────────────
+    permacultureZone: { type: Number, min: 0, max: 5, default: null },
+    targetZone:       { type: String, default: '' },   // string version for backward compat
+
+    // ── Position (metres from garden top-left) ────────────────────────────────
+    x:           { type: Number, default: 0 },
     y:           { type: Number, default: 0 },
-    width:       { type: Number, default: 2 },           // metres
+    width:       { type: Number, default: 2 },
     height:      { type: Number, default: 2 },
     rotation:    { type: Number, default: 0 },
+
+    // ── Plant content ─────────────────────────────────────────────────────────
     plants:      { type: [String], default: [] },
+
+    // ── Placement rules ───────────────────────────────────────────────────────
+    // Stable rule identifiers from PLACEMENT_RULES, e.g. ['near-house', 'full-sun']
+    placementRules: { type: [String], default: [] },
+
+    // ── AI reasoning & confidence ─────────────────────────────────────────────
     reason:      { type: String, default: '' },
     confidence:  { type: Number, min: 0, max: 1, default: 0.8 },
     warnings:    { type: [String], default: [] },
+
+    // ── Spatial strategy fields ───────────────────────────────────────────────
+    // Set by the generator; preserved by validation; displayed in preview.
+    variantStrategy: { type: String, default: null },     // solar-priority | flow-access | water-gravity
+    strategyReason:  { type: String, default: '' },       // 1-sentence why this strategy drove placement
+    strategyTags:    { type: [String], default: [] },     // full-sun, daily-harvest, near-house, zone-1, etc.
+
+    // ── Detail plan (for openable types: raised-bed, greenhouse, orchard, etc.) ─
+    // Stores layout metadata for the detail view / bed editor.
+    // Schema is flexible (Mixed) to support different layout types per element.
+    // layoutType: 'rows' | 'blocks' | 'trees' | 'guild-layers' | 'berry-rows'
+    detailPlan: { type: mongoose.Schema.Types.Mixed, default: null },
 }, { _id: false });
 
 const permaculturePlanSchema = new mongoose.Schema({

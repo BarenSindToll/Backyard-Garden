@@ -1,3 +1,5 @@
+import { CANONICAL_TYPE_COLORS, resolveElementColor } from '../../config/permaculturePlanSchema';
+
 // Rendering colors per action type
 const ACTION_COLOR = {
     create_new:            '#5b4ec0',  // blue-purple — new placement
@@ -23,12 +25,34 @@ const ACTION_LABEL = {
     recommendation_only:   'Note',
 };
 
-// Per-type icons shown in the label chip
+// Per-type icons shown in the label chip — by AI schema type
 const TYPE_ICONS = {
     'permaculture-zone': '🔵',
     'structure':         '🏗',
     'planting-strip':    '🌿',
     'water-feature':     '💧',
+};
+
+// Per-canonical-type icons (override TYPE_ICONS when catalogKey/canonicalType is known)
+const CANONICAL_ICONS = {
+    raised_bed:     '🪴',
+    greenhouse:     '🏡',
+    path:           '🛤',
+    compost:        '♻️',
+    coop:           '🐔',
+    beehive:        '🐝',
+    shed:           '🏚',
+    patio:          '🪑',
+    windbreak:      '🌬',
+    pond:           '💧',
+    swale:          '〰',
+    orchard:        '🍎',
+    guild:          '🌀',
+    berry_patch:    '🫐',
+    herb_garden:    '🌿',
+    food_forest:    '🌳',
+    wild_zone:      '🦋',
+    'permaculture-zone': '🔵',
 };
 
 // Only these actions produce a visible map element — everything else is panel-only.
@@ -67,10 +91,14 @@ export default function ProposedElementsOverlay({ items = [], pxPerM, hoveredNam
         <>
             {renderable.map((el, i) => {
                 const action     = el.action || 'create_new';
-                const color      = ACTION_COLOR[action] || ACTION_COLOR.create_new;
+                const canonKey   = el.catalogKey || el.canonicalType;
+                const canonColor = canonKey ? CANONICAL_TYPE_COLORS[canonKey] : null;
+                const color      = canonColor || ACTION_COLOR[action] || ACTION_COLOR.create_new;
                 const fills      = ACTION_FILL[action]  || ACTION_FILL.create_new;
                 const actionTag  = ACTION_LABEL[action] || 'Proposed';
-                const icon       = TYPE_ICONS[el.type]  || '📍';
+                const icon       = (canonKey && CANONICAL_ICONS[canonKey])
+                    || TYPE_ICONS[el.type]
+                    || '📍';
 
                 const isHovered   = el.name === hoveredName;
                 const isSelected  = selectedNames === null || selectedNames.has(el.name);

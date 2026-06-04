@@ -20,6 +20,174 @@ const C = {
     soft:    '#e8e2cc',
 };
 
+// ── Strategy badge derivation ─────────────────────────────────────────────────
+// Returns a short badge string for the active variant strategy, or null.
+function deriveStrategyBadge(el, variantStrategy) {
+    // AI returned explicit strategyReason — use it
+    if (el.strategyReason) return el.strategyReason;
+
+    const reason   = (el.reason || '').toLowerCase();
+    const strategy = el.variantStrategy || variantStrategy || '';
+
+    if (strategy === 'solar-priority' || strategy === 'solar_priority') {
+        if (reason.includes('high-sun') || reason.includes('full sun') || reason.includes('sunniest') || el.strategyTags?.includes('full-sun'))
+            return 'Solar: full-sun placement';
+        if (reason.includes('partial shade') || reason.includes('partial-shade') || el.strategyTags?.includes('partial-shade'))
+            return 'Solar: partial-shade placement';
+        if (reason.includes('solar priority') || reason.includes('variant a'))
+            return 'Solar: sun-optimised';
+        if (reason.includes('sun') || reason.includes('shade'))
+            return 'Solar: sun considered';
+    }
+    if (strategy === 'flow-access' || strategy === 'flow_access') {
+        if (reason.includes('zone 1') || reason.includes('daily harvest') || reason.includes('daily use') || el.strategyTags?.includes('zone-1'))
+            return 'Access: Zone 1 — daily use';
+        if (reason.includes('zone 2') || el.strategyTags?.includes('zone-2'))
+            return 'Access: Zone 2 — regular access';
+        if (reason.includes('zone 3') || el.strategyTags?.includes('zone-3'))
+            return 'Access: Zone 3 — low frequency';
+        if (reason.includes('path') || reason.includes('access') || el.strategyTags?.includes('path-access'))
+            return 'Access: connects productive zones';
+        if (reason.includes('close to house') || reason.includes('near house') || el.strategyTags?.includes('near-house'))
+            return 'Access: near house';
+    }
+    if (strategy === 'water-gravity' || strategy === 'water_gravity') {
+        if (reason.includes('contour') || reason.includes('slope') || el.strategyTags?.includes('contour'))
+            return 'Water: slope / contour';
+        if (reason.includes('low point') || reason.includes('lowest') || el.strategyTags?.includes('low-point'))
+            return 'Water: low-point placement';
+    }
+    return null;
+}
+
+// ── Source extraction ─────────────────────────────────────────────────────────
+// Pulls the first meaningful sentence from an element's reason as a short "Because…" line.
+function extractBecause(reason) {
+    if (!reason) return null;
+    const first = reason.split(/\.\s+/)[0].trim();
+    if (first.length < 18) return null;
+    return first.length > 110 ? first.slice(0, 107) + '…' : first;
+}
+
+// ── Site analysis panel ────────────────────────────────────────────────────────
+function SiteAnalysisPanel({ summary }) {
+    const [collapsed, setCollapsed] = useState(false);
+
+    if (!summary) return null;
+    const { usedFacts = [], missingFacts = [], confidenceImpact = [] } = summary;
+    if (!usedFacts.length && !missingFacts.length) return null;
+
+    const hasMissing = missingFacts.length > 0 || confidenceImpact.length > 0;
+
+    return (
+        <div style={{
+            background: hasMissing ? '#fffbeb' : '#f0f7ec',
+            border: `1px solid ${hasMissing ? 'rgba(180,120,0,0.3)' : 'rgba(61,107,52,0.25)'}`,
+            borderRadius: 8, padding: '10px 13px', marginBottom: 18,
+        }}>
+            <button
+                onClick={() => setCollapsed(v => !v)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            >
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9.5, letterSpacing: '0.15em', textTransform: 'uppercase', color: hasMissing ? '#a06020' : '#3d6b34', fontWeight: 600 }}>
+                    {hasMissing ? '⚠ Site Analysis — partial data' : '✓ Used from Site Analysis'}
+                </span>
+                <span style={{ fontSize: 10, color: '#7c857a' }}>{collapsed ? '▼' : '▲'}</span>
+            </button>
+
+            {!collapsed && (
+                <div style={{ marginTop: 8 }}>
+                    {usedFacts.length > 0 && (
+                        <div style={{ marginBottom: missingFacts.length ? 8 : 0 }}>
+                            {usedFacts.map((f, i) => (
+                                <div key={i} style={{ display: 'flex', gap: 5, marginTop: i > 0 ? 3 : 0 }}>
+                                    <span style={{ color: '#3d6b34', fontSize: 10, flexShrink: 0, marginTop: 2 }}>✓</span>
+                                    <span style={{ fontSize: 11.5, color: '#1d2a20', lineHeight: 1.4 }}>{f}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {missingFacts.length > 0 && (
+                        <div style={{ paddingTop: 6, borderTop: usedFacts.length ? '1px solid rgba(160,96,32,0.2)' : 'none' }}>
+                            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 8.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#a06020', marginBottom: 4 }}>
+                                Missing — placement estimated
+                            </div>
+                            {missingFacts.map((f, i) => (
+                                <div key={i} style={{ display: 'flex', gap: 5, marginTop: i > 0 ? 3 : 0 }}>
+                                    <span style={{ color: '#a06020', fontSize: 10, flexShrink: 0, marginTop: 2 }}>–</span>
+                                    <span style={{ fontSize: 11, color: '#78350f', lineHeight: 1.35 }}>{f}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {confidenceImpact.length > 0 && (
+                        <div style={{ marginTop: 5 }}>
+                            {confidenceImpact.map((f, i) => (
+                                <div key={i} style={{ display: 'flex', gap: 5, marginTop: i > 0 ? 2 : 0 }}>
+                                    <span style={{ color: '#a06020', fontSize: 10, flexShrink: 0, marginTop: 2 }}>!</span>
+                                    <span style={{ fontSize: 10.5, color: '#78350f', fontStyle: 'italic', lineHeight: 1.35 }}>{f}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ── Household food strategy panel ─────────────────────────────────────────────
+function FoodStrategyPanel({ strategy }) {
+    const [collapsed, setCollapsed] = useState(true);  // collapsed by default — less prominent
+
+    if (!strategy) return null;
+    const { householdSize, coverageGoal, realism, estimatedIntensity, bedCountTarget, recommendations = [], warnings = [] } = strategy;
+
+    const goalLabel = { supplement: 'Supplement', partial: 'Partial', high: 'High production', maximum: 'Max self-sufficiency' };
+    const realismColor = realism === 'space-limited' ? '#a06020' : realism === 'ambitious' ? '#856020' : '#3d6b34';
+
+    return (
+        <div style={{ background: '#f5f9f2', border: '1px solid rgba(61,107,52,0.2)', borderRadius: 8, padding: '10px 13px', marginBottom: 18 }}>
+            <button
+                onClick={() => setCollapsed(v => !v)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            >
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9.5, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#3d6b34', fontWeight: 600 }}>
+                    🥕 Food needs strategy
+                </span>
+                <span style={{ fontSize: 10, color: '#7c857a' }}>{collapsed ? '▼' : '▲'}</span>
+            </button>
+
+            {/* Always-visible summary line */}
+            <div style={{ fontSize: 11.5, color: '#485547', marginTop: 5, lineHeight: 1.4 }}>
+                {householdSize ? `${householdSize} people · ` : ''}
+                <strong style={{ color: realismColor }}>{goalLabel[coverageGoal] || coverageGoal}</strong>
+                {bedCountTarget ? ` · ${bedCountTarget} beds` : ''}
+                {realism !== 'realistic' && <span style={{ color: realismColor, marginLeft: 5, fontSize: 10.5 }}>({realism})</span>}
+            </div>
+
+            {!collapsed && recommendations.length > 0 && (
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(61,107,52,0.15)' }}>
+                    {recommendations.map((r, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 5, marginTop: i > 0 ? 4 : 0 }}>
+                            <span style={{ color: '#3d6b34', fontSize: 10, flexShrink: 0, marginTop: 2 }}>→</span>
+                            <span style={{ fontSize: 11.5, color: '#1d2a20', lineHeight: 1.4 }}>{r}</span>
+                        </div>
+                    ))}
+                    {warnings.map((w, i) => (
+                        <div key={`w${i}`} style={{ display: 'flex', gap: 5, marginTop: 4, background: '#fffbeb', borderRadius: 4, padding: '4px 6px' }}>
+                            <span style={{ color: '#a06020', fontSize: 10, flexShrink: 0, marginTop: 2 }}>⚠</span>
+                            <span style={{ fontSize: 11, color: '#78350f', lineHeight: 1.35 }}>{w}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Element classification ─────────────────────────────────────────────────────
 const APPLY_ACTIONS = new Set(['create_new', 'enhance_existing', 'plant_inside_existing', 'add_near_existing']);
 
@@ -68,7 +236,10 @@ function avgConf(elements = []) {
 }
 
 function getTitle(plan, variantIdx, totalVariants) {
-    if (totalVariants >= 2) return variantIdx === 0 ? 'Food Focus' : 'Biodiversity';
+    if (totalVariants >= 2) return variantIdx === 0 ? 'Solar Priority' : 'Flow & Access';
+    // Fall back to plan summary or variant label from planNarrative
+    const narrativeLine = (plan.planNarrative || '').split('\n').find(l => l.startsWith('## '));
+    if (narrativeLine) return narrativeLine.replace('## Permaculture Plan — ', '').trim();
     const s = (plan.summary || '').split('.')[0].trim();
     return s.length > 0 && s.length <= 60 ? s : 'Permaculture Plan';
 }
@@ -137,7 +308,7 @@ function VariantCard({ label, sub, confidence, active, onClick }) {
 }
 
 // ── Element card ───────────────────────────────────────────────────────────────
-function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHoverLeave, applying }) {
+function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHoverLeave, applying, variantStrategy }) {
     const isApplyable = el.type !== 'permaculture-zone' && APPLY_ACTIONS.has(el.action || 'create_new');
     const isTip       = el.action === 'recommendation_only';
     const dim = formatDim(el);
@@ -196,11 +367,40 @@ function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHover
                         )}
                     </div>
 
-                    {el.reason && (
-                        <p style={{ fontSize: 12, color: C.inkSoft, margin: '6px 0 0', lineHeight: 1.45 }}>
-                            {el.reason}
-                        </p>
-                    )}
+                    {(() => {
+                        const badge = deriveStrategyBadge(el, variantStrategy);
+                        return badge ? (
+                            <div style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                marginTop: 5, padding: '2px 8px', borderRadius: 999,
+                                background: variantStrategy === 'flow-access' ? 'rgba(91,78,192,0.09)' : variantStrategy === 'water-gravity' ? 'rgba(26,112,192,0.09)' : 'rgba(180,140,0,0.10)',
+                                border: `1px solid ${variantStrategy === 'flow-access' ? 'rgba(91,78,192,0.22)' : variantStrategy === 'water-gravity' ? 'rgba(26,112,192,0.22)' : 'rgba(180,140,0,0.22)'}`,
+                                fontSize: 10.5, color: variantStrategy === 'flow-access' ? '#4a3a90' : variantStrategy === 'water-gravity' ? '#1a5a90' : '#7a6000',
+                                fontWeight: 500,
+                            }}>
+                                {variantStrategy === 'flow-access' ? '🚶' : variantStrategy === 'water-gravity' ? '💧' : '☀️'}
+                                <span>{badge}</span>
+                            </div>
+                        ) : null;
+                    })()}
+
+                    {el.reason && (() => {
+                        const because = extractBecause(el.reason);
+                        return (
+                            <>
+                                {because && (
+                                    <p style={{ fontSize: 11, color: C.forest, margin: '5px 0 0', lineHeight: 1.35, fontStyle: 'italic' }}>
+                                        Because: {because}
+                                    </p>
+                                )}
+                                {el.reason.length > (because?.length ?? 0) + 5 && (
+                                    <p style={{ fontSize: 11.5, color: C.inkSoft, margin: '3px 0 0', lineHeight: 1.45 }}>
+                                        {el.reason}
+                                    </p>
+                                )}
+                            </>
+                        );
+                    })()}
 
                     {el.plants?.length > 0 && (
                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 7 }}>
@@ -230,7 +430,7 @@ function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHover
 }
 
 // ── Section group ──────────────────────────────────────────────────────────────
-function PlanSection({ title, items, selected, onToggle, hoveredName, onHover, applying }) {
+function PlanSection({ title, items, selected, onToggle, hoveredName, onHover, applying, variantStrategy }) {
     if (!items || items.length === 0) return null;
     return (
         <div style={{ marginBottom: 28 }}>
@@ -251,6 +451,7 @@ function PlanSection({ title, items, selected, onToggle, hoveredName, onHover, a
                     onHoverEnter={() => onHover(el.name)}
                     onHoverLeave={() => onHover(null)}
                     applying={applying}
+                    variantStrategy={variantStrategy}
                 />
             ))}
         </div>
@@ -282,11 +483,17 @@ export default function PermaculturePlanSidePreview({
     if (!plan) return null;
 
     const {
-        proposedElements = [],
-        planNarrative    = '',
-        summary          = '',
-        planWarnings     = [],
+        proposedElements  = [],
+        planNarrative     = '',
+        summary           = '',
+        planWarnings      = [],
+        siteAnalysis      = {},
     } = plan;
+
+    const siteAnalysisSummary   = siteAnalysis?.siteAnalysisSummary             || null;
+    const householdFoodStrategy = plan.sourceContext?.householdFoodStrategy      || null;
+    const variantStrategy       = plan.sourceContext?.variantStrategy             || null;
+    const waterGravityAvailable = !!(plan.sourceContext?.siteAnalysisSummary?.usedFacts?.some(f => /slope|water flow|pooling|low point/i.test(f)));
 
     const applyableElements = useMemo(
         () => proposedElements.filter(e => e.type !== 'permaculture-zone' && APPLY_ACTIONS.has(e.action || 'create_new')),
@@ -324,8 +531,17 @@ export default function PermaculturePlanSidePreview({
             <div style={{ padding: '14px 22px 12px', borderBottom: `1px solid ${C.soft}`, background: C.paper, flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ minWidth: 0 }}>
-                        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.muted, marginBottom: 2 }}>
-                            Draft plan
+                        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.muted, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {totalVariants >= 2
+                                ? (activeVariantIndex === 0 ? '☀️ Variant A — Solar Priority' : '🚶 Variant B — Flow & Access')
+                                : 'Draft plan'}
+                            {/* Source badge */}
+                            {plan.aiSource === 'ai' && (
+                                <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 3, background: 'rgba(61,107,52,0.15)', color: C.forest, fontWeight: 700, letterSpacing: '0.08em' }}>AI</span>
+                            )}
+                            {(plan.aiSource === 'mock' || plan.aiSource === 'rule_based') && (
+                                <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 3, background: 'rgba(120,133,122,0.15)', color: C.muted, fontWeight: 700, letterSpacing: '0.08em' }} title="Rule-based fallback — AI was not used">DRAFT</span>
+                            )}
                         </div>
                         <h2 style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, margin: 0, color: C.deep, lineHeight: 1.1 }}>
                             {planTitle}
@@ -340,17 +556,19 @@ export default function PermaculturePlanSidePreview({
                     >✕</button>
                 </div>
 
-                {/* Variant cards */}
+                {/* Variant strategy cards */}
                 {variants.length > 1 && (
                     <div style={{ display: 'flex', gap: 4, marginTop: 12, padding: 3, background: C.cream, borderRadius: 8 }}>
                         <VariantCard
-                            label="Variant A" sub="Food focus"
+                            label="☀️ Solar Priority"
+                            sub="Sun-optimised placement"
                             confidence={confA}
                             active={activeVariantIndex === 0}
                             onClick={() => onVariantSwitch?.(0)}
                         />
                         <VariantCard
-                            label="Variant B" sub="Biodiversity"
+                            label="🚶 Flow & Access"
+                            sub="Proximity-optimised placement"
                             confidence={confB}
                             active={activeVariantIndex === 1}
                             onClick={() => onVariantSwitch?.(1)}
@@ -383,6 +601,24 @@ export default function PermaculturePlanSidePreview({
             {/* ── Scrollable body ── */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '14px 22px 20px', minHeight: 0 }}>
 
+                {/* Site Analysis summary */}
+                <SiteAnalysisPanel summary={siteAnalysisSummary} />
+
+                {/* Household food strategy */}
+                <FoodStrategyPanel strategy={householdFoodStrategy} />
+
+                {/* Water & Gravity availability note */}
+                {waterGravityAvailable && (
+                    <div style={{ background: '#eef6ff', border: '1px solid rgba(26,112,192,0.25)', borderRadius: 6, padding: '8px 12px', marginBottom: 18 }}>
+                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#1a5a90', fontWeight: 600 }}>
+                            💧 Water & Gravity data available
+                        </span>
+                        <div style={{ fontSize: 11, color: '#1d3a60', marginTop: 3, lineHeight: 1.4 }}>
+                            Slope or water-flow data detected in Site Analysis. A Water & Gravity strategy can be applied as a future refinement.
+                        </div>
+                    </div>
+                )}
+
                 {/* Plan warnings */}
                 {planWarnings.length > 0 && (
                     <div style={{ background: '#fef3e8', border: '1px solid #fcd9a8', borderRadius: 8, padding: '12px 14px', marginBottom: 20 }}>
@@ -396,34 +632,10 @@ export default function PermaculturePlanSidePreview({
                 )}
 
                 {/* Grouped sections */}
-                <PlanSection
-                    title="What will grow"
-                    items={groups.planting}
-                    selected={selected} onToggle={toggleElement}
-                    hoveredName={hoveredName} onHover={onHover}
-                    applying={applying}
-                />
-                <PlanSection
-                    title="Water & structures"
-                    items={groups.water_struct}
-                    selected={selected} onToggle={toggleElement}
-                    hoveredName={hoveredName} onHover={onHover}
-                    applying={applying}
-                />
-                <PlanSection
-                    title="Garden zones"
-                    items={groups.zones}
-                    selected={selected} onToggle={toggleElement}
-                    hoveredName={hoveredName} onHover={onHover}
-                    applying={applying}
-                />
-                <PlanSection
-                    title="Tips & recommendations"
-                    items={groups.tips}
-                    selected={selected} onToggle={toggleElement}
-                    hoveredName={hoveredName} onHover={onHover}
-                    applying={applying}
-                />
+                <PlanSection title="What will grow"         items={groups.planting}    selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
+                <PlanSection title="Water & structures"     items={groups.water_struct} selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
+                <PlanSection title="Garden zones"           items={groups.zones}        selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
+                <PlanSection title="Tips & recommendations" items={groups.tips}         selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
 
                 {/* Skipped elements */}
                 {skipped.length > 0 && (

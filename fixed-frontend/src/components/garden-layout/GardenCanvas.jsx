@@ -23,6 +23,8 @@ const ROTATABLE_STRUCTURES = new Set(['Path', 'Fence', 'Raised Bed']);
 const CIRCULAR_STRUCTURES = new Set(['Pond']);
 // Structures that become real zones when dropped on the General map
 const ZONE_STRUCTURES = new Set(['Greenhouse']);
+// Overlay items that open a zone tab rather than the bed editor
+const ZONE_PORTAL_TYPES = new Set(['vegetableGarden']);
 // Structures that open the Bed Editor when clicked
 const BED_LIKE_STRUCTURES = new Set(['Raised Bed', 'Greenhouse']);
 
@@ -362,7 +364,46 @@ function BedBlockPreview({ block, bedWM, bedHM, pxPerM, selected, onDragStart, o
 }
 
 // ── Free-floating overlay item ────────────────────────────────────────────────
-function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeStart, onRotateStart, onSelectBed, selectedBedId, bedLayout, selectedBedElementId, onSelectBedElement, onUpdateBedLayout }) {
+// ── Vegetable Garden zone-portal mini-bed preview ─────────────────────────────
+function VegGardenPreview({ item, pxPerM, bedLayout }) {
+    const rows = bedLayout?.rows || [];
+    if (!rows.length) {
+        // Fallback: show repeating horizontal strips
+        const stripH = Math.max(18, ((item.hM || 5) * pxPerM) / 4);
+        return (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 3, padding: 4, overflow: 'hidden' }}>
+                {[0,1,2,3].map(i => (
+                    <div key={i} style={{ flex: 1, borderRadius: 3, background: 'rgba(90,130,60,0.22)', border: '1px solid rgba(90,130,60,0.35)', minHeight: 8 }} />
+                ))}
+            </div>
+        );
+    }
+    const totalHM = item.hM || 5;
+    return (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '3px 4px', overflow: 'hidden' }}>
+            {rows.map((row, i) => {
+                const rowHFrac = (row.heightM || 1) / totalHM;
+                return (
+                    <div key={row.id || i} style={{
+                        flex: `0 0 ${Math.max(12, rowHFrac * 100)}%`,
+                        borderRadius: 3,
+                        background: 'rgba(90,130,60,0.20)',
+                        border: '1px solid rgba(90,130,60,0.40)',
+                        display: 'flex', alignItems: 'center', paddingLeft: 4, overflow: 'hidden', minHeight: 10,
+                    }}>
+                        {row.plant?.name && (
+                            <span style={{ fontSize: 9, color: 'rgba(30,60,20,0.75)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {row.plant.name}
+                            </span>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeStart, onRotateStart, onSelectBed, selectedBedId, bedLayout, selectedBedElementId, onSelectBedElement, onUpdateBedLayout, onOpenZonePortal }) {
     const [hovered, setHovered] = useState(false);
     const mouseDownPos = useRef(null);
     const [bedElemDrag, setBedElemDrag] = useState(null);
@@ -434,7 +475,8 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
     const isLinear = LINEAR_STRUCTURES.has(item.name);
     const isRotatable = ROTATABLE_STRUCTURES.has(item.name);
     const isCircular = CIRCULAR_STRUCTURES.has(item.name);
-    const isBedLike = BED_LIKE_STRUCTURES.has(item.name);
+    const isZonePortal = !!(item.isZonePortal || ZONE_PORTAL_TYPES.has(item.type));
+    const isBedLike    = BED_LIKE_STRUCTURES.has(item.name) && !isZonePortal;
     const isSelectedBed = isBedLike && selectedBedId === item.id;
 
     const rawW = Math.max(pxPerM * 2, (item.wM ?? 4) * pxPerM);
@@ -466,15 +508,15 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
             }}
             onClick={e => {
                 e.stopPropagation();
-                if (!isBedLike || !onSelectBed) return;
                 if (mouseDownPos.current) {
                     const dx = e.clientX - mouseDownPos.current.x;
                     const dy = e.clientY - mouseDownPos.current.y;
                     if (dx * dx + dy * dy > 25) return;
                 }
-                onSelectBed(item.id);
+                if (isZonePortal && onOpenZonePortal) { onOpenZonePortal(item); return; }
+                if (isBedLike && onSelectBed) onSelectBed(item.id);
             }}
-            onDoubleClick={e => { e.stopPropagation(); if (!isBedLike) onRemove(item.id); }}
+            onDoubleClick={e => { e.stopPropagation(); if (!isBedLike && !isZonePortal) onRemove(item.id); }}
         >
             {isSelectedBed && (
                 <div style={{ position: 'absolute', top: -20, left: '50%', transform: 'translateX(-50%)', background: '#a8d870', color: '#1a3a0a', fontSize: 9, fontWeight: 700, borderRadius: 4, padding: '1px 7px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 25 }}>Editing</div>
@@ -482,23 +524,35 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
 
             <div style={{
                 position: 'relative', width: '100%', height: '100%',
-                borderRadius: isCircular ? '50%' : isLinear ? 4 : 10,
-                background: item.color ? item.color + '28' : 'rgba(61,107,52,0.10)',
-                border: isSelectedBed ? '2px solid #a8d870' : hovered ? `1.5px dashed ${item.color || '#3d6b34'}aa` : `1.5px dashed ${item.color || '#3d6b34'}60`,
+                borderRadius: isCircular ? '50%' : isLinear ? 4 : (isZonePortal ? 8 : 10),
+                background: isZonePortal
+                    ? (hovered ? 'rgba(90,130,60,0.18)' : 'rgba(90,130,60,0.12)')
+                    : (item.color ? item.color + '28' : 'rgba(61,107,52,0.10)'),
+                border: isZonePortal
+                    ? `${hovered ? '2px' : '1.5px'} solid rgba(90,130,60,${hovered ? '0.75' : '0.45'})`
+                    : isSelectedBed ? '2px solid #a8d870'
+                    : hovered ? `1.5px dashed ${item.color || '#3d6b34'}aa`
+                    : `1.5px dashed ${item.color || '#3d6b34'}60`,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                boxShadow: isSelectedBed ? '0 0 0 2px rgba(168,216,112,0.35), 0 4px 14px rgba(0,0,0,0.18)' : hovered ? '0 4px 14px rgba(0,0,0,0.15)' : '0 2px 6px rgba(0,0,0,0.10)',
-                overflow: 'hidden', transition: 'border-color 0.1s, box-shadow 0.1s', gap: 4,
+                boxShadow: isZonePortal
+                    ? (hovered ? '0 4px 16px rgba(60,100,40,0.22)' : '0 2px 8px rgba(60,100,40,0.14)')
+                    : isSelectedBed ? '0 0 0 2px rgba(168,216,112,0.35), 0 4px 14px rgba(0,0,0,0.18)'
+                    : hovered ? '0 4px 14px rgba(0,0,0,0.15)' : '0 2px 6px rgba(0,0,0,0.10)',
+                overflow: 'hidden', transition: 'border-color 0.1s, box-shadow 0.1s, background 0.1s', gap: 4,
             }}>
                 {isRotatable && (
                     <div title="Drag to rotate" style={{ width: 18, height: 18, flexShrink: 0, borderRadius: '50%', background: hovered ? 'white' : 'rgba(255,255,255,0.4)', border: '1.5px solid rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'crosshair', transition: 'background 0.15s', position: 'relative', zIndex: 2 }}
                         onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onRotateStart(e, item.id); }}>↻</div>
                 )}
-                {!hasBedContent && (
+                {isZonePortal && (
+                    <VegGardenPreview item={item} pxPerM={pxPerM} bedLayout={bedLayout} />
+                )}
+                {!isZonePortal && !hasBedContent && (
                     iconSrc
                         ? <img src={iconSrc} alt={item.name} style={{ width: iconSize, height: iconSize, flexShrink: 0, position: 'relative', zIndex: 1 }} className="object-contain" draggable={false} />
                         : <span style={{ fontSize: Math.max(10, Math.min(iconSize, 20)), pointerEvents: 'none', position: 'relative', zIndex: 1 }}>🌱</span>
                 )}
-                {hasBedContent && (
+                {!isZonePortal && hasBedContent && (
                     <div style={{ position: 'absolute', inset: isRotatable ? '22px 0 0 0' : 0, overflow: 'hidden' }}>
                         {bedRows.map(row => (
                             <BedRowPreview key={row.id}
@@ -548,7 +602,12 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
                             {isLinear ? `${(item.wM ?? 4).toFixed(1)} m · ${Math.round(rotation)}°` : isCircular ? `⌀ ${(item.wM ?? 4).toFixed(1)} m` : `${(item.wM ?? 4).toFixed(1)} m × ${(item.hM ?? 4).toFixed(1)} m`}
                             {isBedLike && (bedRows.length + bedBlocks.length) > 0 && ` · ${bedRows.length + bedBlocks.length} areas`}
                         </p>
-                        {isBedLike ? (
+                        {isZonePortal ? (
+                            <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                                <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onOpenZonePortal?.(item); }} style={{ ...MAP_ACTION_BUTTON_STYLE }}>Open zone</button>
+                                <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onRemove(item.id); }} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 9, cursor: 'pointer' }}>Remove</button>
+                            </div>
+                        ) : isBedLike ? (
                             <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
                                 <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onSelectBed?.(item.id); }} style={{ ...MAP_ACTION_BUTTON_STYLE }}>{isSelectedBed ? '✓ Editing' : 'Open'}</button>
                                 <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); onRemove(item.id); onSelectBed?.(null); }} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 9, cursor: 'pointer' }}>Remove</button>
@@ -965,7 +1024,7 @@ function ZoneBlock({ zone, grid, position, zoneIdx, selected, cellSizeM, plantLi
 
 // ── General overview canvas ───────────────────────────────────────────────────
 
-function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList, setup, onSelectZone, onUpdatePositions, onUpdateOverlayItems, onAddZone, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, proposedItems = [], proposedHoveredName = null, proposedSelectedNames = null }) {
+function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList, setup, onSelectZone, onUpdatePositions, onUpdateOverlayItems, onAddZone, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, proposedItems = [], proposedHoveredName = null, proposedSelectedNames = null, onOpenZonePortal }) {
     const { t } = useLanguage();
     const widthM = setup.widthM || 100;
     const heightM = setup.heightM || 60;
@@ -1306,6 +1365,7 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
                                         selectedBedElementId={selectedBedElementId}
                                         onSelectBedElement={onSelectBedElement}
                                         onUpdateBedLayout={onUpdateBedLayout}
+                                        onOpenZonePortal={onOpenZonePortal}
                                     />
                                 );
                             })}
@@ -1335,7 +1395,7 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
 }
 
 // ── Main canvas ───────────────────────────────────────────────────────────────
-export default function GardenCanvas({ zones, grids, positions, setup, currentZone, onSelectZone, onUpdateGrid, onUpdatePositions, onAddZone, onDeleteZone, onRenameZone, plantList, overlayItems = [], onUpdateOverlayItems, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, zoneItems, onUpdateZoneItems, onAddZoneItem, onResetZone, proposedItems = [], proposedHoveredName = null, proposedSelectedNames = null }) {
+export default function GardenCanvas({ zones, grids, positions, setup, currentZone, onSelectZone, onUpdateGrid, onUpdatePositions, onAddZone, onDeleteZone, onRenameZone, plantList, overlayItems = [], onUpdateOverlayItems, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, zoneItems, onUpdateZoneItems, onAddZoneItem, onResetZone, proposedItems = [], proposedHoveredName = null, proposedSelectedNames = null, onOpenZonePortal }) {
     const { t, language } = useLanguage();
     const [resizeState, setResizeState] = useState(null);
     const [plantResizeState, setPlantResizeState] = useState(null);
@@ -1463,6 +1523,8 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
     const currentZoneName = !isGeneralView ? zones[currentZone] : null;
     const currentZoneItems = currentZoneName ? (zoneItems?.[currentZoneName] || []) : [];
     const currentZoneStyle = currentZoneName ? (ZONE_STYLES[detectZoneType(currentZoneName)] || ZONE_STYLES.general) : ZONE_STYLES.general;
+    // Vegetable garden portals use a beige paper-like zone background
+    const isVegGardenZone = currentZoneName ? detectZoneType(currentZoneName) === 'vegetable' : false;
     const zonePxPerM = CELL_PX * detailZoom;
 
     const currentDetailType = currentZoneName ? detectDetailType(currentZoneName) : null;
@@ -1479,7 +1541,7 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
             </div>
 
             {isGeneralView ? (
-                <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} onAddZone={onAddZone} selectedBedId={selectedBedId} onSelectBed={onSelectBed} selectedBedElementId={selectedBedElementId} onSelectBedElement={onSelectBedElement} bedLayouts={bedLayouts} onUpdateBedLayout={onUpdateBedLayout} proposedItems={proposedItems} proposedHoveredName={proposedHoveredName} proposedSelectedNames={proposedSelectedNames} />
+                <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} onAddZone={onAddZone} selectedBedId={selectedBedId} onSelectBed={onSelectBed} selectedBedElementId={selectedBedElementId} onSelectBedElement={onSelectBedElement} bedLayouts={bedLayouts} onUpdateBedLayout={onUpdateBedLayout} proposedItems={proposedItems} proposedHoveredName={proposedHoveredName} proposedSelectedNames={proposedSelectedNames} onOpenZonePortal={onOpenZonePortal} />
             ) : (
                 <div className="flex-1" style={{ position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <CompassLabels labels={t.canvas} northDirection={setup?.northDirection || 'top'} />
@@ -1513,8 +1575,10 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
                                 className="overflow-auto flex-1"
                                 style={{
                                     cursor: resizeState || plantResizeState ? 'crosshair' : 'default',
-                                    background: '#3d6b34',
-                                    backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
+                                    background: isVegGardenZone ? '#f0e8d0' : '#3d6b34',
+                                    backgroundImage: isVegGardenZone
+                                        ? 'radial-gradient(circle, rgba(120,90,40,0.08) 1px, transparent 1px)'
+                                        : 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
                                     backgroundSize: '40px 40px',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     padding: '28px',

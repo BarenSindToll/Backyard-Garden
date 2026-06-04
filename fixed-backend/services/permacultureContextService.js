@@ -820,7 +820,15 @@ function buildExistingMapStructures(layout = {}) {
  * @param {object}          params.locationContext  – merged location data
  * @returns { success: boolean, context: object|null, error?: string }
  */
-export async function buildPermacultureContext({ userId, layout = {}, userRequirements = {}, locationContext = {} } = {}) {
+export async function buildPermacultureContext({
+    userId,
+    layout             = {},
+    userRequirements   = {},
+    locationContext    = {},
+    generationRequest  = {},
+    variantType        = 'A',
+    variantStrategy    = '',
+} = {}) {
     try {
         // ── Fetch user profile ─────────────────────────────────────────────────
         let user = null;
@@ -976,6 +984,11 @@ export async function buildPermacultureContext({ userId, layout = {}, userRequir
                 plantInsideExistingBedsFirst:      true,
                 doNotInventUnknownStructureTypes:  true,
             },
+
+            // Pass through variant + request data so AI service can read them directly
+            generationRequest,
+            variantType,
+            variantStrategy,
         };
 
         return { success: true, context };
@@ -983,4 +996,113 @@ export async function buildPermacultureContext({ userId, layout = {}, userRequir
         console.error('[buildPermacultureContext] Unexpected error:', err.message);
         return { success: false, error: err.message, context: null };
     }
+}
+
+// ── Household food strategy derivation ────────────────────────────────────────
+
+/**
+ * Derive a lightweight household food strategy from garden area, household size,
+ * coverage goal, and preservation preferences.
+ *
+ * Uses simple rules — not precise nutrition science.
+ *
+ * @param {object} layout           – full garden layout snapshot
+ * @param {object} generationRequest – wizard generationRequest (may be undefined for old plans)
+ * @returns {object|null}
+ */
+export function deriveHouseholdFoodStrategy(layout = {}, generationRequest = {}) {
+    const hn = generationRequest.householdNeeds;
+    if (!hn) return null;
+
+    const setup         = layout.setup || {};
+    const widthM        = setup.widthM  || 10;
+    const heightM       = setup.heightM || 10;
+    const areaM2        = widthM * heightM;
+    const size          = hn.householdSize || 0;
+    const goal          = hn.foodCoverageGoal || 'supplement';
+    const pres          = hn.preservationGoals || {};
+    const cats          = hn.foodCategories    || {};
+    const cropAreas     = generationRequest.cropPreferences?.cropAreas || {};
+    const allowedAdd    = generationRequest.allowedAdditions || {};
+
+    const recommendations = [];
+    const warnings        = [];
+
+    // ── Realism assessment ────────────────────────────────────────────────────
+    let realism = 'realistic';
+    const areaPerPerson = size > 0 ? areaM2 / size : areaM2;
+
+    if (goal === 'maximum' && areaM2 < 300) {
+        realism = 'space-limited';
+        warnings.push(`Maximum self-sufficiency is unrealistic on ${areaM2} m²; treat this as supplemental or partial production.`);
+    } else if (goal === 'high' && areaM2 < 150) {
+        realism = 'space-limited';
+        warnings.push(`High production on ${areaM2} m² is achievable only with intensive raised beds, vertical growing, and greenhouse use.`);
+    } else if ((goal === 'high' || goal === 'maximum') && size > 4 && areaM2 < 500) {
+        realism = 'ambitious';
+        warnings.push(`For ${size} people, ${goal} food coverage needs at least 500 m² for meaningful production.`);
+    }
+
+    // ── Estimated growing intensity ───────────────────────────────────────────
+    const intensityScore = (
+        (goal === 'supplement' ? 1 : goal === 'partial' ? 2 : goal === 'high' ? 3 : 4) +
+        (areaM2 >= 1000 ? 2 : areaM2 >= 300 ? 1 : 0)
+    );
+    const estimatedIntensity = intensityScore <= 2 ? 'low' : intensityScore <= 4 ? 'medium' : 'high';
+
+    // ── Bed / structure count guidance ───────────────────────────────────────
+    const bedCountMin = goal === 'supplement' ? 1 : goal === 'partial' ? Math.min(4, Math.ceil(size * 1)) : Math.min(8, Math.ceil(size * 1.5));
+    const bedCountMax = Math.min(16, bedCountMin + 4);
+
+    if (size > 0) {
+        recommendations.push(
+            `For ${size} ${size === 1 ? 'person' : 'people'} and ${goal} food supply, prioritise ${bedCountMin}–${bedCountMax} raised beds, kitchen herbs, and ${areaM2 >= 200 ? 'a berry patch and ' : ''}${areaM2 >= 400 ? '4–8 fruit trees' : 'container fruit if space is limited'}.`
+        );
+    } else {
+        recommendations.push(`For ${goal} food supply, prioritise raised beds in Zone 1, kitchen herbs, and seasonal vegetables.`);
+    }
+
+    // ── Preservation-specific recommendations ─────────────────────────────────
+    if (pres.winterStorage || pres.canning || pres.fermentation) {
+        const preserveCrops = [];
+        if (pres.winterStorage)  preserveCrops.push('potatoes, onions, garlic, squash, apples, plums');
+        if (pres.canning)        preserveCrops.push('tomatoes, peppers, cucumbers, cabbage, berries');
+        if (pres.fermentation)   preserveCrops.push('cabbage, cucumbers, beets, garlic');
+        if (pres.drying)         preserveCrops.push('herbs (dill, parsley, thyme, lovage), chamomile, calendula');
+        if (preserveCrops.length)
+            recommendations.push(`For preservation (${[pres.winterStorage && 'winter storage', pres.canning && 'canning', pres.fermentation && 'fermentation'].filter(Boolean).join(', ')}), include: ${preserveCrops.join('; ')}.`);
+    }
+
+    // ── Romanian staples note ──────────────────────────────────────────────────
+    if (cats.vegetables && cats.preservationCrops) {
+        recommendations.push('Romanian household staples: tomatoes (greenhouse), peppers, eggplant, zucchini, cucumbers, beans, peas, cabbage, onions, garlic, carrots, potatoes, parsley root, dill, lovage.');
+    }
+
+    // ── Animal-linked food categories ─────────────────────────────────────────
+    if (cats.animalProducts && !generationRequest.animalPreferences?.animals?.length) {
+        warnings.push('Animal products selected but no animals chosen in the animals section — add chickens or bees to enable egg/honey production.');
+    }
+
+    // ── Area scale context ────────────────────────────────────────────────────
+    if (areaM2 < 50) {
+        recommendations.push('Under 50 m²: focus on containers, vertical growing, herbs, salads, and high-yield compact crops (radish, lettuce, cherry tomatoes).');
+    } else if (areaM2 < 200) {
+        recommendations.push(`${areaM2} m²: good for herbs, salads, and seasonal vegetables for 1–${Math.max(1, Math.ceil(areaM2 / 60))} people. Add berry patch and dwarf fruit trees if space allows.`);
+    } else if (areaM2 < 1000) {
+        recommendations.push(`${areaM2} m²: meaningful seasonal production. Room for raised beds, greenhouse, berry patch, and a small orchard (4–6 trees).`);
+    } else {
+        recommendations.push(`${areaM2} m²: large enough for a full mixed system — staple crops, orchard, food forest, animals, swales, and annual vegetable beds.`);
+    }
+
+    return {
+        householdSize:      size || null,
+        coverageGoal:       goal,
+        realism,
+        estimatedIntensity,
+        bedCountTarget:     `${bedCountMin}–${bedCountMax}`,
+        recommendations,
+        warnings,
+        preservationFocus:  Object.entries(pres).filter(([,v]) => v).map(([k]) => k),
+        foodCategoryFocus:  Object.entries(cats).filter(([,v]) => v).map(([k]) => k),
+    };
 }

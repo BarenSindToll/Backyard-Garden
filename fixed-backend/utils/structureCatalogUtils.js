@@ -130,6 +130,155 @@ export const STRUCTURE_CATALOG = [
         isStableByDefault:  false,
         allowedActions:     ['create_new', 'enhance_existing', 'add_near_existing'],
     },
+
+    // ── Vegetable garden zone portal ─────────────────────────────────────────
+    {
+        catalogKey:         'vegetable_garden',
+        displayName:        'Vegetable Garden',
+        canonicalType:      'vegetable_garden',
+        category:           'productive',
+        defaultWidthM:      14,
+        defaultHeightM:     8,
+        canCreateNew:       true,
+        canContainPlants:   true,
+        canBeEnhanced:      true,
+        isStableByDefault:  false,
+        allowedActions:     ['create_new', 'enhance_existing', 'plant_inside_existing'],
+    },
+
+    // ── Permaculture functional areas ─────────────────────────────────────────
+    {
+        catalogKey:         'orchard',
+        displayName:        'Orchard',
+        canonicalType:      'orchard',
+        category:           'productive',
+        defaultWidthM:      14,
+        defaultHeightM:     10,
+        canCreateNew:       true,
+        canContainPlants:   true,
+        canBeEnhanced:      true,
+        isStableByDefault:  false,
+        allowedActions:     ['create_new', 'enhance_existing', 'plant_inside_existing', 'add_near_existing'],
+    },
+    {
+        catalogKey:         'guild',
+        displayName:        'Guild',
+        canonicalType:      'guild',
+        category:           'productive',
+        defaultWidthM:      6,
+        defaultHeightM:     6,
+        canCreateNew:       true,
+        canContainPlants:   true,
+        canBeEnhanced:      true,
+        isStableByDefault:  false,
+        allowedActions:     ['create_new', 'enhance_existing', 'plant_inside_existing'],
+    },
+    {
+        catalogKey:         'berry_patch',
+        displayName:        'Berry Patch',
+        canonicalType:      'berry_patch',
+        category:           'productive',
+        defaultWidthM:      8,
+        defaultHeightM:     4,
+        canCreateNew:       true,
+        canContainPlants:   true,
+        canBeEnhanced:      true,
+        isStableByDefault:  false,
+        allowedActions:     ['create_new', 'enhance_existing', 'plant_inside_existing'],
+    },
+    {
+        catalogKey:         'herb_garden',
+        displayName:        'Herb Garden',
+        canonicalType:      'herb_garden',
+        category:           'productive',
+        defaultWidthM:      5,
+        defaultHeightM:     4,
+        canCreateNew:       true,
+        canContainPlants:   true,
+        canBeEnhanced:      true,
+        isStableByDefault:  false,
+        allowedActions:     ['create_new', 'enhance_existing', 'plant_inside_existing'],
+    },
+    {
+        catalogKey:         'food_forest',
+        displayName:        'Food Forest',
+        canonicalType:      'food_forest',
+        category:           'productive',
+        defaultWidthM:      16,
+        defaultHeightM:     12,
+        canCreateNew:       true,
+        canContainPlants:   true,
+        canBeEnhanced:      true,
+        isStableByDefault:  false,
+        allowedActions:     ['create_new', 'enhance_existing', 'plant_inside_existing'],
+    },
+    {
+        catalogKey:         'wild_zone',
+        displayName:        'Wild Zone',
+        canonicalType:      'wild_zone',
+        category:           'ecological',
+        defaultWidthM:      12,
+        defaultHeightM:     10,
+        canCreateNew:       true,
+        canContainPlants:   true,
+        canBeEnhanced:      true,
+        isStableByDefault:  false,
+        allowedActions:     ['create_new', 'enhance_existing'],
+    },
+
+    // ── Additional structures ─────────────────────────────────────────────────
+    {
+        catalogKey:         'beehive',
+        displayName:        'Beehive',
+        canonicalType:      'beehive',
+        category:           'livestock',
+        defaultWidthM:      1,
+        defaultHeightM:     1,
+        canCreateNew:       true,
+        canContainPlants:   false,
+        canBeEnhanced:      true,
+        isStableByDefault:  false,
+        allowedActions:     ['create_new', 'enhance_existing', 'add_near_existing'],
+    },
+    {
+        catalogKey:         'patio',
+        displayName:        'Patio',
+        canonicalType:      'patio',
+        category:           'access',
+        defaultWidthM:      6,
+        defaultHeightM:     5,
+        canCreateNew:       true,
+        canContainPlants:   true,   // container plants / raised planters on patio
+        canBeEnhanced:      true,
+        isStableByDefault:  false,
+        allowedActions:     ['create_new', 'enhance_existing', 'add_near_existing'],
+    },
+    {
+        catalogKey:         'windbreak',
+        displayName:        'Windbreak',
+        canonicalType:      'windbreak',
+        category:           'structure',
+        defaultWidthM:      15,
+        defaultHeightM:     2,
+        canCreateNew:       true,
+        canContainPlants:   true,   // hedge plants
+        canBeEnhanced:      true,
+        isStableByDefault:  false,
+        allowedActions:     ['create_new', 'enhance_existing', 'plant_inside_existing'],
+    },
+    {
+        catalogKey:         'swale',
+        displayName:        'Swale',
+        canonicalType:      'swale',
+        category:           'water',
+        defaultWidthM:      12,
+        defaultHeightM:     1.5,
+        canCreateNew:       true,
+        canContainPlants:   true,   // swale edge planting
+        canBeEnhanced:      true,
+        isStableByDefault:  false,
+        allowedActions:     ['create_new', 'enhance_existing', 'add_near_existing'],
+    },
 ];
 
 // ── Alias map: lowercase display name → catalogKey ────────────────────────────
@@ -209,6 +358,84 @@ const ALIAS_MAP = new Map([
     ['chicken coop', 'coop'],
     ['hen house', 'coop'],
     ['duck house', 'coop'],
+
+    // Vegetable garden (zone portal)
+    ['vegetable garden', 'vegetable_garden'],
+    ['vegetable_garden', 'vegetable_garden'],
+    ['kitchen garden', 'vegetable_garden'],
+    ['potager', 'vegetable_garden'],
+    ['main vegetable garden', 'vegetable_garden'],
+    ['vegetable production area', 'vegetable_garden'],
+
+    // Orchard
+    ['orchard', 'orchard'],
+    ['fruit tree area', 'orchard'],
+    ['fruit orchard', 'orchard'],
+    ['apple orchard', 'orchard'],
+    ['orchard zone', 'orchard'],
+
+    // Guild
+    ['guild', 'guild'],
+    ['plant guild', 'guild'],
+    ['fruit tree guild', 'guild'],
+    ['apple guild', 'guild'],
+    ['plum guild', 'guild'],
+    ['companion guild', 'guild'],
+    ['permaculture guild', 'guild'],
+
+    // Berry patch
+    ['berry patch', 'berry_patch'],
+    ['berry garden', 'berry_patch'],
+    ['soft fruit area', 'berry_patch'],
+    ['berry area', 'berry_patch'],
+
+    // Herb garden
+    ['herb garden', 'herb_garden'],
+    ['herb bed', 'herb_garden'],
+    ['culinary herb garden', 'herb_garden'],
+    ['herbal border', 'herb_garden'],
+    ['medicinal herb garden', 'herb_garden'],
+
+    // Food forest
+    ['food forest', 'food_forest'],
+    ['forest garden', 'food_forest'],
+    ['edible forest', 'food_forest'],
+    ['edible woodland', 'food_forest'],
+
+    // Wild zone
+    ['wild zone', 'wild_zone'],
+    ['wildlife area', 'wild_zone'],
+    ['wildflower meadow', 'wild_zone'],
+    ['natural area', 'wild_zone'],
+    ['native planting', 'wild_zone'],
+    ['meadow strip', 'wild_zone'],
+
+    // Beehive
+    ['beehive', 'beehive'],
+    ['bee hive', 'beehive'],
+    ['apiary', 'beehive'],
+    ['hive', 'beehive'],
+    ['langstroth hive', 'beehive'],
+
+    // Patio
+    ['patio', 'patio'],
+    ['terrace', 'patio'],
+    ['deck', 'patio'],
+    ['seating area', 'patio'],
+    ['outdoor living area', 'patio'],
+
+    // Windbreak
+    ['windbreak', 'windbreak'],
+    ['windbreak hedge', 'windbreak'],
+    ['shelter belt', 'windbreak'],
+    ['shelterbelt', 'windbreak'],
+    ['native hedge windbreak', 'windbreak'],
+
+    // Swale
+    ['swale', 'swale'],
+    ['swale on contour', 'swale'],
+    ['contour swale', 'swale'],
+    ['water harvesting swale', 'swale'],
 ]);
 
 // ── Public helpers ─────────────────────────────────────────────────────────────

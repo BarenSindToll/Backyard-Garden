@@ -24,29 +24,40 @@ export function detectZoneType(name = '') {
     if (n.includes('orchard') || n.includes('fruit tree') || n.includes('livad') || n.includes('pomi')) return 'orchard';
     // Greenhouse — EN + RO (seră)
     if (n.includes('greenhouse') || n.includes('glass house') || n.includes('ser')) return 'greenhouse';
+    // Food forest / forest garden — check before 'forest' generic
+    if (n.includes('food forest') || n.includes('forest garden') || n.includes('edible forest') || n.includes('pădure de alimente')) return 'forest';
     // Vegetable — EN + RO (legume, bucătărie, potager)
     if (n.includes('veg') || n.includes('kitchen garden') || n.includes('potager') || n.includes('legume')) return 'vegetable';
-    // Herb — EN + RO (ierburi, condimente)
+    // Herb / herb garden — EN + RO (ierburi, condimente)
     if (n.includes('herb') || n.includes('spice') || n.includes('ierb') || n.includes('condiment')) return 'herb';
     // Flower — EN + RO (flori, trandafiri)
     if (n.includes('flower') || n.includes('bloom') || n.includes('rose') || n.includes('flori') || n.includes('trandafir')) return 'flower';
-    // Food forest — EN + RO (pădure)
-    if (n.includes('forest') || n.includes('woodland') || n.includes('food forest') || n.includes('pădure')) return 'forest';
+    // Forest / woodland — EN + RO (pădure)
+    if (n.includes('forest') || n.includes('woodland') || n.includes('pădure')) return 'forest';
+    // Berry patch — EN + RO (zmeur, fructe de pădure, coacăz)
+    if (n.includes('berry') || n.includes('zmeur') || n.includes('coacăz') || n.includes('fructe de pădure') || n.includes('soft fruit')) return 'orchard';
     // Compost — same word
     if (n.includes('compost')) return 'compost';
+    // Swale / water harvesting — before generic pond/water
+    if (n.includes('swale') || n.includes('contour') || n.includes('water harvest')) return 'pond';
     // Pond — EN + RO (iaz, apă, lac)
     if (n.includes('pond') || n.includes('water') || n.includes('lake') || n.includes('stream') || n.includes('iaz') || n.includes('apă') || n.includes('lac')) return 'pond';
     // Kids — EN + RO (copii, joacă)
     if (n.includes('kids') || n.includes('play') || n.includes('children') || n.includes('playground') || n.includes('copii') || n.includes('joac')) return 'kids';
-    // Path — EN + RO (cărare, alee, potecă)
+    // Path / windbreak — EN + RO (cărare, alee, potecă)
     if (n.includes('path') || n.includes('walk') || n.includes('trail') || n.includes('cărare') || n.includes('alee') || n.includes('potec')) return 'path';
+    if (n.includes('windbreak') || n.includes('shelterbelt') || n.includes('shelter belt')) return 'path';
     // Raised bed — EN + RO (strat înălțat)
     if (n.includes('raised') || n.includes('raised bed') || n.includes('strat înăl')) return 'raised';
+    // Wild zone / meadow — ecological area
+    if (n.includes('wild') || n.includes('meadow') || n.includes('wildlife') || n.includes('biodiversity') || n.includes('native')) return 'flower';
+    // Beehive / apiary
+    if (n.includes('beehive') || n.includes('bee hive') || n.includes('apiary') || n.includes('hive') || n.includes('albine')) return 'guild';
     // Building — EN + RO (magazie, clădire, depozit)
     if (n.includes('shed') || n.includes('building') || n.includes('house') || n.includes('barn') || n.includes('storage') || n.includes('magazie') || n.includes('clădire') || n.includes('depozit')) return 'building';
     // Guild — EN + RO (breaslă)
     if (n.includes('guild') || n.includes('breasl')) return 'guild';
-    // Seating — EN + RO (odihn, patio, terasă)
+    // Seating / patio — EN + RO (odihn, patio, terasă)
     if (n.includes('seat') || n.includes('relax') || n.includes('patio') || n.includes('deck') || n.includes('odihn') || n.includes('teras')) return 'seating';
     return 'general';
 }
