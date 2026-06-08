@@ -113,6 +113,12 @@ function buildDefault(setup, overlayItems, zoneItems) {
             safety:            '',
             notes:             '',
         },
+        neighbourhood: {
+            north: { type: 'unknown', label: '', notes: '' },
+            east:  { type: 'unknown', label: '', notes: '' },
+            south: { type: 'unknown', label: '', notes: '' },
+            west:  { type: 'unknown', label: '', notes: '' },
+        },
     };
 }
 
@@ -411,6 +417,76 @@ function Step4GoalsConstraints({ data, onChange, sa }) {
     );
 }
 
+// ── Step 5: Neighbourhood ──────────────────────────────────────────────────────
+
+const COMPASS_DIRS = ['north', 'east', 'south', 'west'];
+const DIR_LABELS = { north: 'North ↑', east: 'East →', south: 'South ↓', west: 'West ←' };
+
+function Step5Neighbourhood({ data, onChange, sa }) {
+    const nb = data.neighbourhood || {
+        north: { type: 'unknown', label: '', notes: '' },
+        east:  { type: 'unknown', label: '', notes: '' },
+        south: { type: 'unknown', label: '', notes: '' },
+        west:  { type: 'unknown', label: '', notes: '' },
+    };
+
+    const setDir = (dir, field, value) => {
+        onChange(prev => ({
+            ...prev,
+            neighbourhood: {
+                ...nb,
+                [dir]: { ...nb[dir], [field]: value },
+            },
+        }));
+    };
+
+    const typeOptions = (sa.neighbourhoodTypes || []).map(o => o.value);
+    const typeLabels  = Object.fromEntries((sa.neighbourhoodTypes || []).map(o => [o.value, o.label]));
+
+    return (
+        <div className="space-y-5">
+            <SectionHeader title="Surrounding Neighbourhood" />
+            <p className="text-xs text-gray-500 -mt-2">
+                Describe what borders each side of your property. This helps the AI plan windbreaks, buffers, and element placement.
+            </p>
+            {COMPASS_DIRS.map(dir => {
+                const side = nb[dir] || { type: 'unknown', label: '', notes: '' };
+                return (
+                    <div key={dir} className="border border-gray-200 rounded-xl p-4 space-y-3">
+                        <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                            {DIR_LABELS[dir]}
+                        </div>
+                        <div>
+                            <label className="block text-xs text-gray-500 mb-1">Type</label>
+                            <select
+                                value={side.type || 'unknown'}
+                                onChange={e => setDir(dir, 'type', e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/30"
+                            >
+                                {typeOptions.map(v => (
+                                    <option key={v} value={v}>{typeLabels[v] || v}</option>
+                                ))}
+                            </select>
+                        </div>
+                        {side.type === 'other' && (
+                            <Input
+                                label="Describe"
+                                value={side.label || ''}
+                                onChange={v => setDir(dir, 'label', v)}
+                            />
+                        )}
+                        <Textarea
+                            label="Notes (optional)"
+                            value={side.notes || ''}
+                            onChange={v => setDir(dir, 'notes', v)}
+                        />
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 // ── Wizard shell ───────────────────────────────────────────────────────────────
 
 export default function SiteAnalysisWizard({ setup, overlayItems, zoneItems, initialData, onSave, onClose }) {
@@ -476,6 +552,7 @@ export default function SiteAnalysisWizard({ setup, overlayItems, zoneItems, ini
                     {step === 1 && <Step2SectorsSoil data={data} onChange={setData} sa={sa} />}
                     {step === 2 && <Step3Elements data={data} onChange={setData} sa={sa} />}
                     {step === 3 && <Step4GoalsConstraints data={data} onChange={setData} sa={sa} />}
+                    {step === 4 && <Step5Neighbourhood data={data} onChange={setData} sa={sa} />}
                 </div>
 
                 {/* Footer */}

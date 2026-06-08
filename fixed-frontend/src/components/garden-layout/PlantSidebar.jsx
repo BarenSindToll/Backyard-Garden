@@ -1,6 +1,18 @@
 import { useMemo, useState } from 'react';
-import { STRUCTURES } from './gardenZoneConfig';
+import { STRUCTURES, GENERAL_STRUCTURES } from './gardenZoneConfig';
 import { useLanguage } from '../../utils/languageContext';
+import {
+    Home, CookingPot, Sprout, Recycle, Waves, Hammer, Car, Bird, PawPrint,
+    Network, TreePine, Cherry, Carrot, Hexagon, Smile, Wheat, Trees,
+} from 'lucide-react';
+
+const LUCIDE_ICONS = { Home, CookingPot, Sprout, Recycle, Waves, Hammer, Car, Bird, PawPrint, Network, TreePine, Cherry, Carrot, Hexagon, Smile, Wheat, Trees };
+
+function LucideIcon({ name, size = 18, color = '#4a5a40' }) {
+    const Icon = LUCIDE_ICONS[name];
+    if (!Icon) return <span style={{ fontSize: size * 0.75 }}>🌱</span>;
+    return <Icon size={size} color={color} strokeWidth={1.8} />;
+}
 
 const GUILD_LABEL_COLOR = {
     'Producer':             'bg-green-100 text-green-800',
@@ -27,8 +39,8 @@ function PlantInfo({ plant, g }) {
     );
 }
 
-export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNames = [], favoritePlants = [], onFavoritesChange }) {
-    const [tab, setTab] = useState('plants');
+export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNames = [], favoritePlants = [], onFavoritesChange, isGeneralView = false }) {
+    const [tab, setTab] = useState(isGeneralView ? 'structures' : 'plants');
     const [search, setSearch] = useState('');
     const [zoneFilterOn, setZoneFilterOn] = useState(false);
     const [activeRole, setActiveRole] = useState(null);
@@ -83,19 +95,21 @@ export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNa
             <div style={{ padding: '14px 18px 10px', borderBottom: '1px solid #e8e2cc', flexShrink: 0 }}>
                 {/* Tab row */}
                 <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
-                    <button
-                        onClick={() => setTab('plants')}
-                        style={{
-                            padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer',
-                            fontFamily: 'JetBrains Mono, monospace', fontSize: 10,
-                            letterSpacing: '0.15em', textTransform: 'uppercase',
-                            color: tab === 'plants' ? '#3d6b34' : '#7c857a',
-                            borderBottom: tab === 'plants' ? '2px solid #3d6b34' : '2px solid transparent',
-                            transition: 'color 0.12s',
-                        }}
-                    >
-                        {g.plantsTab}
-                    </button>
+                    {!isGeneralView && (
+                        <button
+                            onClick={() => setTab('plants')}
+                            style={{
+                                padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer',
+                                fontFamily: 'JetBrains Mono, monospace', fontSize: 10,
+                                letterSpacing: '0.15em', textTransform: 'uppercase',
+                                color: tab === 'plants' ? '#3d6b34' : '#7c857a',
+                                borderBottom: tab === 'plants' ? '2px solid #3d6b34' : '2px solid transparent',
+                                transition: 'color 0.12s',
+                            }}
+                        >
+                            {g.plantsTab}
+                        </button>
+                    )}
                     <button
                         onClick={() => setTab('structures')}
                         style={{
@@ -107,7 +121,7 @@ export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNa
                             transition: 'color 0.12s',
                         }}
                     >
-                        {g.structuresTab}
+                        {isGeneralView ? 'Elements' : g.structuresTab}
                     </button>
                 </div>
 
@@ -180,7 +194,9 @@ export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNa
                 )}
 
                 {tab === 'structures' && (
-                    <p style={{ fontSize: 11, color: '#7c857a', margin: 0 }}>{g.dragInstruction}</p>
+                    <p style={{ fontSize: 11, color: '#7c857a', margin: 0 }}>
+                        {isGeneralView ? 'Drag onto the General map to place a structure.' : g.dragInstruction}
+                    </p>
                 )}
             </div>
 
@@ -188,7 +204,52 @@ export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNa
             <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0 16px' }}>
 
                 {/* ── STRUCTURES TAB ── */}
-                {tab === 'structures' && (
+                {tab === 'structures' && isGeneralView && (
+                    <div style={{ padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        {GENERAL_STRUCTURES.map((s) => (
+                            <div
+                                key={s.key}
+                                draggable
+                                onDragStart={e => e.dataTransfer.setData('plant', JSON.stringify({
+                                    name: s.name,
+                                    structureKey: s.key,
+                                    isStructure: true,
+                                    color: s.color,
+                                    borderColor: s.borderColor,
+                                    iconKey: s.iconKey,
+                                    canOpenZone: s.canOpenZone,
+                                }))}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 10,
+                                    background: '#fbf7ea', border: `1px solid ${s.borderColor}44`,
+                                    borderLeft: `3px solid ${s.borderColor}`,
+                                    borderRadius: 7, padding: '7px 10px',
+                                    cursor: 'grab',
+                                    transition: 'box-shadow 0.1s',
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.10)'}
+                                onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+                            >
+                                <div style={{
+                                    width: 32, height: 32, borderRadius: 6, flexShrink: 0,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    background: s.color, border: `1.5px solid ${s.borderColor}66`,
+                                }}>
+                                    <LucideIcon name={s.iconKey} size={17} color={s.textColor || s.borderColor} />
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                    <p style={{ fontSize: 12, fontWeight: 700, color: '#1d2a20', margin: 0, letterSpacing: '0.01em' }}>{s.name}</p>
+                                    <p style={{ fontSize: 10, color: '#7c857a', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.description}</p>
+                                </div>
+                                {s.canOpenZone && (
+                                    <div style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 8, color: s.borderColor, background: s.color, borderRadius: 3, padding: '1px 4px', border: `1px solid ${s.borderColor}44`, whiteSpace: 'nowrap' }}>zone</div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {tab === 'structures' && !isGeneralView && (
                     <div style={{ padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {STRUCTURES.map((structure) => {
                             const tr = g.structures[structure.name] || { name: structure.name, description: structure.description };

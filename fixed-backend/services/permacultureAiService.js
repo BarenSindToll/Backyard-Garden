@@ -93,6 +93,22 @@ R9.  If you cannot place something as create_new or enhance_existing, use action
 R10. Use targetElementId (matching an id from existingMapStructures) when recommending changes to an existing structure.
 R11. Use catalogKey (from availableStructureCatalog) when proposing a new structure.
 R12. Every proposed element's reason MUST cite at least one of: (a) a site analysis fact, (b) an existing map structure by name, (c) a selected crop or animal from USER REQUIREMENTS, (d) an explicit user goal, or (e) a permaculture zone principle (Zone 1/2/3/4/5). Reasons without a source are not acceptable.
+R13. Never generate any path, walkway, road, trail, or access route element. catalogKey="path" is forbidden. Users add paths manually — do not count paths in your element total.
+R14. Use ONLY these exact catalogKey values for create_new elements that appear on the General Map. Do not invent new catalog keys:
+     vegetable_garden | herb_garden | greenhouse | orchard | guild | berry_patch | food_forest |
+     pond | compost | coop | beehive | shed | house | wild_zone | patio | windbreak | swale
+R15. Never create two elements that serve the same functional purpose. Each functional role appears at most ONCE:
+     • ONE compost element (do not add both "Compost" and "Compost Hub")
+     • ONE pond element (do not add both "Duck Pond" and "Wildlife Pond")
+     • ONE coop element; ONE greenhouse; ONE shed/workshop
+     Exception — multiple instances are allowed for: guild, orchard, berry_patch, pond (only if user explicitly requests it), vegetable_garden (only if user explicitly requests multiple growing areas)
+R16. Use short, clean names only. Never use verbose AI-generated names:
+     ✓ "Compost" — ✗ "Strategic Composting Hub" or "Integrated Composting Node"
+     ✓ "Pond" — ✗ "Wildlife Biodiversity Pond Feature"
+     ✓ "Vegetable Garden" — ✗ "Comprehensive Annual Kitchen Garden System"
+     ✓ "Beehives" — ✗ "Apiary Pollination Station"
+     ✓ "Herb Garden" — ✗ "Culinary Herb Production Zone"
+     Keep names under 25 characters. Use the catalog's displayName as your reference.
 
 SITE ANALYSIS AUTHORITY:
 A1. The SITE ANALYSIS SUMMARY section contains authoritative facts provided by the user. Use every fact listed under "Used facts" when it influences placement or reasoning.
@@ -113,7 +129,7 @@ G1. The General Map shows major permaculture elements and zones, NOT individual 
 G2. Individual crops and plant lists go into the detailPlan.suggestedPlants of their parent element.
 G3. Never propose a create_new element whose purpose is to place a single named crop (e.g. "Tomato bed", "Basil planting"). Instead, create a structural element (raised_bed, herb_garden) and list crops in its detailPlan.
 G4. The plants[] field at element level is for notable guild companions (comfrey, yarrow, marigold) — not a crop inventory.
-G5. Every openable element (raised_bed, greenhouse, orchard, guild, berry_patch, herb_garden) MUST include a detailPlan with layoutType and at least 3 suggestedPlants appropriate to Romania.
+G5. Every productive zone element (vegetable_garden, herb_garden, greenhouse, orchard, guild, berry_patch) MUST include a detailPlan with layoutType and at least 3–6 suggestedPlants appropriate to Romania AND an internalBeds array (see VG4–VG5 for schema). These zone tabs are populated directly from your output — do not leave them empty.
 
 ROMANIA / EASTERN EUROPE DEFAULTS:
 C1. Default to Romanian-adapted species: apple (Ionatan, Jonathan), plum (Italian prune, Stanley), pear (Williams), cherry (Morello, Kordia), comfrey (Bocking 14), elderflower, hawthorn, blackthorn, clover, yarrow.
@@ -217,23 +233,44 @@ D7. All coordinates are in metres. x + width <= gardenWidthM; y + height <= gard
 D8. confidence: 0.9–1.0 = well-supported by site data; 0.65–0.85 = estimated; 0.4–0.64 = data-poor.
 D9. Include at least Mollison (1988) and Holmgren (2002) in bibliography.
 D10. Output nothing except the JSON object.
+D11. Never generate a path/walkway/road element (see R13). Use the element count budget for productive zones instead.
 
 VEGETABLE GARDEN GROUPING (REQUIRED):
 VG1. Never generate multiple standalone raised_bed elements for individual crops (e.g. "Tomato Bed", "Leafy Greens Bed").
 VG2. Group ALL vegetable production into exactly ONE element: catalogKey="vegetable_garden", action="create_new", type="structure".
 VG3. Size the vegetable_garden element based on available space:
      <200 m²: 8×5m   |   200–500 m²: 12×7m   |   500+ m²: 14×8m or larger.
-VG4. Include an "internalBeds" array with 4–6 rows (inner layout). Use widthM = parent element width. Each row heightM ≈ 1.0–1.3m:
-     - Row 1: heat-lovers (tomatoes, peppers, eggplant, cucumbers, basil, marigold)
-     - Row 2: leafy greens (lettuce, spinach, Swiss chard, kale, radish)
-     - Row 3: root crops (carrot, parsley root, beetroot, onion, garlic)
-     - Row 4: legumes (bean, pea, dill) — if selected or household needs suggest it
-     - Row 5: cucurbits (zucchini, pumpkin, cucumber) — if space allows
-     - Row 6: companion/flower border (calendula, marigold, nasturtium, borage, yarrow)
-VG5. internalBed schema: { "id": "bed-1", "label": "Tomatoes & Herbs", "x": 0, "y": 0, "widthM": 14, "heightM": 1.2, "plants": ["Tomato (Roma)", "Basil"], "spacingCm": 45 }
-VG6. Only include rows for crops the user selected or that fit household food needs. Omit row if crop type not wanted.
-VG7. A separate "Kitchen Garden Access Path" element is encouraged alongside the vegetable_garden.
-VG8. If a Greenhouse element is also present, remove tomatoes/peppers from the vegetable_garden rows (they go in the greenhouse).
+VG4. BED COUNT — DYNAMICALLY calculated (REQUIRED, do NOT hardcode):
+     Use the "Bed target" value from HOUSEHOLD FOOD NEEDS section as your primary guide:
+       supplement goal  → 2–3 beds
+       partial goal     → 3–5 beds (scale with household size: +1 bed per additional person above 2)
+       high goal        → 5–8 beds (scale with household size)
+       maximum goal     → 7–12 beds (scale with household size and area)
+     Site constraints — REDUCE bed count:
+       • Greenhouse already present → subtract 1–2 beds (tomatoes/peppers move indoors; note in reason)
+       • Herb garden already present → omit the herb/companion border bed
+       • Area < 150 m² → maximum 3 beds regardless of goals
+       • Area 150–300 m² → maximum 5 beds
+       • Heavily shaded site or poor soil noted → reduce by 1 bed and add to element warnings[]
+       • Low maintenance goal or <3h/week → reduce by 1–2 beds
+     RULES: minimum 2 beds; maximum 12 beds; NEVER use a fixed number like exactly 4, 5, or 6 in all plans.
+VG5. BED CONTENT — assign companion-planting groups to each bed, based on household needs and crops selected:
+     Typical groups (use only those relevant to the user's selections):
+       • Heat-lovers: Tomato, Basil, Marigold, Pepper (omit if greenhouse handles these)
+       • Leafy greens: Lettuce, Spinach, Swiss Chard, Kale, Radish, Arugula
+       • Root crops: Carrot, Parsley Root, Beetroot, Onion, Garlic, Celeriac
+       • Legumes & dill: Bean, Pea, Dill, Borage (nitrogen-fixing companions)
+       • Cucurbits: Zucchini, Pumpkin, Cucumber, Nasturtium (space-hungry, put last)
+       • Brassicas: Cabbage, Broccoli, Kohlrabi, Dill (for fermentation/winter storage)
+       • Romanian staples: Eggplant, Lovage, Summer Savory (if preservation selected)
+       • Companion border: Calendula, Marigold, Yarrow, Chamomile (reduce by omitting if herb garden present)
+     Assign 2–5 companion plants per bed. Do NOT list the same plant in multiple beds.
+VG6. internalBed schema (REQUIRED for every bed):
+     { "id": "bed-1", "label": "Heat-Lovers", "x": 0, "y": 0, "widthM": <zone_width>, "heightM": 1.2,
+       "plants": ["Tomato (Roma)", "Basil", "Marigold"], "spacingCm": 45 }
+     x = 0 always; y increments by (heightM + 0.3) per bed; widthM = vegetable_garden element width.
+VG7. Only include beds for crops the user selected or household needs require. Omit a bed type entirely if not relevant.
+VG8. If a Greenhouse element is also present, remove tomatoes/peppers from outdoor beds (they go in greenhouse). State this in element reason.
 
 STRICT OUTPUT FORMAT (CRITICAL — violating these rules will cause a parse error):
 F1. Return ONLY valid JSON. The response MUST start with { and end with }.
@@ -435,7 +472,44 @@ ${(() => {
     return lines.join('\n');
 })()}
 
-VARIANT STRATEGY
+${(() => {
+    const nb = siteContext.savedSiteAnalysis?.neighbourhood || siteContext.neighbourhood || null;
+    if (!nb) return '';
+    const TONE = {
+        forest:    'Forest — wind protection, shade, wildlife edge, leaf-litter mulch, mushroom/edge habitat; shade competition near boundary',
+        river:     'River/Stream — water access, humidity, biodiversity; flood risk on boundary edge; ideal for pond, wetland, water-demanding plants',
+        road:      'Road — buffer zone needed (hedge/fence); avoid food crops near pollution; good for access, parking, storage, ornamental hedgerow',
+        buildings: 'Buildings/Structures — shade/wind tunnel risk; heat island in summer; windbreak opportunity; avoid shade-sensitive crops nearby',
+        field:     'Crop field — possible pesticide/herbicide drift; windbreak hedge buffer strongly advised on this boundary',
+        orchard:   'Orchard — beneficial pollinator corridor; plan guild/hedge connections to extend ecosystem benefit',
+        pasture:   'Pasture — manure/compost loop opportunity; livestock pressure on fence; plan robust boundary',
+        hedge:     'Windbreak/Hedge — microclimate protected side; integrate with guild planting; wind shadow extends 10× hedge height',
+        empty:     'Open/empty — exposed side; wind exposure; consider windbreak planting',
+        other:     'Custom boundary feature — see notes',
+        unknown:   'Unknown — no boundary data',
+    };
+    const dirs = ['north','east','south','west'];
+    const lines = dirs.map(d => {
+        const v = nb[d];
+        if (!v || v.type === 'unknown') return `  ${d.charAt(0).toUpperCase()+d.slice(1)}: unknown`;
+        const tone = TONE[v.type] || v.type;
+        const notePart = v.notes ? ` | note: ${v.notes}` : '';
+        return `  ${d.charAt(0).toUpperCase()+d.slice(1)}: ${v.label || v.type} — ${tone}${notePart}`;
+    }).join('\n');
+    return `NEIGHBOURHOOD CONTEXT (CRITICAL — must influence element placement and reasons)
+${lines}
+
+NEIGHBOURHOOD DESIGN RULES:
+N1. Forest side: place orchard, guild, wild_zone, berry_patch near that edge (edge effect). Keep sun-hungry crops away from forest shade. Wind-protected from that direction.
+N2. River/stream side: place pond at low point near that edge; avoid flood-risk placement of permanent structures; humidity-loving plants (herbs, mint, willows) near water.
+N3. Road side: plant hedgerow/windbreak buffer on road boundary; place compost, storage, parking area near road for access; keep food gardens away from road pollution.
+N4. Crop field side: plant windbreak hedge on that boundary to intercept pesticide drift; ideally a double row with shrubs and trees.
+N5. Pasture side: plan fencing and integrate manure composting into a loop; potential rotational grazing or chicken tractor near pasture edge.
+N6. Buildings side: account for shade cast; use heat reflected from walls for heat-loving climbers; avoid fruit trees directly under building overhang.
+N7. EVERY proposed element reason MUST acknowledge relevant neighbourhood boundary if within 10m of that boundary.
+
+`;
+})()}VARIANT STRATEGY
   Variant type: ${siteContext.variantType || 'A'}
   Strategy: ${siteContext.variantStrategy || 'solar-priority'}
 ${siteContext.variantStrategy === 'flow-access'

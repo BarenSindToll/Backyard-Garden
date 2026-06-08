@@ -307,6 +307,8 @@ const ALIAS_MAP = new Map([
     ['wildlife pond', 'pond'],
     ['ornamental pond', 'pond'],
     ['fish pond', 'pond'],
+    ['duck pond', 'pond'],
+    ['biodiversity pond', 'pond'],
     ['water feature', 'pond'],
     ['water butt', 'pond'],
     ['rain tank', 'pond'],
@@ -322,6 +324,11 @@ const ALIAS_MAP = new Map([
     ['compost pile', 'compost'],
     ['three-bin compost system', 'compost'],
     ['compost system', 'compost'],
+    ['compost hub', 'compost'],
+    ['compost area', 'compost'],
+    ['compost station', 'compost'],
+    ['composting node', 'compost'],
+    ['composting area', 'compost'],
 
     // Path
     ['path', 'path'],
@@ -504,6 +511,226 @@ export const VALID_ACTIONS = new Set([
     'add_near_existing',
     'recommendation_only',
 ]);
+
+// ── General Map canonical type normalization ───────────────────────────────────
+
+/** The 17 approved canonical general map structure types (camelCase, matching gardenZoneConfig.js). */
+export const CANONICAL_GENERAL_KEYS = new Set([
+    'house', 'outdoorKitchen', 'greenhouse', 'compost', 'pond',
+    'workshop', 'carRoad', 'coop', 'animalRun', 'guild', 'orchard',
+    'berryPatch', 'vegetableGarden', 'beehives', 'kidsPlayground',
+    'stapleCrops', 'woodlot',
+]);
+
+/** Clean, short display names for each canonical general map key. */
+export const CANONICAL_DISPLAY_NAMES = {
+    house:           'House',
+    outdoorKitchen:  'Outdoor Kitchen',
+    greenhouse:      'Greenhouse',
+    compost:         'Compost',
+    pond:            'Pond',
+    workshop:        'Workshop',
+    carRoad:         'Car Road',
+    coop:            'Coop',
+    animalRun:       'Animal Run',
+    guild:           'Guild',
+    orchard:         'Orchard',
+    berryPatch:      'Berry Patch',
+    vegetableGarden: 'Vegetable Garden',
+    beehives:        'Beehives',
+    kidsPlayground:  'Kids Playground',
+    stapleCrops:     'Staple Crops',
+    woodlot:         'Woodlot',
+};
+
+/**
+ * Types that allow multiple instances on the General Map.
+ * All other types are singular — only one instance is allowed.
+ */
+export const MULTI_ALLOWED_CANONICAL_KEYS = new Set([
+    'guild', 'orchard', 'berryPatch', 'vegetableGarden', 'pond',
+]);
+
+// Map: catalog key (snake_case) → { key: camelCase canonical, name: forced display name or null }
+// null name means "clean the original name but keep its meaning"
+// null entry means "skip this element — don't place on General Map"
+const CATALOG_TO_CANONICAL = {
+    // Vegetable garden group — all forced to clean name
+    vegetable_garden:  { key: 'vegetableGarden', name: 'Vegetable Garden' },
+    kitchen_garden:    { key: 'vegetableGarden', name: 'Vegetable Garden' },
+    potager:           { key: 'vegetableGarden', name: 'Vegetable Garden' },
+    intensive_beds:    { key: 'vegetableGarden', name: 'Vegetable Garden' },
+    raised_beds:       { key: 'vegetableGarden', name: 'Vegetable Garden' },
+    raised_bed:        { key: 'vegetableGarden', name: 'Vegetable Garden' },
+    // Herb garden — maps to vegetableGarden visual but keeps its own zone tab name
+    herb_garden:       { key: 'vegetableGarden', name: 'Herb Garden' },
+    // Orchard group
+    orchard:           { key: 'orchard',         name: null },   // keep original (e.g. "Apple Orchard")
+    fruit_trees:       { key: 'orchard',         name: 'Orchard' },
+    // Guild — keep original for multi-instance naming (e.g. "Apple Guild", "Pear Guild")
+    guild:             { key: 'guild',            name: null },
+    // Woodlot group — normalize to Woodlot
+    food_forest:       { key: 'woodlot',          name: 'Woodlot' },
+    forest_garden:     { key: 'woodlot',          name: 'Woodlot' },
+    wild_zone:         { key: 'woodlot',          name: 'Woodlot' },
+    // Berry patch group
+    berry_patch:       { key: 'berryPatch',       name: 'Berry Patch' },
+    berry_strip:       { key: 'berryPatch',       name: 'Berry Patch' },
+    // Structures (singular — always use canonical name)
+    greenhouse:        { key: 'greenhouse',       name: 'Greenhouse' },
+    pond:              { key: 'pond',             name: 'Pond' },
+    compost:           { key: 'compost',          name: 'Compost' },
+    coop:              { key: 'coop',             name: 'Coop' },
+    chicken_coop:      { key: 'coop',             name: 'Coop' },
+    beehive:           { key: 'beehives',         name: 'Beehives' },
+    shed:              { key: 'workshop',         name: 'Workshop' },
+    house:             { key: 'house',            name: 'House' },
+    patio:             { key: 'outdoorKitchen',   name: 'Outdoor Kitchen' },
+    // Explicitly skipped — not placeable on General Map
+    path:              null,
+    fence:             null,
+    windbreak:         null,
+    swale:             null,
+};
+
+// Name-based patterns for elements whose catalogKey isn't in the map (ordered: specific first)
+const NAME_PATTERNS = [
+    [/compost/i,                                         'compost'],
+    [/\bpond\b/i,                                        'pond'],
+    [/bee[\s-]?hive|apiary/i,                            'beehives'],
+    [/coop|chicken\s+coop|hen\s+house|duck\s+house/i,    'coop'],
+    [/animal[\s-]?run|chicken[\s-]?run|duck[\s-]?run|pasture/i, 'animalRun'],
+    [/greenhouse|polytunnel|glasshouse/i,                'greenhouse'],
+    [/orchard|fruit[\s-]?tree/i,                         'orchard'],
+    [/berry[\s-]?(?:patch|strip|area|garden|bed)|soft\s+fruit/i, 'berryPatch'],
+    [/\bguild\b/i,                                       'guild'],
+    [/food[\s-]?forest|forest[\s-]?garden|edible\s+(?:forest|woodland)|woodland|woodlot|coppice/i, 'woodlot'],
+    [/wild[\s-]?(?:zone|area)|wildflower\s+meadow/i,    'woodlot'],
+    [/staple\s*crop|grain\s*plot|crop\s*field|wheat\s*field|potato\s*(?:plot|field)/i, 'stapleCrops'],
+    [/vegetable|kitchen\s+garden|potager|raised\s*bed|intensive\s+bed/i, 'vegetableGarden'],
+    [/\bherb[\s-]?(?:garden|bed|border)\b/i,            'vegetableGarden'],
+    [/workshop|storage\s+shed|tool\s+shed/i,            'workshop'],
+    [/outdoor\s*kitchen|fire\s*pit/i,                   'outdoorKitchen'],
+    [/driveway|car[\s-]?(?:road|park)|parking/i,        'carRoad'],
+    [/playground|play\s*area|kids[\s-]?(?:area|space)/i,'kidsPlayground'],
+    [/\b(?:house|home|main\s+building)\b/i,             'house'],
+];
+
+// Verbose filler words to strip from AI-generated names
+const VERBOSE_PREFIXES = /\b(?:strategic|integrated|enhanced|optimized|comprehensive|productive|functional|sustainable|natural|holistic|intensive|diversified|key|primary|central|main)\s+/gi;
+const VERBOSE_SUFFIXES = /\s+\b(?:system|node|hub|station|area|zone|cluster|space|section|plot|feature|complex)\b$/gi;
+
+/**
+ * Strip verbose filler from an AI-generated name, keeping meaningful words.
+ */
+function cleanName(name, canonicalKey) {
+    if (!name) return CANONICAL_DISPLAY_NAMES[canonicalKey] || 'Structure';
+    let clean = name.replace(VERBOSE_PREFIXES, '').replace(VERBOSE_SUFFIXES, '').replace(VERBOSE_PREFIXES, '').trim();
+    if (clean.length < 3) clean = CANONICAL_DISPLAY_NAMES[canonicalKey] || name;
+    return clean;
+}
+
+/**
+ * Normalize any AI-proposed element to its canonical general map type and display name.
+ *
+ * Returns:
+ *   { canonicalKey: string, displayName: string }
+ *   — canonicalKey is the camelCase general map type (for dedup + visual style)
+ *   — displayName is the clean human-readable label (for zone tabs and map labels)
+ *
+ * Returns null if the element should not appear on the General Map (path, fence, windbreak, etc.)
+ */
+export function normalizeGeneralStructure(element) {
+    const rawCk = (element.catalogKey || '').toLowerCase().trim().replace(/[\s-]+/g, '_');
+    const originalName = (element.name || '').trim();
+
+    // 1. Exact catalog key lookup
+    if (Object.prototype.hasOwnProperty.call(CATALOG_TO_CANONICAL, rawCk)) {
+        const mapping = CATALOG_TO_CANONICAL[rawCk];
+        if (!mapping) return null;  // explicitly excluded
+        const { key: canonicalKey, name: forcedName } = mapping;
+        const displayName = forcedName ?? cleanName(originalName, canonicalKey);
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`[AI normalize] "${originalName}" (${rawCk}) → ${canonicalKey}: "${displayName}"`);
+        }
+        return { canonicalKey, displayName };
+    }
+
+    // 2. Name-based pattern fallback
+    for (const [pattern, canonicalKey] of NAME_PATTERNS) {
+        if (pattern.test(originalName)) {
+            const displayName = MULTI_ALLOWED_CANONICAL_KEYS.has(canonicalKey)
+                ? cleanName(originalName, canonicalKey)
+                : CANONICAL_DISPLAY_NAMES[canonicalKey];
+            if (process.env.NODE_ENV !== 'production') {
+                console.log(`[AI normalize] "${originalName}" (name match) → ${canonicalKey}: "${displayName}"`);
+            }
+            return { canonicalKey, displayName };
+        }
+    }
+
+    return null;  // unmappable — caller decides to skip or keep as-is
+}
+
+/**
+ * Deduplicate proposed elements by canonical general map type.
+ *
+ * Singular types (not in MULTI_ALLOWED_CANONICAL_KEYS): only one instance kept.
+ * Multi-allowed types: multiple instances allowed, but identical clean names are merged.
+ * recommendation_only and permaculture-zone elements are always passed through.
+ *
+ * @param {object[]} elements — proposed elements array
+ * @returns {{ deduplicated: object[], mergeReport: { canonicalKey, kept, dropped }[] }}
+ */
+export function deduplicateProposedElements(elements) {
+    const seenSingular = new Map();  // canonicalKey → first element index
+    const seenMulti    = new Map();  // `${canonicalKey}:${displayName}` → first element index
+    const deduplicated = [];
+    const mergeReport  = [];
+
+    for (const el of elements) {
+        // Always pass through non-map elements
+        if (el.action === 'recommendation_only' || el.type === 'permaculture-zone') {
+            deduplicated.push(el);
+            continue;
+        }
+
+        const norm = normalizeGeneralStructure(el);
+
+        if (!norm) {
+            // Unmappable or excluded (path, fence, etc.) — keep for downstream filtering
+            deduplicated.push(el);
+            continue;
+        }
+
+        const { canonicalKey, displayName } = norm;
+
+        if (MULTI_ALLOWED_CANONICAL_KEYS.has(canonicalKey)) {
+            // Multi-allowed: deduplicate by (canonicalKey + displayName) pair
+            const multiKey = `${canonicalKey}:${displayName.toLowerCase()}`;
+            if (!seenMulti.has(multiKey)) {
+                seenMulti.set(multiKey, deduplicated.length);
+                deduplicated.push({ ...el, name: displayName });
+            } else {
+                const keptEl = deduplicated[seenMulti.get(multiKey)];
+                mergeReport.push({ canonicalKey, kept: keptEl.name, dropped: el.name });
+                console.log(`[AI dedupe] Merged duplicate ${canonicalKey}: kept "${keptEl.name}", dropped "${el.name}"`);
+            }
+        } else {
+            // Singular type: only one instance
+            if (!seenSingular.has(canonicalKey)) {
+                seenSingular.set(canonicalKey, deduplicated.length);
+                deduplicated.push({ ...el, name: displayName });
+            } else {
+                const keptEl = deduplicated[seenSingular.get(canonicalKey)];
+                mergeReport.push({ canonicalKey, kept: keptEl.name, dropped: el.name });
+                console.log(`[AI dedupe] Merged duplicate ${canonicalKey}: kept "${keptEl.name}", dropped "${el.name}"`);
+            }
+        }
+    }
+
+    return { deduplicated, mergeReport };
+}
 
 // ── Strict post-generation validation ─────────────────────────────────────────
 

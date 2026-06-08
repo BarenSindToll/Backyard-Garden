@@ -17,6 +17,7 @@ export const loadLayout = async (req, res) => {
             bedLayouts: layout.bedLayouts || {},
             zoneItems: layout.zoneItems || {},
             siteAnalysis: layout.siteAnalysis || null,
+            neighbourhood: layout.neighbourhood || null,
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -24,7 +25,7 @@ export const loadLayout = async (req, res) => {
 };
 
 export const saveLayout = async (req, res) => {
-    const { grids, zones, setup, positions, overlayItems, bedLayouts, zoneItems, siteAnalysis } = req.body;
+    const { grids, zones, setup, positions, overlayItems, bedLayouts, zoneItems, siteAnalysis, neighbourhood } = req.body;
     const userId = req.user.id;
     try {
         await gardenLayoutModel.findOneAndUpdate(
@@ -35,6 +36,7 @@ export const saveLayout = async (req, res) => {
                 bedLayouts: bedLayouts && typeof bedLayouts === 'object' ? bedLayouts : {},
                 zoneItems: zoneItems && typeof zoneItems === 'object' ? zoneItems : {},
                 ...(siteAnalysis !== undefined ? { siteAnalysis } : {}),
+                ...(neighbourhood !== undefined ? { neighbourhood } : {}),
             },
             { new: true, upsert: true }
         );

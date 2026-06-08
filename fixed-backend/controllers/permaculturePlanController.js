@@ -2,7 +2,7 @@ import PermaculturePlan from '../models/permaculturePlanModel.js';
 import gardenLayoutModel from '../models/gardenLayoutModel.js';
 import { buildPermacultureContext, deriveHouseholdFoodStrategy } from '../services/permacultureContextService.js';
 import { generatePermaculturePlanWithAI } from '../services/permacultureAiService.js';
-import { resolveCanonicalType, getCatalogEntry, validateProposedElements } from '../utils/structureCatalogUtils.js';
+import { resolveCanonicalType, getCatalogEntry, validateProposedElements, normalizeGeneralStructure, deduplicateProposedElements, MULTI_ALLOWED_CANONICAL_KEYS, CANONICAL_DISPLAY_NAMES } from '../utils/structureCatalogUtils.js';
 import { resolveElementColor } from '../config/permaculturePlanSchema.js';
 import {
     validatePermaculturePlan,
@@ -21,15 +21,15 @@ function makeBedLayoutFromPlants(plants, bedItem) {
 
     const rowH = Math.max(0.15, (bedH - 0.10) / count - 0.05);
     const rows = plants.slice(0, count).map((plantName, idx) => ({
-        id:           `gen-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 5)}`,
-        x:            0.05,
-        y:            0.05 + idx * (rowH + 0.05),
-        widthM:       Math.max(0.3, bedW - 0.10),
-        heightM:      rowH,
-        spacingCm:    25,
+        id: `gen-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 5)}`,
+        x: 0.05,
+        y: 0.05 + idx * (rowH + 0.05),
+        widthM: Math.max(0.3, bedW - 0.10),
+        heightM: rowH,
+        spacingCm: 25,
         rowSpacingCm: 30,
-        notes:        'Generated from permaculture plan',
-        plant:        { name: plantName },
+        notes: 'Generated from permaculture plan',
+        plant: { name: plantName },
     }));
     return { rows, blocks: [], layoutMode: 'rows' };
 }
@@ -38,10 +38,10 @@ function makeBedLayoutFromPlants(plants, bedItem) {
 
 function getCompassMapping(northDirection = 'top') {
     switch (northDirection) {
-        case 'right':  return { top: 'W', right: 'N', bottom: 'E', left: 'S' };
+        case 'right': return { top: 'W', right: 'N', bottom: 'E', left: 'S' };
         case 'bottom': return { top: 'S', right: 'W', bottom: 'N', left: 'E' };
-        case 'left':   return { top: 'E', right: 'S', bottom: 'W', left: 'N' };
-        default:       return { top: 'N', right: 'E', bottom: 'S', left: 'W' };
+        case 'left': return { top: 'E', right: 'S', bottom: 'W', left: 'N' };
+        default: return { top: 'N', right: 'E', bottom: 'S', left: 'W' };
     }
 }
 
@@ -59,17 +59,17 @@ function sunnyBiasPosition(northDirection = 'top') {
     const edge = getSunniestEdge(northDirection);
     switch (edge) {
         case 'bottom': return { xFrac: 0.45, yFrac: 0.65 };
-        case 'top':    return { xFrac: 0.45, yFrac: 0.15 };
-        case 'right':  return { xFrac: 0.65, yFrac: 0.45 };
-        case 'left':   return { xFrac: 0.15, yFrac: 0.45 };
-        default:       return { xFrac: 0.45, yFrac: 0.65 };
+        case 'top': return { xFrac: 0.45, yFrac: 0.15 };
+        case 'right': return { xFrac: 0.65, yFrac: 0.45 };
+        case 'left': return { xFrac: 0.15, yFrac: 0.45 };
+        default: return { xFrac: 0.45, yFrac: 0.65 };
     }
 }
 
 // ── Placement helpers ─────────────────────────────────────────────────────────
 // Clamp a proposed element so it stays within garden bounds.
 function clampToGarden(xM, yM, wM, hM, widthM, heightM) {
-    const x = Math.max(0, Math.min(xM, widthM  - wM));
+    const x = Math.max(0, Math.min(xM, widthM - wM));
     const y = Math.max(0, Math.min(yM, heightM - hM));
     return { x, y };
 }
@@ -86,9 +86,9 @@ function findAnchorM(existingMapStructures, widthM, heightM) {
 function buildSiteAnalysisSummary(sa, existingElements) {
     if (!sa) return null;
 
-    const usedFacts            = [];
-    const missingFacts         = [];
-    const confidenceImpact     = [];
+    const usedFacts = [];
+    const missingFacts = [];
+    const confidenceImpact = [];
     const placementImplications = [];
 
     // Terrain
@@ -124,7 +124,7 @@ function buildSiteAnalysisSummary(sa, existingElements) {
     // Sun / shade sectors
     if (sa.sectors?.sunnyAreas || sa.sectors?.shadedAreas) {
         const parts = [
-            sa.sectors.sunnyAreas  && `sunny areas: ${sa.sectors.sunnyAreas}`,
+            sa.sectors.sunnyAreas && `sunny areas: ${sa.sectors.sunnyAreas}`,
             sa.sectors.shadedAreas && `shaded areas: ${sa.sectors.shadedAreas}`,
         ].filter(Boolean);
         usedFacts.push(`Sun/shade: ${parts.join('; ')}`);
@@ -148,7 +148,7 @@ function buildSiteAnalysisSummary(sa, existingElements) {
             sa.soil.soilFertility && `fertility: ${sa.soil.soilFertility}`,
         ].filter(Boolean).join(', ');
         usedFacts.push(`Soil: ${soilDesc}`);
-        if (sa.soil.soilType === 'clay')  placementImplications.push('Clay soil: raise beds for drainage; pond requires minimal lining');
+        if (sa.soil.soilType === 'clay') placementImplications.push('Clay soil: raise beds for drainage; pond requires minimal lining');
         if (sa.soil.soilType === 'sandy') placementImplications.push('Sandy soil: heavy mulching and compost essential; water harvesting critical');
     } else {
         missingFacts.push('Soil type not specified');
@@ -205,6 +205,39 @@ function buildSiteAnalysisSummary(sa, existingElements) {
         placementImplications.push('Prioritise drought-tolerant perennials and water-harvesting systems');
     }
 
+    // Neighbourhood context
+    if (sa.neighbourhood) {
+        const nb = sa.neighbourhood;
+        const DIRECTION_LABELS = { north: 'North', east: 'East', south: 'South', west: 'West' };
+        const TYPE_IMPLICATIONS = {
+            forest: (dir) => `${dir} side bordered by forest — wind protection, shade, wildlife edge, leaf litter; keep sun-sensitive crops away from ${dir} shadow`,
+            river: (dir) => `${dir} side has river/stream — water access, humidity, biodiversity; watch flood risk; good for pond, wetland, water-hungry plants on ${dir} edge`,
+            road: (dir) => `${dir} side faces road — buffer with hedge or fence; avoid food crops near pollution; good for access path, parking, storage`,
+            buildings: (dir) => `${dir} side has buildings — potential shade/wind tunnel; use as heat island or windbreak; avoid shade-sensitive crops`,
+            field: (dir) => `${dir} side borders crop field — possible pesticide drift; use hedgerow buffer on ${dir} boundary`,
+            orchard: (dir) => `${dir} side borders orchard — beneficial pollinator corridor; consider guild/hedge connections`,
+            pasture: (dir) => `${dir} side borders pasture — manure/compost opportunity; animal pressure; plan fencing`,
+            hedge: (dir) => `${dir} side has windbreak/hedge — microclimate benefit; integrate with guild planting`,
+            empty: (_) => null,
+            unknown: (_) => null,
+        };
+        const parts = [];
+        for (const [dir, data] of Object.entries(nb)) {
+            if (!data || !data.type || data.type === 'unknown' || data.type === 'empty') continue;
+            const dirLabel = DIRECTION_LABELS[dir] || dir;
+            const typeLabel = data.label || data.type;
+            const custom = data.type === 'other' && data.notes ? data.notes : null;
+            const desc = custom || typeLabel;
+            parts.push(`${dirLabel}: ${desc}`);
+            const impl = TYPE_IMPLICATIONS[data.type]?.(dirLabel);
+            if (impl) placementImplications.push(impl);
+            if (data.notes && data.type !== 'other') usedFacts.push(`${dirLabel} neighbourhood note: ${data.notes}`);
+        }
+        if (parts.length > 0) {
+            usedFacts.push(`Neighbourhood: ${parts.join(' | ')}`);
+        }
+    }
+
     // Existing structures
     const structNames = (existingElements?.stableElements || []);
     if (structNames.length > 0) {
@@ -217,12 +250,12 @@ function buildSiteAnalysisSummary(sa, existingElements) {
 // ── Element count target helper ───────────────────────────────────────────────
 function getTargetElementCount(areaM2, householdNeeds = {}, generationRequest = {}) {
     const householdSize = Number(householdNeeds?.householdSize || 0);
-    const coverage      = householdNeeds?.foodCoverageGoal || 'supplement';
+    const coverage = householdNeeds?.foodCoverageGoal || 'supplement';
     let min = 5, max = 8;
-    if      (areaM2 >= 1000)  { min = 12; max = 20; }
-    else if (areaM2 >= 200)   { min = 8;  max = 14; }
+    if (areaM2 >= 1000) { min = 12; max = 20; }
+    else if (areaM2 >= 200) { min = 8; max = 14; }
     // else < 200              { min = 5; max = 8 }
-    if (householdSize >= 4 && ['partial','high','maximum'].includes(coverage)) { min += 2; max += 3; }
+    if (householdSize >= 4 && ['partial', 'high', 'maximum'].includes(coverage)) { min += 2; max += 3; }
     return { min, max };
 }
 
@@ -230,91 +263,91 @@ function getTargetElementCount(areaM2, householdNeeds = {}, generationRequest = 
 // variantType 'A' = Solar Priority, 'B' = Flow & Access
 // sourceContext contains existingMapStructures, availableStructureCatalog, and generationRequest.
 function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourceContext = {}, variantType = 'A', variantStrategy = 'solar-priority') {
-    const setup        = layoutSnapshot.setup        || {};
-    const zones        = layoutSnapshot.zones        || [];
+    const setup = layoutSnapshot.setup || {};
+    const zones = layoutSnapshot.zones || [];
     const overlayItems = layoutSnapshot.overlayItems || [];
 
-    const widthM  = setup.widthM  || 10;
+    const widthM = setup.widthM || 10;
     const heightM = setup.heightM || 10;
-    const areaM2  = widthM * heightM;
+    const areaM2 = widthM * heightM;
 
     const northDirection = setup.northDirection || locationContext?.northDirection || 'top';
-    const sunEdge        = getSunniestEdge(northDirection);
-    const compassMap     = getCompassMapping(northDirection);
-    const sunnyPos       = sunnyBiasPosition(northDirection);
+    const sunEdge = getSunniestEdge(northDirection);
+    const compassMap = getCompassMapping(northDirection);
+    const sunnyPos = sunnyBiasPosition(northDirection);
 
     // ── Catalog-aware existing structure lookup ───────────────────────────────
     const existingMapStructures = sourceContext.existingMapStructures || [];
     const existingNames = overlayItems.map(it => it.name).filter(Boolean);
 
     const findExisting = (canon) => existingMapStructures.find(s => s.canonicalType === canon) || null;
-    const allOfCanon  = (canon) => existingMapStructures.filter(s => s.canonicalType === canon);
+    const allOfCanon = (canon) => existingMapStructures.filter(s => s.canonicalType === canon);
 
     const hasByCanon = (canon) =>
         existingMapStructures.some(s => s.canonicalType === canon) ||
         existingNames.some(n => resolveCanonicalType(n) === canon);
 
     // ── Generation request — read crop prefs, household needs, animals ────────
-    const genReq         = sourceContext.generationRequest || {};
-    const allowed        = genReq.allowedAdditions || {};
+    const genReq = sourceContext.generationRequest || {};
+    const allowed = genReq.allowedAdditions || {};
     // Part 1 fix: accept both cropPreferences and plantPreferences
-    const cropPrefs      = genReq.cropPreferences || genReq.plantPreferences || {};
-    const cropAreas      = cropPrefs.cropAreas     || {};
-    const householdNeeds = genReq.householdNeeds   || {};
-    const animalPrefs    = genReq.animalPreferences || {};
-    const animals        = (animalPrefs.animals     || []);
+    const cropPrefs = genReq.cropPreferences || genReq.plantPreferences || {};
+    const cropAreas = cropPrefs.cropAreas || {};
+    const householdNeeds = genReq.householdNeeds || {};
+    const animalPrefs = genReq.animalPreferences || {};
+    const animals = (animalPrefs.animals || []);
 
     // Convenience: which animals were selected?
-    const hasChickens = animals.some(a => a.type === 'chickens'  && a.status !== null);
-    const hasDucks    = animals.some(a => a.type === 'ducks'     && a.status !== null);
-    const hasBees     = animals.some(a => a.type === 'bees'      && a.status !== null);
-    const hasGoats    = animals.some(a => a.type === 'goats'     && a.status !== null);
+    const hasChickens = animals.some(a => a.type === 'chickens' && a.status !== null);
+    const hasDucks = animals.some(a => a.type === 'ducks' && a.status !== null);
+    const hasBees = animals.some(a => a.type === 'bees' && a.status !== null);
+    const hasGoats = animals.some(a => a.type === 'goats' && a.status !== null);
 
     // Derive "want" flags — combine explicit allowedAdditions with selected crop areas
-    const wantGreenhouse  = allowed.greenhouse   === true  || !!cropAreas.tomatoesInGreenhouse;
-    const wantBerryPatch  = allowed.berryPatch   === true  || !!cropAreas.berryPatch;
-    const wantOrchard     = allowed.orchard      === true  || !!cropAreas.orchard;
-    const wantHerbGarden  = allowed.herbGarden   === true  || !!cropAreas.herbs;
-    const wantPotatoes    = !!cropAreas.potatoes;
-    const wantCabbage     = !!cropAreas.cabbage;
-    const wantRoots       = !!cropAreas.carrots;
-    const wantAlliums     = !!cropAreas.onionsGarlic;
-    const wantLegumes     = !!cropAreas.beansPeas;
-    const wantThreeSisters= !!cropAreas.cornPumpkin;
+    const wantGreenhouse = allowed.greenhouse === true || !!cropAreas.tomatoesInGreenhouse;
+    const wantBerryPatch = allowed.berryPatch === true || !!cropAreas.berryPatch;
+    const wantOrchard = allowed.orchard === true || !!cropAreas.orchard;
+    const wantHerbGarden = allowed.herbGarden === true || !!cropAreas.herbs;
+    const wantPotatoes = !!cropAreas.potatoes;
+    const wantCabbage = !!cropAreas.cabbage;
+    const wantRoots = !!cropAreas.carrots;
+    const wantAlliums = !!cropAreas.onionsGarlic;
+    const wantLegumes = !!cropAreas.beansPeas;
+    const wantThreeSisters = !!cropAreas.cornPumpkin;
     const wantSaladGreens = !!cropAreas.saladGreens;
-    const wantVineyard    = !!cropAreas.vineyard;
-    const wantMedicinal   = !!cropAreas.medicinalFlowers;
+    const wantVineyard = !!cropAreas.vineyard;
+    const wantMedicinal = !!cropAreas.medicinalFlowers;
 
     // Scale-aware target
     const target = getTargetElementCount(areaM2, householdNeeds, genReq);
-    const canAddRaisedBed  = allowed.raisedBeds  !== false;
-    const canAddGreenhouse = allowed.greenhouse  === true;
-    const canAddPond       = allowed.pond        === true;
-    const canAddCompost    = allowed.compost     !== false;
-    const canAddPaths      = allowed.paths       !== false;
-    const canAddGuilds     = allowed.guilds      !== false;
-    const canAddOrchard    = allowed.orchard     === true;
-    const canAddBerryPatch = allowed.berryPatch  === true;
-    const canAddHerbGarden = allowed.herbGarden  === true;
-    const canAddWindbreak  = allowed.windbreak   === true;
-    const canAddCoop       = allowed.coop        === true;
-    const canAddBeehives   = allowed.beehives    === true;
-    const canAddSwales     = allowed.swales      === true;
-    const canAddFoodForest = allowed.foodForest  === true;
+    const canAddRaisedBed = allowed.raisedBeds !== false;
+    const canAddGreenhouse = allowed.greenhouse === true;
+    const canAddPond = allowed.pond === true;
+    const canAddCompost = allowed.compost !== false;
+    const canAddPaths = allowed.paths !== false;
+    const canAddGuilds = allowed.guilds !== false;
+    const canAddOrchard = allowed.orchard === true;
+    const canAddBerryPatch = allowed.berryPatch === true;
+    const canAddHerbGarden = allowed.herbGarden === true;
+    const canAddWindbreak = allowed.windbreak === true;
+    const canAddCoop = allowed.coop === true;
+    const canAddBeehives = allowed.beehives === true;
+    const canAddSwales = allowed.swales === true;
+    const canAddFoodForest = allowed.foodForest === true;
 
-    const hasCompost    = hasByCanon('compost');
-    const hasPond       = hasByCanon('pond');
-    const hasRaisedBed  = hasByCanon('raised_bed');
+    const hasCompost = hasByCanon('compost');
+    const hasPond = hasByCanon('pond');
+    const hasRaisedBed = hasByCanon('raised_bed');
     const hasGreenhouse = hasByCanon('greenhouse');
-    const hasPath       = hasByCanon('path');
-    const hasFence      = hasByCanon('fence');
-    const hasCoop       = hasByCanon('coop');
+    const hasPath = hasByCanon('path');
+    const hasFence = hasByCanon('fence');
+    const hasCoop = hasByCanon('coop');
 
-    const existingPond       = findExisting('pond');
-    const existingCompost    = findExisting('compost');
+    const existingPond = findExisting('pond');
+    const existingCompost = findExisting('compost');
     const existingGreenhouse = findExisting('greenhouse');
-    const existingBeds       = allOfCanon('raised_bed');
-    const existingRaisedBed  = existingBeds[0] || null;
+    const existingBeds = allOfCanon('raised_bed');
+    const existingRaisedBed = existingBeds[0] || null;
 
     // Anchor point — used to position kitchen/food elements close to house
     const anchor = findAnchorM(existingMapStructures, widthM, heightM);
@@ -327,8 +360,8 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
     const saved = sourceContext.savedSiteAnalysis || null;
 
     // ── Detect Water & Gravity strategy availability ───────────────────────────
-    const hasSlopeData  = !!(saved?.topography?.slopeType && saved?.topography?.slopeDirection);
-    const hasWaterFlow  = !!(saved?.topography?.poolingAreas || (saved?.topography?.waterSources?.length > 0));
+    const hasSlopeData = !!(saved?.topography?.slopeType && saved?.topography?.slopeDirection);
+    const hasWaterFlow = !!(saved?.topography?.poolingAreas || (saved?.topography?.waterSources?.length > 0));
     const waterGravityAvailable = hasSlopeData || hasWaterFlow;
 
     console.log(`[buildMockDraft] variant=${variantType} area=${areaM2}m² target=${elementTarget} waterGravity=${waterGravityAvailable} pond=${hasPond} beds=${existingBeds.length}`);
@@ -357,21 +390,21 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
         soilNotes: soilNote,
         constraints: [
             !hasCompost ? 'No composting system detected — nutrient cycling is incomplete and the garden depends on bought-in inputs.' : null,
-            !hasPath    ? 'No defined access paths — design paths to all productive areas to prevent soil compaction in beds.' : null,
-            widthM < 5  ? 'Limited width constrains zone depth; prioritise vertical growing (trellises, espalier).' : null,
-            saved?.constraints?.localRules     ? `Local rules: ${saved.constraints.localRules}` : null,
+            !hasPath ? 'No defined access paths — design paths to all productive areas to prevent soil compaction in beds.' : null,
+            widthM < 5 ? 'Limited width constrains zone depth; prioritise vertical growing (trellises, espalier).' : null,
+            saved?.constraints?.localRules ? `Local rules: ${saved.constraints.localRules}` : null,
             saved?.constraints?.irrigationLimits ? `Irrigation limits: ${saved.constraints.irrigationLimits}` : null,
-            saved?.constraints?.pests          ? `Known pests/diseases: ${saved.constraints.pests}` : null,
-            saved?.goals?.childrenPets         ? 'Avoid toxic plants — children or pets present on site.' : null,
+            saved?.constraints?.pests ? `Known pests/diseases: ${saved.constraints.pests}` : null,
+            saved?.goals?.childrenPets ? 'Avoid toxic plants — children or pets present on site.' : null,
         ].filter(Boolean),
         opportunities: [
-            !hasPond       ? 'A wildlife pond is the single highest-yield permaculture feature per m² — supports frogs, dragonflies, and birds that provide natural pest control.' : null,
-            hasPond        ? 'Existing pond can be enhanced with marginal plantings — water mint, marsh marigold, yellow flag iris.' : null,
+            !hasPond ? 'A wildlife pond is the single highest-yield permaculture feature per m² — supports frogs, dragonflies, and birds that provide natural pest control.' : null,
+            hasPond ? 'Existing pond can be enhanced with marginal plantings — water mint, marsh marigold, yellow flag iris.' : null,
             !hasGreenhouse && areaM2 > 50 ? 'A greenhouse or polytunnel extends the growing season by 6–8 weeks at each end.' : null,
-            !hasFence      ? 'A living hedge doubles as windbreak, wildlife corridor, and productive food source.' : null,
+            !hasFence ? 'A living hedge doubles as windbreak, wildlife corridor, and productive food source.' : null,
             existingBeds.length > 0 ? `${existingBeds.length} existing raised bed(s) can be planted with companion guilds for maximum yield.` : null,
-            hasGreenhouse  ? 'Existing greenhouse should be planned with heat-loving crops (tomatoes, peppers, cucumbers).' : null,
-            hasCoop        ? 'Existing animal area can integrate rotational grazing and direct composting from chicken manure.' : null,
+            hasGreenhouse ? 'Existing greenhouse should be planned with heat-loving crops (tomatoes, peppers, cucumbers).' : null,
+            hasCoop ? 'Existing animal area can integrate rotational grazing and direct composting from chicken manure.' : null,
         ].filter(Boolean),
     };
 
@@ -423,10 +456,10 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             });
         } else if (canAddRaisedBed) {
             // Create ONE Vegetable Garden zone portal (not multiple scattered raised beds)
-            const vgW   = areaM2 < 200 ? 8 : areaM2 < 1000 ? 12 : 14;
-            const vgH   = areaM2 < 200 ? 5 : areaM2 < 1000 ? 7  : 8;
-            const bedX  = Math.max(1, Math.min(widthM * sunnyPos.xFrac, widthM - vgW - 1));
-            const bedY  = Math.max(1, Math.min(heightM * sunnyPos.yFrac, heightM - vgH - 1));
+            const vgW = areaM2 < 200 ? 8 : areaM2 < 1000 ? 12 : 14;
+            const vgH = areaM2 < 200 ? 5 : areaM2 < 1000 ? 7 : 8;
+            const bedX = Math.max(1, Math.min(widthM * sunnyPos.xFrac, widthM - vgW - 1));
+            const bedY = Math.max(1, Math.min(heightM * sunnyPos.yFrac, heightM - vgH - 1));
             const vgPos = clampToGarden(bedX, bedY, vgW, vgH, widthM, heightM);
 
             const sunFact = saved?.sectors?.sunnyAreas
@@ -437,12 +470,12 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
                 : null;
 
             // Determine which internal beds to include based on crop preferences
-            const inclTomato  = !wantGreenhouse;   // if greenhouse selected, tomatoes go there
-            const inclLeafy   = wantSaladGreens || true;
-            const inclRoots   = wantRoots || true;
+            const inclTomato = !wantGreenhouse;   // if greenhouse selected, tomatoes go there
+            const inclLeafy = wantSaladGreens || true;
+            const inclRoots = wantRoots || true;
             const inclLegumes = wantLegumes || areaM2 >= 200;
-            const inclCucurb  = wantThreeSisters || areaM2 >= 400;
-            const inclCompan  = true;
+            const inclCucurb = wantThreeSisters || areaM2 >= 400;
+            const inclCompan = true;
 
             const beds = [];
             let bedY0 = 0;
@@ -451,12 +484,12 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
                 beds.push({ id: `bed-${beds.length + 1}`, label, x: 0, y: parseFloat(bedY0.toFixed(2)), widthM: vgW, heightM: heightM_, plants, spacingCm });
                 bedY0 += heightM_ + 0.15;
             };
-            if (inclTomato)  addBed('Tomatoes, Peppers & Herbs', ['Tomato (Roma)', 'Pepper (Kapia)', 'Basil', 'Marigold'], 1.3, 45);
-            if (inclLeafy)   addBed('Leafy Greens', ['Lettuce', 'Spinach', 'Swiss Chard', 'Kale', 'Radish'], 1.0, 25);
-            if (inclRoots)   addBed('Root Crops', ['Carrot', 'Parsley Root', 'Beetroot', 'Onion'], 1.0, 15);
+            if (inclTomato) addBed('Tomatoes, Peppers & Herbs', ['Tomato (Roma)', 'Pepper (Kapia)', 'Basil', 'Marigold'], 1.3, 45);
+            if (inclLeafy) addBed('Leafy Greens', ['Lettuce', 'Spinach', 'Swiss Chard', 'Kale', 'Radish'], 1.0, 25);
+            if (inclRoots) addBed('Root Crops', ['Carrot', 'Parsley Root', 'Beetroot', 'Onion'], 1.0, 15);
             if (inclLegumes) addBed('Legumes', ['Bean (Fasole)', 'Pea (Mazăre)', 'Dill'], 1.0, 30);
-            if (inclCucurb)  addBed('Cucurbits', ['Zucchini (Dovlecel)', 'Cucumber', 'Pumpkin'], 1.2, 60);
-            if (inclCompan)  addBed('Companion Flowers', ['Calendula (Gălbenele)', 'Marigold (Crăițe)', 'Nasturtium', 'Borage'], 0.8, 30);
+            if (inclCucurb) addBed('Cucurbits', ['Zucchini (Dovlecel)', 'Cucumber', 'Pumpkin'], 1.2, 60);
+            if (inclCompan) addBed('Companion Flowers', ['Calendula (Gălbenele)', 'Marigold (Crăițe)', 'Nasturtium', 'Borage'], 0.8, 30);
 
             console.log(`[buildMockDraft] Variant A: creating Vegetable Garden portal (${vgW}×${vgH}m, ${beds.length} beds)`);
             proposed.push({
@@ -497,7 +530,7 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             const ghPos = clampToGarden(widthM * sunnyPos.xFrac, heightM * sunnyPos.yFrac, 5.0, 4.0, widthM, heightM);
             proposed.push({
                 action: 'create_new', catalogKey: 'greenhouse', canonicalType: 'greenhouse',
-                type: 'structure', name: 'Productive Greenhouse', targetZone: '1',
+                type: 'structure', name: 'Greenhouse', targetZone: '1',
                 x: ghPos.x, y: ghPos.y, width: 5.0, height: 4.0, rotation: 0,
                 plants: ['Tomato (Greenhouse)', 'Pepper', 'Cucumber'],
                 reason: `Placed toward the ${sunEdge}-facing (sunniest) side of the garden. A greenhouse here extends the productive season significantly and allows heat-loving crops that cannot succeed outdoors.`,
@@ -609,17 +642,17 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             });
         }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // VARIANT B — FLOW & ACCESS (rich, zone-based placement)
-    // Zone 1 (daily use, ≤10m from house): herbs, salads, compost, daily beds, greenhouse.
-    // Zone 2 (weekly, 10–30m): main veg, roots, berries, beehives.
-    // Zone 3 (occasional, 30m+): orchard, guilds, potatoes, coop, pond, meadow.
-    // Paths connect every productive zone back to the house.
-    // ──────────────────────────────────────────────────────────────────────────
+        // ──────────────────────────────────────────────────────────────────────────
+        // VARIANT B — FLOW & ACCESS (rich, zone-based placement)
+        // Zone 1 (daily use, ≤10m from house): herbs, salads, compost, daily beds, greenhouse.
+        // Zone 2 (weekly, 10–30m): main veg, roots, berries, beehives.
+        // Zone 3 (occasional, 30m+): orchard, guilds, potatoes, coop, pond, meadow.
+        // Paths connect every productive zone back to the house.
+        // ──────────────────────────────────────────────────────────────────────────
     } else {
         // Position helpers for Flow & Access
         const near = (dx, dy, w, h) => clampToGarden(anchor.xM + dx, anchor.yM + dy, w, h, widthM, heightM);
-        const pos  = (fx, fy, w, h) => clampToGarden(widthM * fx, heightM * fy, w, h, widthM, heightM);
+        const pos = (fx, fy, w, h) => clampToGarden(widthM * fx, heightM * fy, w, h, widthM, heightM);
 
         // ── Zone 1 — daily-use elements, close to house ───────────────────────
 
@@ -639,15 +672,15 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
 
         // Z1-2. Vegetable Garden zone portal (Flow & Access: close to house, zone 1)
         if (existingBeds.length === 0 && canAddRaisedBed) {
-            const vgW  = areaM2 < 200 ? 8 : areaM2 < 1000 ? 11 : 14;
-            const vgH  = areaM2 < 200 ? 5 : areaM2 < 1000 ? 6  : 7;
+            const vgW = areaM2 < 200 ? 8 : areaM2 < 1000 ? 11 : 14;
+            const vgH = areaM2 < 200 ? 5 : areaM2 < 1000 ? 6 : 7;
             const vgPos = near(2, 2, vgW, vgH);
 
             const bBeds = [];
             let yOff = 0;
             const addB = (label, plants, h, sp) => {
                 if (yOff + h > vgH) return;
-                bBeds.push({ id: `bed-${bBeds.length+1}`, label, x:0, y:parseFloat(yOff.toFixed(2)), widthM:vgW, heightM:h, plants, spacingCm:sp });
+                bBeds.push({ id: `bed-${bBeds.length + 1}`, label, x: 0, y: parseFloat(yOff.toFixed(2)), widthM: vgW, heightM: h, plants, spacingCm: sp });
                 yOff += h + 0.15;
             };
             addB('Daily Salads & Herbs', ['Lettuce', 'Spinach', 'Radish', 'Chives', 'Parsley'], 1.0, 25);
@@ -756,7 +789,7 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
                 const ghPos = near(5, -1, 5.0, 4.0);
                 proposed.push({
                     action: 'create_new', catalogKey: 'greenhouse', canonicalType: 'greenhouse',
-                    type: 'structure', name: 'Productive Greenhouse', targetZone: '1',
+                    type: 'structure', name: 'Greenhouse', targetZone: '1',
                     variantStrategy: 'flow-access', strategyReason: 'Greenhouse in Zone 1 — daily watering and harvesting needed.',
                     strategyTags: ['daily-harvest', 'near-house', 'zone-1'],
                     x: ghPos.x, y: ghPos.y, width: 5.0, height: 4.0, rotation: 0,
@@ -916,9 +949,9 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             const shadeEdge = northDirection;
             const hedgePos = shadeEdge === 'bottom'
                 ? { x: 0, y: heightM - 2.0, width: widthM, height: 2.0 }
-                : shadeEdge === 'right'   ? { x: widthM - 2.0, y: 0, width: 2.0, height: heightM }
-                : shadeEdge === 'left'    ? { x: 0, y: 0, width: 2.0, height: heightM }
-                :                           { x: 0, y: 0, width: widthM, height: 2.0 };
+                : shadeEdge === 'right' ? { x: widthM - 2.0, y: 0, width: 2.0, height: heightM }
+                    : shadeEdge === 'left' ? { x: 0, y: 0, width: 2.0, height: heightM }
+                        : { x: 0, y: 0, width: widthM, height: 2.0 };
             proposed.push({
                 action: 'create_new', catalogKey: 'windbreak', canonicalType: 'windbreak',
                 type: 'structure', name: 'Boundary Windbreak Hedge', targetZone: '3',
@@ -1157,8 +1190,8 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
     // actionable element count is met with sensible fallback elements.
 
     const actionable = () => proposed.filter(p => p.action !== 'recommendation_only');
-    const usedNames  = () => new Set(proposed.map(p => p.name));
-    const usedKeys   = () => new Set(proposed.map(p => p.catalogKey).filter(Boolean));
+    const usedNames = () => new Set(proposed.map(p => p.name));
+    const usedKeys = () => new Set(proposed.map(p => p.catalogKey).filter(Boolean));
 
     const fallbackCandidates = [
         {
@@ -1249,9 +1282,9 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
 
     // ── Plan narrative ────────────────────────────────────────────────────────
     const variantLabel = isVariantB ? 'Flow & Access' : 'Solar Priority';
-    const zoneWord     = zones.length === 1 ? 'zone' : 'zones';
-    const itemWord     = overlayItems.length === 1 ? 'structure' : 'structures';
-    const bedCount     = existingBeds.length;
+    const zoneWord = zones.length === 1 ? 'zone' : 'zones';
+    const itemWord = overlayItems.length === 1 ? 'structure' : 'structures';
+    const bedCount = existingBeds.length;
 
     const planNarrative = `## Permaculture Plan — Variant ${variantType}: ${variantLabel}
 
@@ -1260,8 +1293,8 @@ Your garden covers ${widthM} m × ${heightM} m (${areaM2} m²) with ${zones.leng
 
 **Variant Focus**
 ${isVariantB
-    ? `This plan uses a **Flow & Access** spatial strategy. Elements are positioned by visit frequency: daily-use crops, herbs and compost are in Zone 1 (close to the house), main vegetable beds and berries in Zone 2, and orchard, guilds and low-maintenance systems in Zone 3. Paths connect all productive areas. The goal is to minimise daily walking effort and make every element easy to reach and use.`
-    : `This plan uses a **Solar Priority** spatial strategy. The ${sunEdge}-facing side of the garden (highest direct sun) is reserved for demanding crops — tomatoes, peppers, greenhouse production and summer annuals. Partial-shade areas are used for root crops, leafy greens, herbs and currants. Tall structures are placed so they do not cast shade on sun-sensitive beds.${saved?.sectors?.sunnyAreas ? ` Site Analysis confirms sunny areas: ${saved.sectors.sunnyAreas}.` : ' Sun-based placement estimated from North direction — add sun sector data to Site Analysis for higher accuracy.'}`}
+            ? `This plan uses a **Flow & Access** spatial strategy. Elements are positioned by visit frequency: daily-use crops, herbs and compost are in Zone 1 (close to the house), main vegetable beds and berries in Zone 2, and orchard, guilds and low-maintenance systems in Zone 3. Paths connect all productive areas. The goal is to minimise daily walking effort and make every element easy to reach and use.`
+            : `This plan uses a **Solar Priority** spatial strategy. The ${sunEdge}-facing side of the garden (highest direct sun) is reserved for demanding crops — tomatoes, peppers, greenhouse production and summer annuals. Partial-shade areas are used for root crops, leafy greens, herbs and currants. Tall structures are placed so they do not cast shade on sun-sensitive beds.${saved?.sectors?.sunnyAreas ? ` Site Analysis confirms sunny areas: ${saved.sectors.sunnyAreas}.` : ' Sun-based placement estimated from North direction — add sun sector data to Site Analysis for higher accuracy.'}`}
 ${waterGravityAvailable ? `\n**Water & Gravity note:** Slope or water flow data detected in Site Analysis. A Water & Gravity strategy can be applied as a future refinement — swales on contour, pond at low point, drought-tolerant crops higher up.` : ''}
 
 **Design Principles Applied**
@@ -1269,8 +1302,8 @@ This draft applies key Holmgren (2002) permaculture principles: observe and inte
 
 **Existing Structures**
 ${existingNames.length > 0
-    ? `Detected on map: ${existingNames.join(', ')}. These have been used as the foundation for this plan — new elements work with, not against, existing investments.`
-    : 'No structures detected on the map. All proposed elements are new placements.'}
+            ? `Detected on map: ${existingNames.join(', ')}. These have been used as the foundation for this plan — new elements work with, not against, existing investments.`
+            : 'No structures detected on the map. All proposed elements are new placements.'}
 
 ${saved ? `**Site Analysis Inputs**
 ${saved.goals?.mainGoal ? `Primary goal: ${saved.goals.mainGoal}.` : ''}${saved.goals?.maintenanceTime ? ` Available maintenance time: ${saved.goals.maintenanceTime}.` : ''}${saved.goals?.experienceLevel ? ` Experience level: ${saved.goals.experienceLevel}.` : ''}
@@ -1310,8 +1343,8 @@ export const generateDraft = async (req, res) => {
         const userId = req.user.id;
         const {
             generationRequest = {},
-            variantType       = 'A',
-            variantStrategy   = variantType === 'B' ? 'flow-access' : 'solar-priority',
+            variantType = 'A',
+            variantStrategy = variantType === 'B' ? 'flow-access' : 'solar-priority',
         } = req.body;
 
         // Load the current layout so we can snapshot it
@@ -1323,48 +1356,48 @@ export const generateDraft = async (req, res) => {
         // All location / site data comes from saved layout — never from the request body
         const savedSiteAnalysis = layout?.siteAnalysis || null;
         const mergedLocation = {
-            country:        layout?.setup?.country        || '',
-            city:           '',
-            latitude:       null,
-            longitude:      null,
-            altitude:       savedSiteAnalysis?.climate?.altitude
-                                ? parseFloat(savedSiteAnalysis.climate.altitude) || null
-                                : null,
-            hardinessZone:  savedSiteAnalysis?.climate?.climateZone || layout?.setup?.hardinessZone || '',
-            climateNotes:   layout?.setup?.climate || '',
+            country: layout?.setup?.country || '',
+            city: '',
+            latitude: null,
+            longitude: null,
+            altitude: savedSiteAnalysis?.climate?.altitude
+                ? parseFloat(savedSiteAnalysis.climate.altitude) || null
+                : null,
+            hardinessZone: savedSiteAnalysis?.climate?.climateZone || layout?.setup?.hardinessZone || '',
+            climateNotes: layout?.setup?.climate || '',
             northDirection: savedSiteAnalysis?.sectors?.northDirection || layout?.setup?.northDirection || 'top',
         };
 
         // Map generationRequest into userRequirements for buildPermacultureContext.
         // Backward-compatible: accepts both new cropPreferences and old plantPreferences.
-        const cropPrefs      = generationRequest.cropPreferences   || {};
-        const plantPrefs     = generationRequest.plantPreferences  || {};
-        const animalPrefs    = generationRequest.animalPreferences || {};
-        const allowed        = generationRequest.allowedAdditions  || {};
-        const householdNeeds = generationRequest.householdNeeds    || { foodCoverageGoal: 'supplement' };
+        const cropPrefs = generationRequest.cropPreferences || {};
+        const plantPrefs = generationRequest.plantPreferences || {};
+        const animalPrefs = generationRequest.animalPreferences || {};
+        const allowed = generationRequest.allowedAdditions || {};
+        const householdNeeds = generationRequest.householdNeeds || { foodCoverageGoal: 'supplement' };
 
         // Merge preferred plants from all sources, deduped (Part 1 fix)
-        const mainCrops     = cropPrefs.selectedMainCrops || [];
-        const prioritized   = cropPrefs.prioritizePlants  || plantPrefs.prioritizePlants || [];
+        const mainCrops = cropPrefs.selectedMainCrops || [];
+        const prioritized = cropPrefs.prioritizePlants || plantPrefs.prioritizePlants || [];
         // Derive crop names from active cropAreas (so Romania crop selections always reach AI)
         const cropAreaNames = (() => {
             const ca = cropPrefs.cropAreas || {};
-            const map = { potatoes:'Potato', tomatoesInGreenhouse:'Tomato', cabbage:'Cabbage', carrots:'Carrot', onionsGarlic:'Onion,Garlic', beansPeas:'Bean,Pea', cornPumpkin:'Corn,Pumpkin', saladGreens:'Lettuce,Spinach', herbs:'Parsley,Dill,Lovage,Basil', berryPatch:'Raspberry,Strawberry,Currant', orchard:'Apple,Pear,Plum,Cherry', vineyard:'Grape', medicinalFlowers:'Calendula,Marigold,Lavender' };
-            return Object.entries(ca).filter(([,v]) => v).flatMap(([k]) => (map[k] || '').split(',').filter(Boolean));
+            const map = { potatoes: 'Potato', tomatoesInGreenhouse: 'Tomato', cabbage: 'Cabbage', carrots: 'Carrot', onionsGarlic: 'Onion,Garlic', beansPeas: 'Bean,Pea', cornPumpkin: 'Corn,Pumpkin', saladGreens: 'Lettuce,Spinach', herbs: 'Parsley,Dill,Lovage,Basil', berryPatch: 'Raspberry,Strawberry,Currant', orchard: 'Apple,Pear,Plum,Cherry', vineyard: 'Grape', medicinalFlowers: 'Calendula,Marigold,Lavender' };
+            return Object.entries(ca).filter(([, v]) => v).flatMap(([k]) => (map[k] || '').split(',').filter(Boolean));
         })();
         const preferredPlants = [...new Set([...mainCrops, ...prioritized, ...cropAreaNames])];
-        const excludedPlants  = cropPrefs.avoidPlants || plantPrefs.avoidPlants || generationRequest.excludedPlants || [];
+        const excludedPlants = cropPrefs.avoidPlants || plantPrefs.avoidPlants || generationRequest.excludedPlants || [];
 
         // Build an animal context note for the AI
         const animalNote = (() => {
             const animals = animalPrefs.animals || [];
             if (!animals.length) return '';
-            const having  = animals.filter(a => a.status === 'have').map(a => a.type);
+            const having = animals.filter(a => a.status === 'have').map(a => a.type);
             const wanting = animals.filter(a => a.status === 'want' || a.status === 'maybe').map(a => a.type);
             const parts = [];
-            if (having.length)  parts.push(`User currently has: ${having.join(', ')}`);
+            if (having.length) parts.push(`User currently has: ${having.join(', ')}`);
             if (wanting.length) parts.push(`User wants to add: ${wanting.join(', ')}`);
-            if (animalPrefs.manureManagement)  parts.push('manure composting required');
+            if (animalPrefs.manureManagement) parts.push('manure composting required');
             if (animalPrefs.rotationalGrazing) parts.push('rotational grazing planned');
             return parts.join('; ');
         })();
@@ -1383,24 +1416,24 @@ export const generateDraft = async (req, res) => {
             if (householdNeeds.adults || householdNeeds.children)
                 parts.push(`(${householdNeeds.adults || '?'} adults, ${householdNeeds.children || '?'} children)`);
             parts.push(`Coverage goal: ${householdNeeds.foodCoverageGoal}`);
-            const presActive = Object.entries(householdNeeds.preservationGoals || {}).filter(([,v]) => v).map(([k]) => k);
+            const presActive = Object.entries(householdNeeds.preservationGoals || {}).filter(([, v]) => v).map(([k]) => k);
             if (presActive.length) parts.push(`Preservation goals: ${presActive.join(', ')}`);
-            const catActive = Object.entries(householdNeeds.foodCategories || {}).filter(([,v]) => v).map(([k]) => k);
-            if (catActive.length)  parts.push(`Food categories: ${catActive.join(', ')}`);
+            const catActive = Object.entries(householdNeeds.foodCategories || {}).filter(([, v]) => v).map(([k]) => k);
+            if (catActive.length) parts.push(`Food categories: ${catActive.join(', ')}`);
             if (householdNeeds.dietNotes?.trim()) parts.push(`Diet notes: ${householdNeeds.dietNotes.trim()}`);
             return parts.join('. ');
         })();
 
         const userRequirements = {
             freeText: [
-                generationRequest.taskType    ? `Task: ${generationRequest.taskType}`           : '',
+                generationRequest.taskType ? `Task: ${generationRequest.taskType}` : '',
                 generationRequest.changeLevel ? `Change level: ${generationRequest.changeLevel}` : '',
                 householdNote,
                 animalNote,
                 cropAreaNote,
                 generationRequest.notes || '',
             ].filter(Boolean).join('. '),
-            goals:      [generationRequest.designFocus].filter(Boolean),
+            goals: [generationRequest.designFocus].filter(Boolean),
             focusAreas: [generationRequest.taskType].filter(Boolean),
             preferredPlants,
             excludedPlants,
@@ -1409,9 +1442,9 @@ export const generateDraft = async (req, res) => {
         // Build rich context object (synchronous analysis — no external calls)
         const { context: sourceContext } = await buildPermacultureContext({
             userId,
-            layout:           layoutSnapshot,
+            layout: layoutSnapshot,
             userRequirements,
-            locationContext:  mergedLocation,
+            locationContext: mergedLocation,
             generationRequest,
             variantType,
             variantStrategy,
@@ -1421,8 +1454,8 @@ export const generateDraft = async (req, res) => {
         // buildPermacultureContext did not yet propagate it to the returned context.
         if (savedSiteAnalysis) sourceContext.savedSiteAnalysis = savedSiteAnalysis;
         if (!sourceContext.generationRequest) sourceContext.generationRequest = generationRequest;
-        if (!sourceContext.variantType)       sourceContext.variantType       = variantType;
-        if (!sourceContext.variantStrategy)   sourceContext.variantStrategy   = variantStrategy;
+        if (!sourceContext.variantType) sourceContext.variantType = variantType;
+        if (!sourceContext.variantStrategy) sourceContext.variantStrategy = variantStrategy;
 
         // Build and attach the structured site analysis summary
         const siteAnalysisSummary = buildSiteAnalysisSummary(
@@ -1439,10 +1472,10 @@ export const generateDraft = async (req, res) => {
         // Inject variant type + strategy into sourceContext for AI prompt.
         const sourceContextWithVariant = { ...(sourceContext || {}), variantType, variantStrategy };
 
-        let rawPlan      = null;
+        let rawPlan = null;
         let usedFallback = false;
-        let aiSource     = 'ai';
-        let aiResult     = null;
+        let aiSource = 'ai';
+        let aiResult = null;
 
         try {
             aiResult = await generatePermaculturePlanWithAI(sourceContextWithVariant);
@@ -1459,19 +1492,19 @@ export const generateDraft = async (req, res) => {
             // AI was called and charged but returned unusable output — do NOT silently mock.
             console.error(`[generateDraft] AI was called but failed: ${aiResult.error}`);
             return res.status(502).json({
-                success:        false,
-                message:        aiResult.error,
-                aiWasCalled:    true,
-                chargedLikely:  true,
-                truncated:      aiResult.truncated || false,
-                hint:           'Retry generation, or set ALLOW_AI_MOCK_FALLBACK=true to use a rule-based draft when AI fails.',
+                success: false,
+                message: aiResult.error,
+                aiWasCalled: true,
+                chargedLikely: true,
+                truncated: aiResult.truncated || false,
+                hint: 'Retry generation, or set ALLOW_AI_MOCK_FALLBACK=true to use a rule-based draft when AI fails.',
             });
         } else {
             // AI was disabled / key missing / provider not called — mock fallback is safe
             console.log(`[generateDraft] AI unavailable, using mock (variant=${variantType})`);
-            rawPlan      = buildMockDraft(layoutSnapshot, userRequirements, mergedLocation, sourceContextWithVariant, variantType, variantStrategy);
+            rawPlan = buildMockDraft(layoutSnapshot, userRequirements, mergedLocation, sourceContextWithVariant, variantType, variantStrategy);
             usedFallback = true;
-            aiSource     = 'mock';
+            aiSource = 'mock';
         }
 
         // ── Strict post-generation validation ─────────────────────────────────
@@ -1533,7 +1566,7 @@ export const generateDraft = async (req, res) => {
             }
 
             // 3. Overlap resolution (shift or downgrade to recommendation_only)
-            const existingItems  = layoutSnapshot?.overlayItems || [];
+            const existingItems = layoutSnapshot?.overlayItems || [];
             const { resolved, skipped } = resolvePlanElementOverlaps(
                 rawPlan.proposedElements,
                 gardenSetup,
@@ -1545,35 +1578,60 @@ export const generateDraft = async (req, res) => {
             rawPlan = { ...rawPlan, proposedElements: resolved };
         }
 
+        // ── Canonical-type normalization + deduplication ──────────────────────
+        {
+            // Apply canonical normalization to each create_new element:
+            // • forces clean display names ("Compost" not "Strategic Compost Hub")
+            // • maps variants to canonical keys (kitchen_garden → vegetableGarden)
+            const normalizedElements = rawPlan.proposedElements.map(el => {
+                if (el.action === 'recommendation_only' || el.type === 'permaculture-zone') return el;
+                const norm = normalizeGeneralStructure(el);
+                if (!norm) return el;  // unmappable — keep as-is, getRenderMode will filter
+                return { ...el, name: norm.displayName };
+            });
+
+            // Remove functional duplicates (e.g. Compost + Compost Hub → keep one Compost)
+            const { deduplicated, mergeReport } = deduplicateProposedElements(normalizedElements);
+
+            if (mergeReport.length > 0) {
+                console.log(
+                    `[generateDraft] Canonical dedup merged ${mergeReport.length} element(s):\n` +
+                    mergeReport.map(r => `  • ${r.canonicalKey}: kept "${r.kept}", dropped "${r.dropped}"`).join('\n')
+                );
+            }
+
+            rawPlan = { ...rawPlan, proposedElements: deduplicated };
+        }
+
         // ── Normalise siteAnalysis to model schema ────────────────────────────
         const ctx = sourceContextWithVariant || {};
         const siteAnalysis = usedFallback
             ? {
                 ...rawPlan.siteAnalysis,
-                stableElements:       (ctx.existingElements?.stableElements) || [],
-                climate:              '',
-                waterStrategy:        '',
-                soilStrategy:         '',
-                accessStrategy:       '',
+                stableElements: (ctx.existingElements?.stableElements) || [],
+                climate: '',
+                waterStrategy: '',
+                soilStrategy: '',
+                accessStrategy: '',
                 biodiversityStrategy: '',
-                siteAnalysisSummary:  siteAnalysisSummary || null,
+                siteAnalysisSummary: siteAnalysisSummary || null,
             }
             : {
-                existingStructures:   rawPlan.siteAnalysis?.existingStructures  || [],
-                stableElements:       (ctx.existingElements?.stableElements) || [],
-                slopeNotes:           ctx.siteCharacteristics?.constraints?.find(c => c.type === 'terrain')?.message || '',
-                sunExposureNotes:     '',
-                windNotes:            ctx.siteCharacteristics?.constraints?.find(c => c.type === 'wind')?.message || '',
-                waterFlowNotes:       rawPlan.siteAnalysis?.waterStrategy       || '',
-                soilNotes:            rawPlan.siteAnalysis?.soilStrategy         || '',
-                constraints:          rawPlan.siteAnalysis?.constraints          || [],
-                opportunities:        rawPlan.siteAnalysis?.opportunities        || [],
-                climate:              rawPlan.siteAnalysis?.climate              || '',
-                waterStrategy:        rawPlan.siteAnalysis?.waterStrategy        || '',
-                soilStrategy:         rawPlan.siteAnalysis?.soilStrategy         || '',
-                accessStrategy:       rawPlan.siteAnalysis?.accessStrategy       || '',
+                existingStructures: rawPlan.siteAnalysis?.existingStructures || [],
+                stableElements: (ctx.existingElements?.stableElements) || [],
+                slopeNotes: ctx.siteCharacteristics?.constraints?.find(c => c.type === 'terrain')?.message || '',
+                sunExposureNotes: '',
+                windNotes: ctx.siteCharacteristics?.constraints?.find(c => c.type === 'wind')?.message || '',
+                waterFlowNotes: rawPlan.siteAnalysis?.waterStrategy || '',
+                soilNotes: rawPlan.siteAnalysis?.soilStrategy || '',
+                constraints: rawPlan.siteAnalysis?.constraints || [],
+                opportunities: rawPlan.siteAnalysis?.opportunities || [],
+                climate: rawPlan.siteAnalysis?.climate || '',
+                waterStrategy: rawPlan.siteAnalysis?.waterStrategy || '',
+                soilStrategy: rawPlan.siteAnalysis?.soilStrategy || '',
+                accessStrategy: rawPlan.siteAnalysis?.accessStrategy || '',
                 biodiversityStrategy: rawPlan.siteAnalysis?.biodiversityStrategy || '',
-                siteAnalysisSummary:  siteAnalysisSummary || null,
+                siteAnalysisSummary: siteAnalysisSummary || null,
             };
 
         const planWarnings = usedFallback
@@ -1583,23 +1641,23 @@ export const generateDraft = async (req, res) => {
         const plan = await PermaculturePlan.create({
             userId,
             sourceLayoutSnapshot: layoutSnapshot,
-            sourceContext:        ctx,
+            sourceContext: ctx,
             userRequirements: {
-                freeText:        userRequirements.freeText        || '',
-                goals:           userRequirements.goals           || layout?.setup?.goals      || [],
-                focusAreas:      userRequirements.focusAreas      || layout?.setup?.focusAreas || [],
+                freeText: userRequirements.freeText || '',
+                goals: userRequirements.goals || layout?.setup?.goals || [],
+                focusAreas: userRequirements.focusAreas || layout?.setup?.focusAreas || [],
                 preferredPlants: userRequirements.preferredPlants || [],
-                excludedPlants:  userRequirements.excludedPlants  || [],
+                excludedPlants: userRequirements.excludedPlants || [],
             },
-            locationContext:         mergedLocation,
+            locationContext: mergedLocation,
             siteAnalysis,
-            proposedElements:        rawPlan.proposedElements        || [],
-            summary:                 rawPlan.summary                 || '',
-            planNarrative:           rawPlan.planNarrative || rawPlan.summary || '',
+            proposedElements: rawPlan.proposedElements || [],
+            summary: rawPlan.summary || '',
+            planNarrative: rawPlan.planNarrative || rawPlan.summary || '',
             plantingRecommendations: rawPlan.plantingRecommendations || [],
-            maintenancePlan:         rawPlan.maintenancePlan         || [],
+            maintenancePlan: rawPlan.maintenancePlan || [],
             planWarnings,
-            bibliography:            rawPlan.bibliography             || [],
+            bibliography: rawPlan.bibliography || [],
             aiSource,
             status: 'draft',
             // variantType is stored as a plan warning annotation so the frontend can read it
@@ -1670,9 +1728,9 @@ const STABLE_STRUCTURE_NAMES = new Set([
 // Legacy type-level colors kept for backward-compat; resolveElementColor() is preferred.
 const ELEMENT_TYPE_COLORS = {
     'permaculture-zone': '#6040a0',
-    'structure':         '#8B5E3C',
-    'planting-strip':    '#4a7c3f',
-    'water-feature':     '#1a70c0',
+    'structure': '#8B5E3C',
+    'planting-strip': '#4a7c3f',
+    'water-feature': '#1a70c0',
 };
 
 // Approximate base-pixels-per-metre for backend layout storage
@@ -1683,22 +1741,22 @@ function estimatePxPerM(widthM, heightM) {
 
 // Describe what changed between current layout and snapshot
 function diffLayouts(current, snapshot) {
-    const curItems  = (current?.overlayItems  || []).map(i => i.name).sort();
+    const curItems = (current?.overlayItems || []).map(i => i.name).sort();
     const snapItems = (snapshot?.overlayItems || []).map(i => i.name).sort();
-    const curZones  = (current?.zones  || []).slice().sort();
+    const curZones = (current?.zones || []).slice().sort();
     const snapZones = (snapshot?.zones || []).slice().sort();
 
-    const addedItems   = curItems.filter(n => !snapItems.includes(n));
+    const addedItems = curItems.filter(n => !snapItems.includes(n));
     const removedItems = snapItems.filter(n => !curItems.includes(n));
-    const addedZones   = curZones.filter(z => !snapZones.includes(z));
+    const addedZones = curZones.filter(z => !snapZones.includes(z));
     const removedZones = snapZones.filter(z => !curZones.includes(z));
 
     const changed = addedItems.length + removedItems.length + addedZones.length + removedZones.length > 0;
     const parts = [
-        addedItems.length   ? `${addedItems.length} structure(s) added`   : '',
+        addedItems.length ? `${addedItems.length} structure(s) added` : '',
         removedItems.length ? `${removedItems.length} structure(s) removed` : '',
-        addedZones.length   ? `${addedZones.length} zone(s) added`         : '',
-        removedZones.length ? `${removedZones.length} zone(s) removed`     : '',
+        addedZones.length ? `${addedZones.length} zone(s) added` : '',
+        removedZones.length ? `${removedZones.length} zone(s) removed` : '',
     ].filter(Boolean);
 
     return {
@@ -1708,25 +1766,138 @@ function diffLayouts(current, snapshot) {
     };
 }
 
-// Resolve stable structure positions from current overlay items (metres)
+// Map AI catalogKey/name → GENERAL_STRUCTURES key for structureKey + iconKey on applied items
+const AI_TO_GENERAL_KEY = {
+    vegetable_garden: 'vegetableGarden', kitchen_garden: 'vegetableGarden', potager: 'vegetableGarden',
+    intensive_beds: 'vegetableGarden', raised_beds: 'vegetableGarden',
+    orchard: 'orchard', fruit_trees: 'orchard',
+    berry_patch: 'berryPatch', berry_strip: 'berryPatch',
+    guild: 'guild', food_forest: 'woodlot', forest_garden: 'woodlot', coppice: 'woodlot',
+    wild_zone: 'woodlot', windbreak: 'woodlot',
+    compost: 'compost',
+    pond: 'pond', swale: 'pond', duck_pond: 'pond',
+    greenhouse: 'greenhouse',
+    herb_garden: 'vegetableGarden',
+    coop: 'coop', chicken_coop: 'coop',
+    beehive: 'beehives', apiary: 'beehives',
+    path: 'carRoad',
+    shed: 'workshop',
+    staple_crops: 'stapleCrops', grain_plot: 'stapleCrops',
+    animal_run: 'animalRun', pasture: 'animalRun',
+    kids_playground: 'kidsPlayground',
+};
+const GENERAL_ICON_KEYS = {
+    vegetableGarden: 'Carrot', orchard: 'TreePine', berryPatch: 'Cherry', guild: 'Network',
+    woodlot: 'Trees', compost: 'Recycle', pond: 'Waves', greenhouse: 'Sprout',
+    coop: 'Bird', beehives: 'Hexagon', carRoad: 'Car', workshop: 'Hammer',
+    stapleCrops: 'Wheat', animalRun: 'PawPrint', kidsPlayground: 'Smile',
+    house: 'Home', outdoorKitchen: 'CookingPot',
+};
+const GENERAL_COLORS = {
+    vegetableGarden: '#D8E8B0', orchard: '#B8DCA0', berryPatch: '#F0A8C0', guild: '#D8B8E8',
+    woodlot: '#5A8840', compost: '#A0785A', pond: '#82C4E0', greenhouse: '#C8E6C9',
+    coop: '#D8C898', beehives: '#FFE082', carRoad: '#C8C0B0', workshop: '#B0A898',
+    stapleCrops: '#EEE098', animalRun: '#C8E0B8', kidsPlayground: '#FFF08A',
+    house: '#E8D5B0', outdoorKitchen: '#D4907A',
+};
+const GENERAL_BORDER_COLORS = {
+    vegetableGarden: '#5A8028', orchard: '#3A8038', berryPatch: '#B03060', guild: '#7040A0',
+    woodlot: '#2A5818', compost: '#5D4037', pond: '#1976D2', greenhouse: '#4A8F50',
+    coop: '#8A7040', beehives: '#C8880A', carRoad: '#7A7060', workshop: '#6B5E52',
+    stapleCrops: '#A08010', animalRun: '#5A8840', kidsPlayground: '#C07010',
+    house: '#A87840', outdoorKitchen: '#8F5A3A',
+};
+
+// AI catalogKeys that create a dedicated zone tab after apply.
+// Restricted to productive planting areas only — buildings/utilities/animals are General Map only.
+const ZONE_PORTAL_CATALOG_KEYS = new Set([
+    'vegetable_garden', 'kitchen_garden', 'potager', 'intensive_beds', 'raised_beds',
+    'herb_garden',
+    'orchard', 'fruit_trees',
+    'berry_patch', 'berry_strip',
+    'guild',
+    'greenhouse',
+]);
+
+// Map a zone-portal catalogKey to the overlay item's type + structureKey
+function resolvePortalTypeInfo(ck) {
+    if (ck === 'orchard' || ck === 'fruit_trees') return { type: 'orchard', structureKey: 'orchard' };
+    if (ck === 'berry_patch' || ck === 'berry_strip') return { type: 'berryPatch', structureKey: 'berryPatch' };
+    if (ck === 'guild') return { type: 'guild', structureKey: 'guild' };
+    if (ck === 'greenhouse') return { type: 'greenhouse', structureKey: 'greenhouse' };
+    return { type: 'vegetableGarden', structureKey: 'vegetableGarden' };
+}
+
+function resolveGeneralStructureKey(catalogKey, name) {
+    const ck = (catalogKey || '').toLowerCase().replace(/ /g, '_');
+    const n = (name || '').toLowerCase();
+    if (AI_TO_GENERAL_KEY[ck]) return AI_TO_GENERAL_KEY[ck];
+    for (const [k, v] of Object.entries(AI_TO_GENERAL_KEY)) {
+        if (n.includes(k.replace(/_/g, ' '))) return v;
+    }
+    return null;
+}
+
+// Determine how an AI element should be visually rendered on the General Map
+function getRenderMode(catalogKey, name) {
+    const n = (name || '').toLowerCase();
+    const ck = (catalogKey || '').toLowerCase();
+    if (ck === 'path' || n.includes('path') || n.includes('walkway') || n.includes('trail'))
+        return 'path';
+    if (
+        ck === 'vegetable_garden' || ck === 'orchard' || ck === 'food_forest' || ck === 'berry_patch' ||
+        ck === 'pond' || ck === 'swale' || ck === 'guild' || ck === 'herb_garden' || ck === 'wild_zone' ||
+        ck === 'windbreak' || ck === 'coop' || ck === 'beehive' ||
+        n.includes('vegetable') || n.includes('orchard') || n.includes('food forest') || n.includes('berry') ||
+        n.includes('pond') || n.includes('meadow') || n.includes('swale') || n.includes('guild') ||
+        n.includes('herb') || n.includes('windbreak') || n.includes('hedge') || n.includes('patch') ||
+        n.includes('wild') || n.includes(' run') || n.includes('coop') || n.includes('pasture') ||
+        n.includes('pollinator') || n.includes('planting') || n.includes('meadow')
+    ) return 'area';
+    return 'structure';
+}
+
+// Type-aware default dimensions (metres) when width/height are absent from the AI element
+function getAiDefaultDimensions(catalogKey, name) {
+    const n = (name || '').toLowerCase();
+    const ck = (catalogKey || '').toLowerCase();
+    if (ck === 'vegetable_garden' || n.includes('vegetable garden') || n.includes('kitchen garden')) return { w: 18, h: 10 };
+    if (ck === 'orchard' || n.includes('orchard')) return { w: 16, h: 12 };
+    if (ck === 'berry_patch' || n.includes('berry')) return { w: 7, h: 4 };
+    if (n.includes('coop') || n.includes('chicken') || n.includes(' run')) return { w: 8, h: 5 };
+    if (ck === 'compost' || n.includes('compost')) return { w: 3, h: 2 };
+    if (ck === 'path' || n.includes('path')) return { w: 20, h: 1 };
+    if (ck === 'pond' || n.includes('pond')) return { w: 5, h: 5 };
+    if (ck === 'greenhouse' || n.includes('greenhouse')) return { w: 5, h: 4 };
+    if (ck === 'food_forest' || n.includes('food forest')) return { w: 14, h: 10 };
+    if (ck === 'guild' || n.includes('guild')) return { w: 8, h: 6 };
+    if (ck === 'herb_garden' || n.includes('herb')) return { w: 6, h: 4 };
+    if (ck === 'wild_zone' || n.includes('meadow') || n.includes('wild')) return { w: 12, h: 4 };
+    if (ck === 'windbreak' || n.includes('windbreak') || n.includes('hedge')) return { w: 20, h: 2 };
+    if (ck === 'swale' || n.includes('swale')) return { w: 20, h: 1.5 };
+    return { w: 6, h: 4 };
+}
+
+// Resolve stable structure positions from current overlay items (metres).
+// Supports both legacy pixel-based x/y and new xM/yM metre fields.
 function resolveStableStructures(overlayItems, pxPerM) {
     return (overlayItems || [])
         .filter(i => STABLE_STRUCTURE_NAMES.has(i.name))
         .map(i => ({
             name: i.name,
-            xM:   (i.x || 0) / pxPerM,
-            yM:   (i.y || 0) / pxPerM,
-            wM:   i.wM || 2,
-            hM:   i.hM || 2,
+            xM: i.xM != null ? i.xM : (i.x || 0) / pxPerM,
+            yM: i.yM != null ? i.yM : (i.y || 0) / pxPerM,
+            wM: i.wM || 2,
+            hM: i.hM || 2,
         }));
 }
 
 function rectsOverlapM(ax, ay, aw, ah, bx, by, bw, bh, margin = 0.25) {
     if (bx == null || by == null) return false;
     return ax < bx + bw + margin &&
-           ax + aw > bx - margin &&
-           ay < by + bh + margin &&
-           ay + ah > by - margin;
+        ax + aw > bx - margin &&
+        ay < by + bh + margin &&
+        ay + ah > by - margin;
 }
 
 // POST /api/permaculture-plans/:id/apply
@@ -1749,22 +1920,22 @@ export const applyPlan = async (req, res) => {
         }
 
         // ── Diff guard ────────────────────────────────────────────────────────
-        const snapshot    = plan.sourceLayoutSnapshot || {};
+        const snapshot = plan.sourceLayoutSnapshot || {};
         const changeReport = diffLayouts(layout, snapshot);
 
         if (changeReport.changed && !force) {
             return res.json({
-                success:      false,
+                success: false,
                 requiresForce: true,
-                warning:      `Your map changed since this plan was generated (${changeReport.summary}). Apply anyway?`,
+                warning: `Your map changed since this plan was generated (${changeReport.summary}). Apply anyway?`,
                 changeReport,
             });
         }
 
         // ── Coordinate system ─────────────────────────────────────────────────
-        const widthM  = layout.setup?.widthM  || 10;
+        const widthM = layout.setup?.widthM || 10;
         const heightM = layout.setup?.heightM || 10;
-        const pxPerM  = estimatePxPerM(widthM, heightM);
+        const pxPerM = estimatePxPerM(widthM, heightM);
         const stables = resolveStableStructures(layout.overlayItems, pxPerM);
 
         // Read selection + full preview element data from frontend
@@ -1792,6 +1963,17 @@ export const applyPlan = async (req, res) => {
         const newOverlayItems = [...(layout.overlayItems || [])];
         // bedLayouts: start from existing; we'll add/update entries for bed suggestions
         const newBedLayouts = { ...(layout.bedLayouts || {}) };
+        // Zone tab tracking — keep zones/grids/positions in sync when portals are applied
+        const newZones = [...(layout.zones || ['Zone 1'])];
+        const newGrids = [...(layout.grids || [Array.from({ length: 10 }, () => Array(10).fill(null))])];
+        const newPositions = [...(layout.positions || [])];
+        // Zone items (new raised-bed format) — persist alongside other zone data
+        const newZoneItemsMap = { ...(layout.zoneItems || {}) };
+        // Pad positions to match the current zones length
+        while (newPositions.length < newZones.length) {
+            const i = newPositions.length;
+            newPositions.push({ x: 200 + (i % 4) * 180, y: 120 + Math.floor(i / 4) * 160, inGeneral: false, shape: 'circle' });
+        }
 
         for (const el of (plan.proposedElements || [])) {
             const elName = el.name || 'Unnamed';
@@ -1803,11 +1985,17 @@ export const applyPlan = async (req, res) => {
                 continue;
             }
 
+            // ── Block path elements — users add paths manually ────────────────
+            if (getRenderMode(el.catalogKey || '', elName) === 'path') {
+                skipped.push({ element: elName, reason: 'Path placement is disabled — add paths manually.' });
+                continue;
+            }
+
             // ── recommendation_only: save as note, never add to map ──────────
             if (action === 'recommendation_only' || el.type === 'permaculture-zone') {
                 skipped.push({
                     element: elName,
-                    reason:  action === 'recommendation_only'
+                    reason: action === 'recommendation_only'
                         ? 'Recommendation only — see plan notes for details.'
                         : 'Permaculture zone overlay — conceptual only, not added to map.',
                 });
@@ -1837,8 +2025,8 @@ export const applyPlan = async (req, res) => {
                         const existing = newBedLayouts[targetId] || { rows: [], blocks: [], layoutMode: 'rows' };
                         newBedLayouts[targetId] = {
                             layoutMode: existing.layoutMode || 'rows',
-                            blocks:     existing.blocks || [],
-                            rows:       [...(existing.rows || []), ...suggestion.rows],
+                            blocks: existing.blocks || [],
+                            rows: [...(existing.rows || []), ...suggestion.rows],
                         };
                         bedLayoutCreated = true;
                         console.log(`[applyPlan] ${action} "${elName}" → bedLayout updated for id=${targetId} (${suggestion.rows.length} row(s) added)`);
@@ -1846,12 +2034,12 @@ export const applyPlan = async (req, res) => {
                 }
 
                 applied.push({
-                    element:         elName,
+                    element: elName,
                     action,
                     targetElementId: el.targetElementId || null,
-                    canonicalType:   el.canonicalType   || null,
-                    plants:          el.plants          || [],
-                    reason:          el.reason          || '',
+                    canonicalType: el.canonicalType || null,
+                    plants: el.plants || [],
+                    reason: el.reason || '',
                     bedLayoutCreated,
                 });
                 if (!bedLayoutCreated) {
@@ -1866,11 +2054,12 @@ export const applyPlan = async (req, res) => {
             // the frontend sent selectedPreviewElements; falls back to stored plan element.
             const sourceEl = previewByName.get(elName) || el;
 
-            const wM = Math.max(0.5, sourceEl.width  ?? el.width  ?? 2);
-            const hM = Math.max(0.3, sourceEl.height ?? el.height ?? 2);
+            const dims = getAiDefaultDimensions(sourceEl.catalogKey || el.catalogKey || '', elName);
+            const wM = Math.max(0.5, sourceEl.width ?? el.width ?? dims.w);
+            const hM = Math.max(0.3, sourceEl.height ?? el.height ?? dims.h);
             // Use EXACT preview positions (metres) — do not re-layout or shift.
             // Only clamp to garden bounds to prevent off-canvas placement.
-            const xM = Math.max(0, Math.min(widthM  - wM, sourceEl.x ?? el.x ?? 0));
+            const xM = Math.max(0, Math.min(widthM - wM, sourceEl.x ?? el.x ?? 0));
             const yM = Math.max(0, Math.min(heightM - hM, sourceEl.y ?? el.y ?? 0));
 
             // Boundary sanity check (should always pass after clamping, but guard anyway)
@@ -1901,96 +2090,133 @@ export const applyPlan = async (req, res) => {
                 continue;
             }
 
-            // Determine if this element should become a Vegetable Garden zone portal.
-            // Criteria: catalogKey raised_bed (or herb_garden) AND has detailPlan with suggestedPlants.
+            // ── Canonical-type duplicate guard ───────────────────────────────
+            // Normalize the incoming element and skip if the same singular canonical type
+            // already exists on the map (either from before apply or added in this batch).
+            {
+                const normCheck = normalizeGeneralStructure({ catalogKey: sourceEl.catalogKey || el.catalogKey || '', name: elName });
+                if (normCheck) {
+                    const { canonicalKey } = normCheck;
+                    const isSingular = !MULTI_ALLOWED_CANONICAL_KEYS.has(canonicalKey);
+                    if (isSingular) {
+                        const alreadyOnMap = newOverlayItems.some(
+                            it => it.structureKey === canonicalKey || it.canonicalKey === canonicalKey
+                        );
+                        if (alreadyOnMap) {
+                            skipped.push({
+                                element: elName,
+                                reason: `A ${CANONICAL_DISPLAY_NAMES[canonicalKey] || canonicalKey} already exists on the map — skipped to prevent duplicate.`,
+                            });
+                            console.log(`[applyPlan] Skipped duplicate ${canonicalKey}: "${elName}" — already on map`);
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            // Determine if this element becomes a dedicated zone portal (openable tab).
+            // Productive planting areas only: vegetable garden, herb garden, orchard,
+            // berry patch, guild, greenhouse. Buildings/utilities/animals stay on General Map.
             const ck = sourceEl.catalogKey || el.catalogKey || '';
             const detailPlants = (sourceEl.detailPlan?.suggestedPlants || el.detailPlan?.suggestedPlants || []).filter(Boolean);
             const internalBeds = (sourceEl.internalBeds || el.internalBeds || []);
-            // A vegetable_garden catalog key always becomes a zone portal.
-            // A raised_bed/herb_garden with detailPlan also becomes one (legacy conversion).
-            const isVegGardenPortal =
-                ck === 'vegetable_garden' ||
-                ((ck === 'raised_bed' || ck === 'herb_garden') && (detailPlants.length >= 2 || internalBeds.length > 0));
+            const isNewZonePortal =
+                ZONE_PORTAL_CATALOG_KEYS.has(ck) ||
+                (ck === 'raised_bed' && (detailPlants.length >= 2 || internalBeds.length > 0));
+            const portalTypeInfo = isNewZonePortal ? resolvePortalTypeInfo(ck) : null;
 
-            // For zone portals: use a larger minimum area so the visual reads as a garden zone
-            const portalWM = isVegGardenPortal ? Math.max(wM, 8.0) : wM;
-            const portalHM = isVegGardenPortal ? Math.max(hM, 5.0) : hM;
+            // Zone portals get a larger minimum area so the visual reads as a garden zone
+            const portalWM = isNewZonePortal ? Math.max(wM, 8.0) : wM;
+            const portalHM = isNewZonePortal ? Math.max(hM, 5.0) : hM;
 
-            // Derive a clean zone name from the element name
-            const cleanZoneName = isVegGardenPortal
-                ? (elName.match(/vegetable|kitchen|garden|potager|herb/i)
-                    ? elName
-                    : elName.replace(/\s*(Raised\s*)?Bed\b/i, '').trim() || 'Vegetable Garden')
+            // Use the AI-supplied element name as the zone tab name; strip only raised-bed suffixes
+            const cleanZoneName = isNewZonePortal
+                ? (elName.replace(/\s*(Raised\s*)?Bed\b/i, '').trim() || portalTypeInfo.type)
                 : elName;
 
             // Generate internal bed layout — prefer AI-provided internalBeds, fall back to detailPlan
             let internalBedLayout = null;
-            if (isVegGardenPortal && internalBeds.length > 0) {
+            if (isNewZonePortal && internalBeds.length > 0) {
                 // AI returned a proper internalBeds array — use it directly
                 internalBedLayout = {
                     layoutMode: 'rows',
                     rows: internalBeds.map((bed, i) => ({
-                        id:        bed.id || `row-${Date.now()}-${i}`,
-                        x:         bed.x  ?? 0,
-                        y:         bed.y  ?? (i * 1.3),
-                        widthM:    bed.widthM  || portalWM,
-                        heightM:   bed.heightM || 1.0,
-                        plant:     { name: (bed.plants || [])[0] || '' },
+                        id: bed.id || `row-${Date.now()}-${i}`,
+                        x: bed.x ?? 0,
+                        y: bed.y ?? (i * 1.3),
+                        widthM: bed.widthM || portalWM,
+                        heightM: bed.heightM || 1.0,
+                        plant: { name: (bed.plants || [])[0] || '' },
                         companions: (bed.plants || []).slice(1).map(p => ({ name: p })),
                         spacingCm: bed.spacingCm || 40,
-                        label:     bed.label || (bed.plants || [])[0] || `Bed ${i + 1}`,
+                        label: bed.label || (bed.plants || [])[0] || `Bed ${i + 1}`,
                     })),
                     blocks: [],
                 };
-            } else if (isVegGardenPortal && detailPlants.length > 0) {
+            } else if (isNewZonePortal && detailPlants.length > 0) {
                 // Fall back to detailPlan.suggestedPlants (legacy)
-                const maxRows   = Math.max(1, Math.floor(portalHM / 1.3));
-                const rowCount  = Math.min(detailPlants.length, maxRows);
-                const rowHM     = parseFloat((portalHM / rowCount).toFixed(2));
+                const maxRows = Math.max(1, Math.floor(portalHM / 1.3));
+                const rowCount = Math.min(detailPlants.length, maxRows);
+                const rowHM = parseFloat((portalHM / rowCount).toFixed(2));
                 internalBedLayout = {
                     layoutMode: 'rows',
                     rows: detailPlants.slice(0, rowCount).map((plantName, i) => ({
-                        id:       `row-${Date.now()}-${i}`,
-                        x:        0,
-                        y:        parseFloat((i * rowHM).toFixed(2)),
-                        widthM:   portalWM,
-                        heightM:  parseFloat((rowHM - 0.15).toFixed(2)),
-                        plant:    { name: plantName },
+                        id: `row-${Date.now()}-${i}`,
+                        x: 0,
+                        y: parseFloat((i * rowHM).toFixed(2)),
+                        widthM: portalWM,
+                        heightM: parseFloat((rowHM - 0.15).toFixed(2)),
+                        plant: { name: plantName },
                         companions: [],
                         spacingCm: 40,
-                        label:    plantName,
+                        label: plantName,
                     })),
                     blocks: [],
                 };
             }
 
+            const itemRenderMode = getRenderMode(ck, cleanZoneName);
+            const gsKey = resolveGeneralStructureKey(ck, cleanZoneName);
+            console.log(`[applyPlan] debug "${elName}" orig x=${sourceEl.x?.toFixed(1)} y=${sourceEl.y?.toFixed(1)} w=${sourceEl.width?.toFixed(1)} h=${sourceEl.height?.toFixed(1)} → applied xM=${xM.toFixed(1)} yM=${yM.toFixed(1)} wM=${portalWM.toFixed(1)} hM=${portalHM.toFixed(1)} renderMode=${itemRenderMode} gsKey=${gsKey}`);
             const item = {
-                id:                 `vg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-                name:               cleanZoneName,
-                x:                  Math.round(xM * pxPerM),
-                y:                  Math.round(yM * pxPerM),
-                wM:                 portalWM,
-                hM:                 portalHM,
-                isStructure:        true,
-                rotation:           Number.isFinite(sourceEl.rotation ?? el.rotation) ? Math.round(sourceEl.rotation ?? el.rotation) : 0,
-                iconData:           null,
-                color:              isVegGardenPortal ? '#6a9a50' : resolveElementColor(
+                id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                name: cleanZoneName,
+                // Legacy pixel coords kept for backward compat with existing drag/resize logic.
+                x: Math.round(xM * pxPerM),
+                y: Math.round(yM * pxPerM),
+                // Metre-based coords — frontend uses these for accurate pixel-perfect placement.
+                xM: parseFloat(xM.toFixed(3)),
+                yM: parseFloat(yM.toFixed(3)),
+                wM: portalWM,
+                hM: portalHM,
+                isStructure: true,
+                structureKey: gsKey || null,
+                iconKey: gsKey ? (GENERAL_ICON_KEYS[gsKey] || null) : null,
+                borderColor: gsKey ? (GENERAL_BORDER_COLORS[gsKey] || null) : null,
+                rotation: Number.isFinite(sourceEl.rotation ?? el.rotation) ? Math.round(sourceEl.rotation ?? el.rotation) : 0,
+                iconData: null,
+                color: (gsKey && GENERAL_COLORS[gsKey]) ? GENERAL_COLORS[gsKey] : resolveElementColor(
                     sourceEl.catalogKey || el.catalogKey || sourceEl.canonicalType || el.canonicalType,
                     sourceEl.type || el.type
                 ),
-                generatedBy:        'permaculture-plan',
-                planId:             String(plan._id),
-                action:             action,
-                catalogKey:         ck || null,
-                canonicalType:      sourceEl.canonicalType   || el.canonicalType   || null,
-                targetElementId:    sourceEl.targetElementId || el.targetElementId || null,
-                variantStrategy:    sourceEl.variantStrategy || el.variantStrategy || null,
+                renderMode: itemRenderMode,
+                aiGenerated: true,
+                confidence: (sourceEl.confidence ?? el.confidence) ?? null,
+                reason: ((sourceEl.reason || el.reason || '').slice(0, 250)) || null,
+                plants: (sourceEl.plants || el.plants || []).slice(0, 8),
+                generatedBy: 'permaculture-plan',
+                planId: String(plan._id),
+                action: action,
+                catalogKey: ck || null,
+                canonicalType: sourceEl.canonicalType || el.canonicalType || null,
+                targetElementId: sourceEl.targetElementId || el.targetElementId || null,
+                variantStrategy: sourceEl.variantStrategy || el.variantStrategy || null,
                 createdFromPreview: true,
                 previewPositionUsed: preservePreviewPlacement,
-                ...(isVegGardenPortal ? {
-                    type:         'vegetableGarden',
+                ...(isNewZonePortal ? {
+                    type: portalTypeInfo.type,
                     isZonePortal: true,
-                    zoneRef:      cleanZoneName,
+                    zoneRef: cleanZoneName,
                 } : {}),
             };
 
@@ -1999,12 +2225,52 @@ export const applyPlan = async (req, res) => {
                 newBedLayouts[String(item.id)] = internalBedLayout;
             }
 
+            // Create a zone tab for productive portals that don't already have one
+            if (isNewZonePortal && !newZones.includes(cleanZoneName)) {
+                newZones.push(cleanZoneName);
+                newGrids.push(Array.from({ length: 10 }, () => Array(10).fill(null)));
+                const pi = newPositions.length;
+                newPositions.push({ x: 200 + (pi % 4) * 180, y: 120 + Math.floor(pi / 4) * 160, inGeneral: false, shape: 'circle' });
+                console.log(`[applyPlan] created zone tab "${cleanZoneName}" (total tabs: ${newZones.length})`);
+
+                // Populate zone with raised beds in the new format so the zone canvas is pre-filled
+                const allBeds = internalBeds.length > 0 ? internalBeds : (detailPlants.length > 0
+                    ? [{ plants: detailPlants, widthM: Math.min(portalWM - 0.4, 4), heightM: 1.1, label: null }]
+                    : []);
+                if (allBeds.length > 0) {
+                    let yOffset = 0.3;
+                    const raisedBedItems = allBeds.map((bed, i) => {
+                        const bH = bed.heightM || 1.1;
+                        const item = {
+                            id: `ai-bed-${Date.now()}-${i}`,
+                            type: 'raisedBed',
+                            name: bed.label || `Raised Bed ${i + 1}`,
+                            xM: 0.3,
+                            yM: yOffset,
+                            wM: Math.min(bed.widthM || (portalWM - 0.4), portalWM - 0.4),
+                            hM: bH,
+                            plants: (bed.plants || []).map((plantName, pi) => ({
+                                id: `ai-plant-${Date.now()}-${i}-${pi}`,
+                                plantName,
+                                iconData: null,
+                                xPct: 12 + (pi % 5) * 19,
+                                yPct: 30 + Math.floor(pi / 5) * 40,
+                            })),
+                        };
+                        yOffset += bH + 0.3;
+                        return item;
+                    });
+                    newZoneItemsMap[cleanZoneName] = raisedBedItems;
+                    console.log(`[applyPlan] pre-filled zone "${cleanZoneName}" with ${raisedBedItems.length} raised bed(s)`);
+                }
+            }
+
             newOverlayItems.push(item);
             applied.push({
-                element:  elName,
-                id:       item.id,
+                element: elName,
+                id: item.id,
                 action,
-                type:     sourceEl.type || el.type,
+                type: sourceEl.type || el.type,
                 catalogKey: item.catalogKey,
                 x: xM, y: yM, wM, hM,
             });
@@ -2017,7 +2283,7 @@ export const applyPlan = async (req, res) => {
         // in the Bed Editor without the user needing to re-save.
         const updatedLayout = await gardenLayoutModel.findOneAndUpdate(
             { userId: req.user.id },
-            { $set: { overlayItems: newOverlayItems, bedLayouts: newBedLayouts } },
+            { $set: { overlayItems: newOverlayItems, bedLayouts: newBedLayouts, zones: newZones, grids: newGrids, positions: newPositions, zoneItems: newZoneItemsMap } },
             { new: true }
         );
 
@@ -2029,24 +2295,24 @@ export const applyPlan = async (req, res) => {
             success: true,
             plan,
             layout: {
-                zones:        updatedLayout.zones,
-                grids:        updatedLayout.grids,
-                setup:        updatedLayout.setup,
-                positions:    updatedLayout.positions,
+                zones: updatedLayout.zones,
+                grids: updatedLayout.grids,
+                setup: updatedLayout.setup,
+                positions: updatedLayout.positions,
                 overlayItems: updatedLayout.overlayItems,
-                bedLayouts:   updatedLayout.bedLayouts   || {},
-                zoneItems:    updatedLayout.zoneItems    || {},
+                bedLayouts: updatedLayout.bedLayouts || {},
+                zoneItems: updatedLayout.zoneItems || {},
             },
             applied,
             // Part 8: return final applied positions so frontend can verify vs preview
             appliedElements: applied.map(a => ({
-                name:   a.element,
-                id:     a.id,
+                name: a.element,
+                id: a.id,
                 action: a.action,
-                x:      a.x,
-                y:      a.y,
-                wM:     a.wM,
-                hM:     a.hM,
+                x: a.x,
+                y: a.y,
+                wM: a.wM,
+                hM: a.hM,
             })),
             skipped,
             appliedCount: applied.length,

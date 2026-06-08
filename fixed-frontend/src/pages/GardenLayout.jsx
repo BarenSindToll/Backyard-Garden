@@ -11,7 +11,7 @@ import BedSidebar from '../components/garden-layout/BedSidebar';
 import PermaculturePlanWizard from '../components/permaculture/PermaculturePlanWizard';
 import PermaculturePlanSidePreview from '../components/permaculture/PermaculturePlanSidePreview';
 import SiteAnalysisWizard from '../components/garden-layout/SiteAnalysisWizard';
-import { STRUCTURES } from '../components/garden-layout/gardenZoneConfig';
+import { STRUCTURES, GENERAL_STRUCTURES_MAP, LEGACY_NAME_TO_KEY } from '../components/garden-layout/gardenZoneConfig';
 import { fetchCurrentUser } from '../utils/fetchCurrentUser';
 import { useLanguage } from '../utils/languageContext';
 
@@ -343,9 +343,26 @@ export default function GardenLayout() {
                             ? layoutData.positions.map(p => ({ inGeneral: false, shape: 'circle', ...p }))
                             : defaultPositions(loadedZones.length)
                     );
-                    const normalizedOverlay = (layoutData.overlayItems || []).map(it =>
-                        it.id != null ? it : { ...it, id: Date.now() + Math.random() }
-                    );
+                    const normalizedOverlay = (layoutData.overlayItems || []).map(it => {
+                        let norm = it.id != null ? it : { ...it, id: Date.now() + Math.random() };
+                        // Upgrade legacy items to new GENERAL_STRUCTURES format when safe
+                        if (!norm.structureKey && norm.isStructure && norm.name) {
+                            const key = LEGACY_NAME_TO_KEY[norm.name];
+                            if (key) {
+                                const gsConf = GENERAL_STRUCTURES_MAP[key];
+                                norm = {
+                                    ...norm,
+                                    structureKey: key,
+                                    type: norm.type || key,
+                                    iconKey: norm.iconKey || gsConf?.iconKey || null,
+                                    color: norm.color || gsConf?.color || null,
+                                    borderColor: norm.borderColor || gsConf?.borderColor || null,
+                                    isZonePortal: norm.isZonePortal ?? (gsConf?.canOpenZone || false),
+                                };
+                            }
+                        }
+                        return norm;
+                    });
                     if (normalizedOverlay.length) setOverlayItems(normalizedOverlay);
                     if (layoutData.bedLayouts && typeof layoutData.bedLayouts === 'object') setBedLayouts(layoutData.bedLayouts);
                     if (layoutData.zoneItems && typeof layoutData.zoneItems === 'object') setZoneItems(layoutData.zoneItems);
@@ -365,6 +382,12 @@ export default function GardenLayout() {
 
     // ── Zone handlers ─────────────────────────────────────────────────────────
     const handleSetupSave = (newSetup) => {
+        setSetup(newSetup);
+        if (userId) saveToBackend(grids, zones, newSetup, positions, overlayItems);
+    };
+
+    const handleRotateNorth = (dir) => {
+        const newSetup = { ...setup, northDirection: dir };
         setSetup(newSetup);
         if (userId) saveToBackend(grids, zones, newSetup, positions, overlayItems);
     };
@@ -828,6 +851,11 @@ export default function GardenLayout() {
                 setApplyWarning(null);
                 setSkippedElements(data.skipped || []);
                 setOverlayItems(data.layout?.overlayItems || []);
+                if (data.layout?.bedLayouts)  setBedLayouts(data.layout.bedLayouts);
+                if (data.layout?.zoneItems)   setZoneItems(data.layout.zoneItems);
+                if (data.layout?.zones)       setZones(data.layout.zones);
+                if (data.layout?.grids)       setGrids(data.layout.grids);
+                if (data.layout?.positions)   setPositions(data.layout.positions);
                 if (!data.skipped?.length) {
                     clearPreview();
                     toast.success('Plan applied to your garden map.', { position: 'top-center', autoClose: 3000 });
@@ -1002,6 +1030,7 @@ export default function GardenLayout() {
                         positions={positions}
                         setup={setup}
                         currentZone={currentZone}
+                        hideCompass={siteAnalysisOpen || generatePlanOpen || !!resetConfirm || resetAllOpen}
                         onSelectZone={idx => { setCurrentZone(idx); setSelectedBedId(null); setSelectedBedElementId(null); setSelectedBedZone(null); }}
                         onUpdateGrid={updateGrid}
                         onUpdatePositions={handleUpdatePositions}
@@ -1025,6 +1054,8 @@ export default function GardenLayout() {
                         proposedHoveredName={hoveredPreviewName}
                         proposedSelectedNames={previewSelectedNames}
                         onOpenZonePortal={handleOpenZonePortal}
+                        neighbourhood={siteAnalysis?.neighbourhood || null}
+                        onRotateNorth={handleRotateNorth}
                     />
                     </div>
                 </div>
@@ -1081,6 +1112,7 @@ export default function GardenLayout() {
                             placedPlantNames={placedPlantNames}
                             favoritePlants={favoritePlants}
                             onFavoritesChange={handleFavoritesChange}
+                            isGeneralView={currentZone === -1}
                         />
                     )}
                 </div>

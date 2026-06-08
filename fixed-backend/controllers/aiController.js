@@ -401,3 +401,190 @@ export const generateGardenPlan = async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 };
+
+// ── Crop companion knowledge base ─────────────────────────────────────────────
+const CROP_KNOWLEDGE = {
+    tomato:     { aliases: ['tomato','tomatoes','tomate','cherry tomato','roma tomato','tomato (roma)'], bedLabel: 'Tomato Companion Bed',   companions: ['Basil','Marigold','Parsley','Calendula'], antagonists: ['Potato','Fennel'], notes: 'Provide stakes or cages. Plant basil nearby to improve flavour and deter aphids.', spacingCm: 50 },
+    cucumber:   { aliases: ['cucumber','cucumbers','castravete','castraveți','castravetele'],            bedLabel: 'Cucumber Trellis Bed',    companions: ['Dill','Nasturtium','Bean','Radish'],      antagonists: ['Potato','Sage'],   notes: 'Install trellis on north side. Dill attracts pest predators.',               spacingCm: 40 },
+    pepper:     { aliases: ['pepper','peppers','bell pepper','ardei','capsicum','chili','chilli'],       bedLabel: 'Pepper & Herb Bed',       companions: ['Basil','Carrot','Parsley','Marigold'],    antagonists: ['Fennel'],         notes: 'Peppers benefit from basil neighbours. Avoid brassicas.',                   spacingCm: 45 },
+    eggplant:   { aliases: ['eggplant','aubergine','vânătă','vanata','brinjal'],                        bedLabel: 'Eggplant Companion Bed',  companions: ['Basil','Marigold','Tarragon'],            antagonists: ['Fennel'],         notes: 'Needs warm spot. Companion marigolds deter nematodes.',                      spacingCm: 50 },
+    lettuce:    { aliases: ['lettuce','salad','salad greens','mixed greens','salata','leafy greens','greens','leaf lettuce'], bedLabel: 'Salad Greens Bed', companions: ['Radish','Spring Onion','Chive','Carrot'], antagonists: [], notes: 'Interplant with radish to deter leaf miners. Shade-tolerant.', spacingCm: 25 },
+    carrot:     { aliases: ['carrot','carrots','morcov','morcovi'],                                     bedLabel: 'Root Crops Bed',          companions: ['Leek','Onion','Rosemary','Chive'],        antagonists: ['Dill'],           notes: 'Deep loose soil for straight roots. Companion leeks repel carrot fly.',      spacingCm: 8  },
+    onion:      { aliases: ['onion','onions','ceapă','ceapa','shallot','scallion','spring onion'],       bedLabel: 'Allium Bed',              companions: ['Carrot','Lettuce','Tomato','Chamomile'],  antagonists: ['Bean','Pea'],     notes: 'Onions deter many pests. Great companion for most vegetables.',              spacingCm: 10 },
+    garlic:     { aliases: ['garlic','usturoi','ustoroi'],                                              bedLabel: 'Garlic & Allium Bed',     companions: ['Tomato','Carrot','Chamomile'],            antagonists: ['Bean','Pea'],     notes: 'Plant garlic in autumn for summer harvest. Natural pest deterrent.',         spacingCm: 10 },
+    bean:       { aliases: ['bean','beans','fasole','french bean','pole bean','runner bean','climbing bean','green bean'], bedLabel: 'Legume Trellis Bed', companions: ['Carrot','Cucumber','Nasturtium','Marigold'], antagonists: ['Onion','Garlic','Fennel'], notes: 'Beans fix nitrogen. Rotate where brassicas will grow next year.', spacingCm: 20 },
+    pea:        { aliases: ['pea','peas','mazăre','mazare','snow pea','sugar snap','garden pea'],        bedLabel: 'Pea & Legume Bed',        companions: ['Carrot','Radish','Lettuce','Spinach'],    antagonists: ['Onion','Garlic'], notes: 'Install support netting early. Nitrogen fixer — great before brassicas.',   spacingCm: 8  },
+    zucchini:   { aliases: ['zucchini','courgette','dovlecel','squash','summer squash','marrow'],        bedLabel: 'Zucchini Companion Bed',  companions: ['Nasturtium','Marigold','Dill','Bean'],    antagonists: [],                 notes: 'Give ample space (1-2m per plant). Nasturtiums distract aphids.',            spacingCm: 80 },
+    pumpkin:    { aliases: ['pumpkin','dovleac','butternut','winter squash','acorn squash'],             bedLabel: 'Cucurbit Bed',            companions: ['Nasturtium','Bean','Corn','Marigold'],    antagonists: [],                 notes: 'Large space needed. Three Sisters with corn and beans is a classic guild.',  spacingCm: 100},
+    cabbage:    { aliases: ['cabbage','varza','kale','broccoli','kohlrabi','brassica','cauliflower'],    bedLabel: 'Brassica Companion Bed',  companions: ['Dill','Thyme','Sage','Nasturtium','Onion'],antagonists: ['Tomato','Fennel'],notes: 'Dill attracts pest-predator wasps. Rotate with legumes each year.',          spacingCm: 45 },
+    spinach:    { aliases: ['spinach','spanac','chard','swiss chard','mangold','beet greens'],           bedLabel: 'Leafy Greens Bed',        companions: ['Radish','Strawberry','Pea','Lettuce'],    antagonists: [],                 notes: 'Fast-growing cool-season crop. Interplant with radish.',                     spacingCm: 15 },
+    radish:     { aliases: ['radish','ridiche','raphanus','daikon'],                                    bedLabel: 'Quick Crops Bed',         companions: ['Lettuce','Tomato','Carrot','Spinach'],    antagonists: [],                 notes: 'Ready in 3-4 weeks. Trap crop for flea beetles.',                            spacingCm: 5  },
+    potato:     { aliases: ['potato','potatoes','cartofi','cartof'],                                    bedLabel: 'Potato Companion Bed',    companions: ['Bean','Marigold','Chamomile'],            antagonists: ['Tomato','Cucumber','Fennel'], notes: 'Hill up soil around stems. Keep well away from tomatoes (shared blight risk).', spacingCm: 35 },
+    herb:       { aliases: ['herb','herbs','basil','dill','parsley','thyme','chive','mint','oregano','rosemary','sage','lovage'], bedLabel: 'Kitchen Herb Bed', companions: ['Tomato','Pepper','Carrot'], antagonists: [], notes: 'Mixed culinary herb bed near kitchen. Herbs deter pests and attract pollinators.', spacingCm: 20 },
+    beetroot:   { aliases: ['beetroot','beet','sfeclă','sfecla','red beet','beets'],                    bedLabel: 'Root & Leaf Bed',         companions: ['Onion','Lettuce','Kohlrabi'],             antagonists: ['Bean'],           notes: 'Tolerates partial shade. Harvest young leaves as salad greens.',             spacingCm: 12 },
+    strawberry: { aliases: ['strawberry','strawberries','căpșuni','capsuni'],                           bedLabel: 'Strawberry Bed',          companions: ['Borage','Lettuce','Spinach','Marigold'], antagonists: ['Cabbage','Fennel'],notes: 'Mulch with straw to keep fruit clean. Borage improves yield.',               spacingCm: 30 },
+    corn:       { aliases: ['corn','sweet corn','porumb','maize'],                                      bedLabel: 'Three Sisters Bed',       companions: ['Bean','Pumpkin','Nasturtium'],            antagonists: [],                 notes: 'Classic Three Sisters guild — corn provides trellis for beans, pumpkin shades soil.', spacingCm: 35 },
+    flower:     { aliases: ['flower','flowers','marigold','calendula','nasturtium','borage','chamomile','companion flower'], bedLabel: 'Companion Flower Border', companions: ['Tomato','Cabbage','Bean','Cucumber'], antagonists: [], notes: 'Companion flowers attract pollinators, repel pests, and improve yield throughout.', spacingCm: 20 },
+};
+
+// Supplementary beds added when more beds are requested than crops provided
+const SUPPLEMENT_ORDER = ['herb','lettuce','radish','beetroot','spinach','bean','pea','flower'];
+
+// ── Zone bed helpers ──────────────────────────────────────────────────────────
+
+function parseCropList(requestedCrops = [], focusNote = '') {
+    const all = new Set();
+    requestedCrops.forEach(c => { if (c && typeof c === 'string') all.add(c.trim().toLowerCase()); });
+    if (focusNote) focusNote.split(/[,;]+/).map(s => s.trim().toLowerCase()).filter(Boolean).forEach(c => all.add(c));
+    return [...all];
+}
+
+function matchCropKey(term) {
+    const lower = (term || '').toLowerCase().trim();
+    if (!lower) return null;
+    for (const [key, entry] of Object.entries(CROP_KNOWLEDGE)) {
+        if (entry.aliases.some(a => lower === a || lower.includes(a) || a.includes(lower))) return key;
+    }
+    return null;
+}
+
+function properCase(str) { return str.replace(/\b\w/g, c => c.toUpperCase()); }
+
+function buildBedsFromCrops(cropKeys, zonePlants, bedW, bedH, hasGreenhouse) {
+    const GREENHOUSE_CROPS = new Set(['pepper', 'eggplant']);
+    const usedCompanionNames = new Set();
+    const beds = [];
+
+    for (const key of cropKeys) {
+        if (hasGreenhouse && GREENHOUSE_CROPS.has(key)) continue;
+        const entry = CROP_KNOWLEDGE[key];
+        if (!entry) continue;
+
+        // Find proper-cased name from DB, fall back to properCase of first alias
+        const dbPlant = zonePlants.find(p => entry.aliases.some(a => p.name.toLowerCase() === a || p.name.toLowerCase().startsWith(a.split(' ')[0])));
+        const leadName = dbPlant ? dbPlant.name : properCase(entry.aliases[0]);
+
+        // Companions: prefer DB companions, fall back to static list
+        const companionPool = (dbPlant?.companions?.length > 0) ? dbPlant.companions : entry.companions;
+        const companionPlants = [];
+        for (const compName of companionPool) {
+            if (companionPlants.length >= 3) break;
+            const compLower = compName.toLowerCase();
+            if (compLower === leadName.toLowerCase()) continue;
+            // Skip companions that conflict with any requested lead crop
+            const conflict = cropKeys.some(k => CROP_KNOWLEDGE[k]?.antagonists?.some(ant => ant.toLowerCase() === compLower));
+            if (conflict || usedCompanionNames.has(compLower)) continue;
+            const dbComp = zonePlants.find(p => p.name.toLowerCase() === compLower || p.name.toLowerCase().startsWith(compLower.split(' ')[0]));
+            companionPlants.push(dbComp ? dbComp.name : compName);
+            usedCompanionNames.add(compLower);
+        }
+
+        beds.push({
+            name: entry.bedLabel,
+            widthM: parseFloat(bedW.toFixed(1)),
+            heightM: parseFloat(bedH.toFixed(1)),
+            plants: [
+                { name: leadName, role: 'main', spacingCm: dbPlant?.planting?.spacingCm || entry.spacingCm || 30 },
+                ...companionPlants.map(c => ({ name: c, role: 'companion', spacingCm: 25 })),
+            ],
+            notes: entry.notes || null,
+            rationale: companionPlants.length > 0
+                ? `${leadName} (requested) grows well with ${companionPlants.slice(0, 2).join(', ')}.`
+                : `A dedicated ${leadName} bed as requested.`,
+        });
+    }
+    return beds;
+}
+
+function buildSupplementaryBeds(count, existingKeys, zonePlants, bedW, bedH) {
+    const beds = [];
+    for (const key of SUPPLEMENT_ORDER) {
+        if (beds.length >= count) break;
+        if (existingKeys.includes(key)) continue;
+        const entry = CROP_KNOWLEDGE[key];
+        if (!entry) continue;
+        const dbPlant = zonePlants.find(p => entry.aliases.some(a => p.name.toLowerCase() === a));
+        const leadName = dbPlant ? dbPlant.name : properCase(entry.aliases[0]);
+        beds.push({
+            name: entry.bedLabel,
+            widthM: parseFloat(bedW.toFixed(1)),
+            heightM: parseFloat(bedH.toFixed(1)),
+            plants: [
+                { name: leadName, role: 'main', spacingCm: entry.spacingCm || 25 },
+                ...entry.companions.slice(0, 2).map(c => ({ name: c, role: 'companion', spacingCm: 20 })),
+            ],
+            notes: entry.notes || null,
+            rationale: 'Supplementary bed — pairs well with your selected crops.',
+        });
+    }
+    return beds;
+}
+
+// ── Zone bed generator ────────────────────────────────────────────────────────
+export const generateZoneBeds = async (req, res) => {
+    try {
+        const {
+            zoneName          = 'Vegetable Garden',
+            requestedCrops    = [],
+            focusNote         = '',
+            preferredBedCount = 0,
+            hardinessZone     = '7b',
+            zoneWidthM        = 8,
+            zoneHeightM       = 5,
+            existingStructures = [],
+        } = req.body;
+
+        // 1. Parse and match requested crops
+        const cropTerms = parseCropList(requestedCrops, focusNote);
+        const cropKeys  = [...new Set(cropTerms.map(matchCropKey).filter(Boolean))];
+
+        // 2. Load plants from DB for proper names and companion data
+        let allPlants = await Plant.find({},
+            'name category guildRole ecologicalFunctions companions antagonists planting.zoneTimes planting.spacingCm'
+        ).lean();
+        let zonePlants = allPlants.filter(p => {
+            const zt = p.planting?.zoneTimes;
+            if (!zt || Object.keys(zt).length === 0) return true;
+            return zt[hardinessZone] != null;
+        });
+        if (zonePlants.length < 5) zonePlants = allPlants;
+
+        // 3. Greenhouse check
+        const hasGreenhouse = existingStructures.some(s => {
+            const n = ((s.name || '') + (s.type || '')).toLowerCase();
+            return n.includes('greenhouse') || n.includes('polytunnel');
+        });
+
+        // 4. Bed sizing from actual zone area
+        const BED_H   = 1.2;
+        const BED_PATH = 0.5;
+        const maxBedsH = Math.max(2, Math.floor((Number(zoneHeightM) + BED_PATH) / (BED_H + BED_PATH)));
+        const BED_W   = parseFloat(Math.min(Math.max(1.5, Number(zoneWidthM) - 1.0), 3.0).toFixed(1));
+
+        // 5. Build beds from matched crops
+        const primaryBeds = buildBedsFromCrops(cropKeys, zonePlants, BED_W, BED_H, hasGreenhouse);
+
+        // 6. Determine final bed count
+        const autoBedCount   = Math.min(Math.max(primaryBeds.length || 2, 2), maxBedsH, 8);
+        const finalBedCount  = Number(preferredBedCount) > 0
+            ? Math.min(Number(preferredBedCount), maxBedsH, 8)
+            : autoBedCount;
+
+        // 7. Trim or pad with supplementary beds
+        let beds = primaryBeds.slice(0, finalBedCount);
+        if (beds.length < finalBedCount) {
+            beds = [...beds, ...buildSupplementaryBeds(finalBedCount - beds.length, cropKeys, zonePlants, BED_W, BED_H)];
+        }
+
+        // 8. Build reason string
+        const namedCrops = cropKeys.map(k => CROP_KNOWLEDGE[k].bedLabel.replace(/ Companion| Trellis| & .*/, '').replace(' Bed', ''));
+        const reason = cropKeys.length > 0
+            ? `${beds.length} bed${beds.length !== 1 ? 's' : ''} planned for ${namedCrops.slice(0, 3).join(', ')}${cropKeys.length > 3 ? ` and ${cropKeys.length - 3} more` : ''}, sized for a ${Number(zoneWidthM).toFixed(1)}m × ${Number(zoneHeightM).toFixed(1)}m zone.`
+            : `${beds.length} general vegetable beds for a ${Number(zoneWidthM).toFixed(1)}m × ${Number(zoneHeightM).toFixed(1)}m zone.`;
+
+        res.json({ success: true, bedPlan: { recommendedBedCount: beds.length, reason, beds } });
+    } catch (err) {
+        console.error('[generateZoneBeds]', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};

@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { STRUCTURES, ZONE_TYPES, detectZoneType } from './gardenZoneConfig';
-import ZoneDetailCanvas from './zoneDetails/ZoneDetailCanvas';
-import { detectDetailType, DETAIL_REGISTRY } from './zoneDetails/ZoneDetailRegistry';
+import { STRUCTURES, ZONE_TYPES, detectZoneType, GENERAL_STRUCTURES_MAP, GENERAL_KEYS_SET } from './gardenZoneConfig';
+import { RULER_SIZE, goodInterval, HorizontalRuler, VerticalRuler } from './MapComponents';
+import { Home, CookingPot, Sprout, Recycle, Waves, Hammer, Car, Bird, PawPrint, Network, TreePine, Cherry, Carrot, Hexagon, Smile, Wheat, Trees } from 'lucide-react';
+const LUCIDE_ICONS_MAP = { Home, CookingPot, Sprout, Recycle, Waves, Hammer, Car, Bird, PawPrint, Network, TreePine, Cherry, Carrot, Hexagon, Smile, Wheat, Trees };
+import RaisedBedZoneCanvas from './RaisedBedZoneCanvas';
+import OrchardZoneCanvas from './OrchardZoneCanvas';
 import PlantingModal from './PlantingModal';
 import AddZoneModal from './AddZoneModal';
 import ZoneTabs from './ZoneTabs';
@@ -13,23 +16,26 @@ const MIN_CELL = 28;
 const HEADER_H = 34;
 const FOOTER_H = 24;
 const GENERAL_PX_PER_M = 10;
-const RULER_SIZE = 30;
+// RULER_SIZE, goodInterval, HorizontalRuler, VerticalRuler imported from MapComponents
 
 // Linear structures resize only in length
-const LINEAR_STRUCTURES = new Set(['Path', 'Fence']);
+const LINEAR_STRUCTURES = new Set(['Path', 'Fence', 'carRoad', 'Car Road']);
 // Structures that show the rotation handle
-const ROTATABLE_STRUCTURES = new Set(['Path', 'Fence', 'Raised Bed']);
+const ROTATABLE_STRUCTURES = new Set(['Path', 'Fence', 'Raised Bed', 'carRoad', 'Car Road']);
 // Structures rendered as circles (force square + 50% radius)
-const CIRCULAR_STRUCTURES = new Set(['Pond']);
-// Structures that become real zones when dropped on the General map
+const CIRCULAR_STRUCTURES = new Set(['Pond', 'pond']);
+// Structures that become real zones when dropped on the General map (legacy)
 const ZONE_STRUCTURES = new Set(['Greenhouse']);
-// Overlay items that open a zone tab rather than the bed editor
-const ZONE_PORTAL_TYPES = new Set(['vegetableGarden']);
+// Overlay items that open a zone tab when clicked — productive areas only
+const ZONE_PORTAL_TYPES = new Set([
+    'vegetableGarden', 'greenhouse', 'guild', 'orchard', 'berryPatch',
+]);
 // Structures that open the Bed Editor when clicked
 const BED_LIKE_STRUCTURES = new Set(['Raised Bed', 'Greenhouse']);
 
 // Default sizes in metres for each structure when first dropped on General map
 const STRUCTURE_DEFAULTS = {
+    // Legacy names
     Path: { wM: 20, hM: 1 },
     Fence: { wM: 10, hM: 0.5 },
     Greenhouse: { wM: 5, hM: 4 },
@@ -39,45 +45,70 @@ const STRUCTURE_DEFAULTS = {
     Shed: { wM: 4, hM: 3 },
     'Raised Bed': { wM: 3, hM: 1.2 },
     Coop: { wM: 3, hM: 3 },
+    // New GENERAL_STRUCTURES keys — auto-derived from config
+    ...Object.fromEntries(Object.values(GENERAL_STRUCTURES_MAP).map(s => [s.key, s.defaultSize])),
 };
 const DEFAULT_PLANT_SIZE = { wM: 1, hM: 1 };
 
 const ZONE_STYLES = {
-    raised:     { border: '#b09060', bg: '#ede0c4', headerBg: '#7a5c30', gridLine: 'rgba(160,128,72,0.18)', bw: 5 },
-    vegetable:  { border: '#7a9860', bg: '#d8e49a', headerBg: '#4a6830', gridLine: 'rgba(100,140,72,0.15)', bw: 3 },
-    orchard:    { border: '#8a9060', bg: '#c8d88a', headerBg: '#5a6830', gridLine: 'rgba(120,140,72,0.15)', bw: 3 },
-    herb:       { border: '#70a870', bg: '#c4d8b8', headerBg: '#3a7050', gridLine: 'rgba(80,148,80,0.15)', bw: 3 },
-    flower:     { border: '#c08890', bg: '#e8bcc0', headerBg: '#8a5060', gridLine: 'rgba(180,100,110,0.15)', bw: 3 },
-    forest:     { border: '#6a9060', bg: '#c4dc9a', headerBg: '#3a5828', gridLine: 'rgba(90,130,70,0.15)', bw: 3 },
+    raised: { border: '#b09060', bg: '#ede0c4', headerBg: '#7a5c30', gridLine: 'rgba(160,128,72,0.18)', bw: 5 },
+    vegetable: { border: '#7a9860', bg: '#d8e49a', headerBg: '#4a6830', gridLine: 'rgba(100,140,72,0.15)', bw: 3 },
+    orchard: { border: '#8a9060', bg: '#c8d88a', headerBg: '#5a6830', gridLine: 'rgba(120,140,72,0.15)', bw: 3 },
+    herb: { border: '#70a870', bg: '#c4d8b8', headerBg: '#3a7050', gridLine: 'rgba(80,148,80,0.15)', bw: 3 },
+    flower: { border: '#c08890', bg: '#e8bcc0', headerBg: '#8a5060', gridLine: 'rgba(180,100,110,0.15)', bw: 3 },
+    forest: { border: '#6a9060', bg: '#c4dc9a', headerBg: '#3a5828', gridLine: 'rgba(90,130,70,0.15)', bw: 3 },
     greenhouse: { border: '#80b070', bg: '#cfe6b1', headerBg: '#4a7838', gridLine: 'rgba(100,160,80,0.18)', bw: 4 },
-    guild:      { border: '#8888a8', bg: '#d0d0e0', headerBg: '#505070', gridLine: 'rgba(100,100,150,0.15)', bw: 3 },
-    compost:    { border: '#a07050', bg: '#a57151', headerBg: '#7a4830', gridLine: 'rgba(130,90,60,0.15)', bw: 3 },
-    pond:       { border: '#60a8c8', bg: '#9fd0e4', headerBg: '#3070a0', gridLine: 'rgba(60,140,180,0.18)', bw: 4 },
-    kids:       { border: '#c8a848', bg: '#edce80', headerBg: '#907030', gridLine: 'rgba(180,148,56,0.15)', bw: 3 },
-    seating:    { border: '#9898a8', bg: '#d0cdbc', headerBg: '#606070', gridLine: 'rgba(120,120,140,0.15)', bw: 3 },
-    building:   { border: '#a09068', bg: '#dab884', headerBg: '#6a5838', gridLine: 'rgba(140,120,80,0.15)', bw: 4 },
-    path:       { border: '#a09068', bg: '#d0cdbc', headerBg: '#807050', gridLine: 'rgba(140,120,80,0.15)', bw: 3 },
-    general:    { border: '#7a9868', bg: '#c4dc9a', headerBg: '#4a6838', gridLine: 'rgba(100,140,80,0.15)', bw: 3 },
+    guild: { border: '#8888a8', bg: '#d0d0e0', headerBg: '#505070', gridLine: 'rgba(100,100,150,0.15)', bw: 3 },
+    compost: { border: '#a07050', bg: '#a57151', headerBg: '#7a4830', gridLine: 'rgba(130,90,60,0.15)', bw: 3 },
+    pond: { border: '#60a8c8', bg: '#9fd0e4', headerBg: '#3070a0', gridLine: 'rgba(60,140,180,0.18)', bw: 4 },
+    kids: { border: '#c8a848', bg: '#edce80', headerBg: '#907030', gridLine: 'rgba(180,148,56,0.15)', bw: 3 },
+    seating: { border: '#9898a8', bg: '#d0cdbc', headerBg: '#606070', gridLine: 'rgba(120,120,140,0.15)', bw: 3 },
+    building: { border: '#a09068', bg: '#dab884', headerBg: '#6a5838', gridLine: 'rgba(140,120,80,0.15)', bw: 4 },
+    path: { border: '#a09068', bg: '#d0cdbc', headerBg: '#807050', gridLine: 'rgba(140,120,80,0.15)', bw: 3 },
+    general: { border: '#7a9868', bg: '#c4dc9a', headerBg: '#4a6838', gridLine: 'rgba(100,140,80,0.15)', bw: 3 },
 };
 const ROLE_BG = {
-    'Producer':             'rgba(160,200,100,0.32)',
-    'Nitrogen fixer':       'rgba(100,160,210,0.32)',
+    'Producer': 'rgba(160,200,100,0.32)',
+    'Nitrogen fixer': 'rgba(100,160,210,0.32)',
     'Pollinator attractor': 'rgba(220,195,100,0.32)',
-    'Dynamic accumulator':  'rgba(185,155,210,0.32)',
-    'Pest repellent':       'rgba(215,150,90,0.32)',
-    'Groundcover':          'rgba(100,195,175,0.32)',
+    'Dynamic accumulator': 'rgba(185,155,210,0.32)',
+    'Pest repellent': 'rgba(215,150,90,0.32)',
+    'Groundcover': 'rgba(100,195,175,0.32)',
 };
 const ROLE_BORDER = {
-    'Producer':             'rgba(110,160,60,0.60)',
-    'Nitrogen fixer':       'rgba(60,120,180,0.60)',
+    'Producer': 'rgba(110,160,60,0.60)',
+    'Nitrogen fixer': 'rgba(60,120,180,0.60)',
     'Pollinator attractor': 'rgba(180,150,40,0.60)',
-    'Dynamic accumulator':  'rgba(140,100,180,0.60)',
-    'Pest repellent':       'rgba(185,110,50,0.60)',
-    'Groundcover':          'rgba(50,150,130,0.60)',
+    'Dynamic accumulator': 'rgba(140,100,180,0.60)',
+    'Pest repellent': 'rgba(185,110,50,0.60)',
+    'Groundcover': 'rgba(50,150,130,0.60)',
 };
 const STRUCTURE_MAP = Object.fromEntries(STRUCTURES.map(s => [s.name, s]));
 
-const NON_OPENABLE_STRUCTURES = new Set(['House', 'Compost', 'Shed', 'Coop']);
+const NON_OPENABLE_STRUCTURES = new Set([
+    'House', 'Compost', 'Shed', 'Coop',
+    'house', 'outdoorKitchen', 'compost', 'pond', 'workshop', 'carRoad', 'beehives', 'kidsPlayground',
+]);
+// Per-type visual config for GENERAL_STRUCTURES: border radius and internal SVG pattern
+const GENERAL_VISUAL_CONFIG = {
+    house:           { radius: 6,     pattern: null  },
+    outdoorKitchen:  { radius: 6,     pattern: null  },
+    greenhouse:      { radius: 4,     pattern: null  },
+    compost:         { radius: 4,     pattern: null  },
+    pond:            { radius: '50%', pattern: null  },
+    workshop:        { radius: 6,     pattern: null  },
+    carRoad:         { radius: 3,     pattern: null  },
+    coop:            { radius: 6,     pattern: null  },
+    animalRun:       { radius: 8,     pattern: null  },
+    guild:           { radius: '50%', pattern: null  },
+    orchard:         { radius: 10,    pattern: null  },
+    berryPatch:      { radius: 8,     pattern: null  },
+    vegetableGarden: { radius: 6,     pattern: 'rows' },
+    beehives:        { radius: 4,     pattern: null  },
+    kidsPlayground:  { radius: 12,    pattern: null  },
+    stapleCrops:     { radius: 4,     pattern: null  },
+    woodlot:         { radius: 10,    pattern: null  },
+};
 const MAP_ACTION_BUTTON_STYLE = { background: '#fff4cf', border: '1px solid #c8a96c', color: '#4b3117', borderRadius: 4, padding: '2px 8px', fontSize: 9, fontWeight: 700, cursor: 'pointer', boxShadow: '0 1px 3px rgba(75,49,23,0.18)' };
 
 const PAPER_LABEL_STYLE = {
@@ -96,43 +127,349 @@ const PAPER_LABEL_STYLE = {
     pointerEvents: 'none',
 };
 
-// ── Compass labels overlay ────────────────────────────────────────────────────
-function resolveCompassPositions(labels, northDirection = 'top') {
-    const { north, south, east, west } = labels;
-    switch (northDirection) {
-        case 'right':   return { top: west,  right: north, bottom: east,  left: south };
-        case 'bottom':  return { top: south, right: west,  bottom: north, left: east  };
-        case 'left':    return { top: east,  right: south, bottom: west,  left: north };
-        default:        return { top: north, right: east,  bottom: south, left: west  };
-    }
+// ── Compass rose ──────────────────────────────────────────────────────────────
+const NORTH_DIRS = ['top', 'right', 'bottom', 'left'];
+const NORTH_DEG = { top: 0, right: 90, bottom: 180, left: 270 };
+
+function CompassRose({ northDirection = 'top', onRotate }) {
+    const deg = NORTH_DEG[northDirection] ?? 0;
+    const canRotate = typeof onRotate === 'function';
+    const [hover, setHover] = useState(false);
+
+    const handleClick = () => {
+        if (!canRotate) return;
+        const idx = NORTH_DIRS.indexOf(northDirection);
+        onRotate(NORTH_DIRS[(idx + 1) % 4]);
+    };
+
+    return (
+        <div
+            title={canRotate ? `North: ${northDirection} — click to rotate` : `North: ${northDirection}`}
+            onClick={handleClick}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            style={{
+                position: 'absolute',
+                bottom: 16,
+                right: 18,
+                zIndex: 90,
+                userSelect: 'none',
+                cursor: canRotate ? 'pointer' : 'default',
+                borderRadius: '50%',
+                background: 'rgba(252,247,235,0.93)',
+                boxShadow: hover
+                    ? '0 3px 12px rgba(0,0,0,0.18), 0 0 0 1.5px rgba(190,155,85,0.5)'
+                    : '0 1px 6px rgba(0,0,0,0.13), 0 0 0 1px rgba(190,155,85,0.28)',
+                transition: 'box-shadow 0.15s',
+                backdropFilter: 'blur(3px)',
+            }}
+        >
+            <svg width="46" height="46" viewBox="0 0 46 46" style={{ display: 'block' }}>
+                {/* Background disc */}
+                <circle cx="23" cy="23" r="21" fill="rgba(252,247,235,0)" />
+
+                {/* Rotating needle group */}
+                <g style={{ transformOrigin: '23px 23px', transform: `rotate(${deg}deg)`, transition: 'transform 0.3s ease' }}>
+                    {/* North arm — red */}
+                    <polygon points="23,4 19.5,23 23,19.5 26.5,23" fill="#c0442a" opacity="0.92" />
+                    {/* South arm — muted */}
+                    <polygon points="23,42 19.5,23 23,26.5 26.5,23" fill="#9a8e7e" opacity="0.85" />
+                    {/* E/W cross-arms */}
+                    <polygon points="42,23 23,19.5 26.5,23 23,26.5" fill="#c0a870" opacity="0.7" />
+                    <polygon points="4,23 23,19.5 19.5,23 23,26.5"  fill="#c0a870" opacity="0.7" />
+                    {/* Center cap */}
+                    <circle cx="23" cy="23" r="3" fill="#faf5e8" stroke="rgba(190,155,85,0.6)" strokeWidth="1" />
+                </g>
+
+                {/* Cardinal labels — screen-fixed (don't rotate) */}
+                <text x="23" y="3"  textAnchor="middle" dominantBaseline="auto"
+                    style={{ font: 'bold 7.5px system-ui, sans-serif', fill: '#b83828' }}>N</text>
+                <text x="23" y="46" textAnchor="middle" dominantBaseline="auto"
+                    style={{ font: '6.5px system-ui, sans-serif', fill: '#7a6e62' }}>S</text>
+                <text x="45" y="26" textAnchor="end" dominantBaseline="middle"
+                    style={{ font: '6.5px system-ui, sans-serif', fill: '#7a6e62' }}>E</text>
+                <text x="1"  y="26" textAnchor="start" dominantBaseline="middle"
+                    style={{ font: '6.5px system-ui, sans-serif', fill: '#7a6e62' }}>W</text>
+            </svg>
+        </div>
+    );
 }
 
-function CompassLabels({ labels, northDirection = 'top' }) {
-    const positioned = resolveCompassPositions(labels, northDirection);
-    const style = {
-        position: 'absolute', zIndex: 90, pointerEvents: 'none',
-        background: 'rgba(0,0,0,0.52)', color: '#fff',
-        fontWeight: 700, fontSize: 13, fontFamily: 'monospace',
-        borderRadius: 5, padding: '2px 7px', lineHeight: 1.4,
-        letterSpacing: 1, userSelect: 'none',
-        border: '1px solid rgba(255,255,255,0.18)',
-    };
-    return (
-        <>
-            <div style={{ ...style, top: 8, left: '50%', transform: 'translateX(-50%)' }}>
-                {positioned.top}
+// ── Neighbourhood bands ────────────────────────────────────────────────────────
+const NB_BAND_STYLES = {
+    forest: {
+        background: 'linear-gradient(to right, #2d5a27 0%, #3d7035 40%, #4a8040 70%, #3d7035 100%)',
+        label: 'Forest', tone: '#b8e8a0',
+    },
+    river: {
+        background: 'linear-gradient(to right, #1a6080 0%, #2077a0 40%, #3090b8 70%, #2077a0 100%)',
+        label: 'River', tone: '#a8d8f0',
+    },
+    road: {
+        background: 'repeating-linear-gradient(90deg, #888 0px, #888 8px, #aaa 8px, #aaa 16px)',
+        label: 'Road', tone: '#e8e8e8',
+    },
+    buildings: {
+        background: 'linear-gradient(to right, #7a7060 0%, #907e6c 50%, #7a7060 100%)',
+        label: 'Buildings', tone: '#ece0c0',
+    },
+    field: {
+        background: 'repeating-linear-gradient(0deg, #c8b840 0px, #c8b840 4px, #d8cc58 4px, #d8cc58 8px)',
+        label: 'Field', tone: '#f0e880',
+    },
+    orchard: {
+        background: 'linear-gradient(to right, #5a8830 0%, #6a9e38 50%, #5a8830 100%)',
+        label: 'Orchard', tone: '#c0e890',
+    },
+    pasture: {
+        background: 'linear-gradient(to right, #78a840 0%, #90c050 50%, #78a840 100%)',
+        label: 'Pasture', tone: '#d0f0a0',
+    },
+    hedge: {
+        background: 'linear-gradient(to right, #486830 0%, #587840 50%, #486830 100%)',
+        label: 'Hedge', tone: '#a8d080',
+    },
+    empty: {
+        background: 'linear-gradient(to right, #c8c0a8 0%, #d8d0b8 50%, #c8c0a8 100%)',
+        label: 'Empty', tone: '#e8e0c8',
+    },
+    unknown: null,
+    other: {
+        background: 'linear-gradient(to right, #a89880 0%, #b8a890 50%, #a89880 100%)',
+        label: 'Other', tone: '#e0d0b8',
+    },
+};
+
+const BAND_THICKNESS = 28;
+
+function NeighbourhoodBands({ neighbourhood, northDirection = 'top', canvasW, canvasH }) {
+    if (!neighbourhood) return null;
+
+    // Map cardinal directions to screen edges accounting for northDirection rotation
+    const edgeMap = {
+        top: { north: 'top', east: 'right', south: 'bottom', west: 'left' },
+        right: { north: 'right', east: 'bottom', south: 'left', west: 'top' },
+        bottom: { north: 'bottom', east: 'left', south: 'top', west: 'right' },
+        left: { north: 'left', east: 'top', south: 'right', west: 'bottom' },
+    }[northDirection] || { north: 'top', east: 'right', south: 'bottom', west: 'left' };
+
+    const bands = [];
+    for (const [cardinal, screenEdge] of Object.entries(edgeMap)) {
+        const side = neighbourhood[cardinal];
+        if (!side || side.type === 'unknown') continue;
+        const style = NB_BAND_STYLES[side.type];
+        if (!style) continue;
+
+        const label = side.type === 'other' && side.label ? side.label : style.label;
+        const isHoriz = screenEdge === 'top' || screenEdge === 'bottom';
+
+        const bandStyle = {
+            position: 'absolute',
+            zIndex: 2,
+            pointerEvents: 'none',
+            background: style.background,
+            boxShadow: screenEdge === 'top' ? 'inset 0 -4px 8px rgba(0,0,0,0.15)' :
+                screenEdge === 'bottom' ? 'inset 0 4px 8px rgba(0,0,0,0.15)' :
+                    screenEdge === 'left' ? 'inset -4px 0 8px rgba(0,0,0,0.15)' :
+                        'inset 4px 0 8px rgba(0,0,0,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+        };
+
+        if (isHoriz) {
+            Object.assign(bandStyle, {
+                left: 0, right: 0,
+                height: BAND_THICKNESS,
+                [screenEdge]: 0,
+            });
+        } else {
+            Object.assign(bandStyle, {
+                top: 0, bottom: 0,
+                width: BAND_THICKNESS,
+                [screenEdge]: 0,
+            });
+        }
+
+        bands.push(
+            <div key={cardinal} style={bandStyle}>
+                <span style={{
+                    fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                    color: style.tone, opacity: 0.9, textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                    transform: !isHoriz ? 'rotate(-90deg)' : undefined,
+                    whiteSpace: 'nowrap',
+                }}>
+                    {label}
+                </span>
             </div>
-            <div style={{ ...style, bottom: 8, left: '50%', transform: 'translateX(-50%)' }}>
-                {positioned.bottom}
-            </div>
-            <div style={{ ...style, left: 8, top: '50%', transform: 'translateY(-50%)' }}>
-                {positioned.left}
-            </div>
-            <div style={{ ...style, right: 8, top: '50%', transform: 'translateY(-50%)' }}>
-                {positioned.right}
-            </div>
-        </>
-    );
+        );
+    }
+
+    return <>{bands}</>;
+}
+
+// ── Pattern overlays for GENERAL_STRUCTURES ───────────────────────────────────
+function PatternOverlay({ pattern, width, height, color, borderColor }) {
+    if (!pattern || !width || !height || width < 10 || height < 10) return null;
+    const W = Math.round(width);
+    const H = Math.round(height);
+    const style = { position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 };
+    const bc = borderColor;
+
+    if (pattern === 'rows') {
+        const gap = Math.max(6, Math.min(14, H / 6));
+        const lines = [];
+        for (let y = gap; y < H - 2; y += gap)
+            lines.push(<line key={y} x1={8} y1={y} x2={W - 8} y2={y} stroke={bc} strokeWidth={1.5} opacity={0.22} />);
+        return <svg style={style} width={W} height={H}>{lines}</svg>;
+    }
+
+    if (pattern === 'crop-rows') {
+        const gap = Math.max(8, Math.min(16, H / 5));
+        const dotGap = Math.max(10, Math.min(18, W / 6));
+        const elems = [];
+        for (let y = gap; y < H - 2; y += gap) {
+            elems.push(<line key={`l${y}`} x1={8} y1={y} x2={W - 8} y2={y} stroke={bc} strokeWidth={1} opacity={0.18} />);
+            for (let x = dotGap / 2; x < W - 4; x += dotGap)
+                elems.push(<circle key={`d${y}-${Math.round(x)}`} cx={x} cy={y} r={1.5} fill={bc} opacity={0.32} />);
+        }
+        return <svg style={style} width={W} height={H}>{elems}</svg>;
+    }
+
+    if (pattern === 'tree-dots') {
+        const r = Math.min(W, H) * 0.09;
+        const cols = Math.max(2, Math.floor(W / (r * 2.8)));
+        const rows = Math.max(2, Math.floor(H / (r * 2.8)));
+        const elems = [];
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const ox = row % 2 === 1 ? (W / cols) * 0.5 : 0;
+                const cx = (W / cols) * (col + 0.5) + ox;
+                const cy = (H / rows) * (row + 0.5);
+                if (cx > 4 && cx < W - 4 && cy > 4 && cy < H - 4) {
+                    elems.push(<circle key={`f${row}-${col}`} cx={cx} cy={cy} r={Math.max(3, r)} fill={bc} opacity={0.22} />);
+                    elems.push(<circle key={`o${row}-${col}`} cx={cx} cy={cy} r={Math.max(3, r)} fill="none" stroke={bc} strokeWidth={1} opacity={0.32} />);
+                }
+            }
+        }
+        return <svg style={style} width={W} height={H}>{elems}</svg>;
+    }
+
+    if (pattern === 'forest') {
+        const gap = Math.max(12, Math.min(22, Math.min(W, H) / 4));
+        const cols = Math.max(2, Math.floor(W / gap));
+        const rows = Math.max(2, Math.floor(H / gap));
+        const trees = [];
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const ox = row % 2 === 1 ? gap * 0.5 : 0;
+                const cx = (W / cols) * (col + 0.5) + ox;
+                const cy = (H / rows) * (row + 0.5);
+                if (cx > 4 && cx < W - 4 && cy > 4 && cy < H - 4) {
+                    const th = gap * 0.7, tw = gap * 0.5;
+                    trees.push(<polygon key={`${row}-${col}`}
+                        points={`${cx},${cy - th * 0.6} ${cx - tw * 0.5},${cy + th * 0.4} ${cx + tw * 0.5},${cy + th * 0.4}`}
+                        fill="#ffffff" opacity={0.28} />);
+                }
+            }
+        }
+        return <svg style={style} width={W} height={H}>{trees}</svg>;
+    }
+
+    if (pattern === 'greenhouse') {
+        const panes = Math.max(3, Math.floor(W / 18));
+        const pW = W / panes;
+        const roofH = Math.min(20, H * 0.35);
+        const elems = [
+            <line key="ridg" x1={W * 0.5} y1={2} x2={W * 0.5} y2={roofH} stroke="#fff" strokeWidth={1.5} opacity={0.5} />,
+            <line key="rl"   x1={0}       y1={roofH} x2={W * 0.5} y2={2} stroke="#fff" strokeWidth={1} opacity={0.4} />,
+            <line key="rr"   x1={W}       y1={roofH} x2={W * 0.5} y2={2} stroke="#fff" strokeWidth={1} opacity={0.4} />,
+        ];
+        for (let i = 1; i < panes; i++)
+            elems.push(<line key={`p${i}`} x1={pW * i} y1={roofH} x2={pW * i} y2={H - 4} stroke="#fff" strokeWidth={1} opacity={0.28} />);
+        return <svg style={style} width={W} height={H}>{elems}</svg>;
+    }
+
+    if (pattern === 'fence') {
+        const postGap = Math.max(12, Math.min(20, Math.min(W, H) / 5));
+        const elems = [
+            <line key="t" x1={4}     y1={8}     x2={W - 4} y2={8}     stroke="#fff" strokeWidth={1.5} opacity={0.38} />,
+            <line key="b" x1={4}     y1={H - 8} x2={W - 4} y2={H - 8} stroke="#fff" strokeWidth={1.5} opacity={0.38} />,
+            <line key="l" x1={8}     y1={4}     x2={8}     y2={H - 4} stroke="#fff" strokeWidth={1.5} opacity={0.38} />,
+            <line key="r" x1={W - 8} y1={4}     x2={W - 8} y2={H - 4} stroke="#fff" strokeWidth={1.5} opacity={0.38} />,
+        ];
+        for (let x = 4; x <= W - 4; x += postGap) {
+            elems.push(<circle key={`pt${Math.round(x)}`} cx={x} cy={8}     r={2} fill="#fff" opacity={0.42} />);
+            elems.push(<circle key={`pb${Math.round(x)}`} cx={x} cy={H - 8} r={2} fill="#fff" opacity={0.42} />);
+        }
+        return <svg style={style} width={W} height={H}>{elems}</svg>;
+    }
+
+    if (pattern === 'road-line') {
+        const seg = 12, gp = 8;
+        const elems = [];
+        if (W >= H) {
+            const cy = H / 2;
+            for (let x = seg; x < W - seg; x += seg + gp)
+                elems.push(<line key={x} x1={x} y1={cy} x2={x + seg} y2={cy} stroke="#fff" strokeWidth={2} opacity={0.55} />);
+        } else {
+            const cx = W / 2;
+            for (let y = seg; y < H - seg; y += seg + gp)
+                elems.push(<line key={y} x1={cx} y1={y} x2={cx} y2={y + seg} stroke="#fff" strokeWidth={2} opacity={0.55} />);
+        }
+        return <svg style={style} width={W} height={H}>{elems}</svg>;
+    }
+
+    if (pattern === 'water-rings') {
+        const cx = W / 2, cy = H / 2;
+        const rings = Math.max(2, Math.min(5, Math.floor(Math.min(W, H) / 14)));
+        return (
+            <svg style={style} width={W} height={H}>
+                {Array.from({ length: rings }, (_, i) => (
+                    <ellipse key={i} cx={cx} cy={cy}
+                        rx={(W * 0.42) * ((i + 1) / rings)} ry={(H * 0.42) * ((i + 1) / rings)}
+                        fill="none" stroke="#fff" strokeWidth={1.2} opacity={0.35} />
+                ))}
+            </svg>
+        );
+    }
+
+    if (pattern === 'radial') {
+        const cx = W / 2, cy = H / 2;
+        const spokes = 8;
+        return (
+            <svg style={style} width={W} height={H}>
+                {Array.from({ length: spokes }, (_, i) => {
+                    const a = (i / spokes) * Math.PI * 2;
+                    return <line key={i} x1={cx} y1={cy}
+                        x2={cx + Math.cos(a) * W * 0.44} y2={cy + Math.sin(a) * H * 0.44}
+                        stroke="#fff" strokeWidth={1} opacity={0.28} />;
+                })}
+                <circle cx={cx} cy={cy} r={Math.min(W, H) * 0.1} fill="#fff" opacity={0.15} />
+            </svg>
+        );
+    }
+
+    if (pattern === 'honeycomb') {
+        const hexR = Math.max(5, Math.min(12, Math.min(W, H) / 4));
+        const hexH = hexR * Math.sqrt(3);
+        const cols = Math.ceil(W / (hexR * 3)) + 1;
+        const rows = Math.ceil(H / hexH) + 1;
+        const elems = [];
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const ox = row % 2 === 1 ? hexR * 1.5 : 0;
+                const cx = hexR * 3 * col + hexR * 1.5 + ox;
+                const cy = hexH * row + hexH * 0.5;
+                const pts = Array.from({ length: 6 }, (_, i) => {
+                    const a = (Math.PI / 3) * i - Math.PI / 6;
+                    return `${cx + hexR * Math.cos(a)},${cy + hexR * Math.sin(a)}`;
+                }).join(' ');
+                elems.push(<polygon key={`${row}-${col}`} points={pts} fill="none" stroke="#fff" strokeWidth={1} opacity={0.28} />);
+            }
+        }
+        return <svg style={style} width={W} height={H}>{elems}</svg>;
+    }
+
+    return null;
 }
 
 function resizeGridLocal(grid, newRows, newCols) {
@@ -145,69 +482,7 @@ function resolveIconSrc(iconData) {
     return iconData.startsWith('data:') ? iconData : `data:image/svg+xml;base64,${iconData}`;
 }
 
-// Pick the smallest "nice" interval (m) so ticks are at least targetPx apart
-function goodInterval(pxPerM, targetPx) {
-    const candidates = [0.5, 1, 2, 5, 10, 20, 25, 50, 100];
-    const minM = targetPx / pxPerM;
-    return candidates.find(c => c >= minM) ?? 100;
-}
-
-// ── Ruler components ──────────────────────────────────────────────────────────
-function HorizontalRuler({ widthM, pxPerM }) {
-    const totalPx = widthM * pxPerM;
-    const minor = goodInterval(pxPerM, 40);
-    const major = goodInterval(pxPerM, 90);
-    const marks = [];
-    for (let m = 0; m <= widthM + 0.001; m = Math.round((m + minor) * 1e6) / 1e6) {
-        const isMajor = Math.abs(m % major) < 0.001 || Math.abs(m % major - major) < 0.001;
-        const x = m * pxPerM;
-        marks.push(
-            <g key={m}>
-                <line x1={x} y1={RULER_SIZE} x2={x} y2={isMajor ? RULER_SIZE - 12 : RULER_SIZE - 6}
-                    stroke={isMajor ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.3)'} strokeWidth={1} />
-                {isMajor && m > 0 && (
-                    <text x={x + 2} y={RULER_SIZE - 14} fill="rgba(255,255,255,0.6)" fontSize={9} fontFamily="monospace">
-                        {Number.isInteger(m) ? m : m.toFixed(1)}m
-                    </text>
-                )}
-            </g>
-        );
-    }
-    return (
-        <svg width={totalPx} height={RULER_SIZE} style={{ display: 'block', flexShrink: 0, background: '#1d3a20' }}>
-            <line x1={0} y1={RULER_SIZE - 1} x2={totalPx} y2={RULER_SIZE - 1} stroke="rgba(255,255,255,0.18)" strokeWidth={1} />
-            {marks}
-        </svg>
-    );
-}
-
-function VerticalRuler({ heightM, pxPerM }) {
-    const totalPx = heightM * pxPerM;
-    const minor = goodInterval(pxPerM, 40);
-    const major = goodInterval(pxPerM, 90);
-    const marks = [];
-    for (let m = 0; m <= heightM + 0.001; m = Math.round((m + minor) * 1e6) / 1e6) {
-        const isMajor = Math.abs(m % major) < 0.001 || Math.abs(m % major - major) < 0.001;
-        const y = m * pxPerM;
-        marks.push(
-            <g key={m}>
-                <line x1={RULER_SIZE} y1={y} x2={isMajor ? RULER_SIZE - 12 : RULER_SIZE - 6} y2={y}
-                    stroke={isMajor ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.3)'} strokeWidth={1} />
-                {isMajor && m > 0 && (
-                    <text x={2} y={y - 2} fill="rgba(255,255,255,0.6)" fontSize={9} fontFamily="monospace">
-                        {Number.isInteger(m) ? m : m.toFixed(1)}m
-                    </text>
-                )}
-            </g>
-        );
-    }
-    return (
-        <svg width={RULER_SIZE} height={totalPx} style={{ display: 'block', flexShrink: 0, background: '#1d3a20' }}>
-            <line x1={RULER_SIZE - 1} y1={0} x2={RULER_SIZE - 1} y2={totalPx} stroke="rgba(255,255,255,0.18)" strokeWidth={1} />
-            {marks}
-        </svg>
-    );
-}
+// ── Bed icon helpers ── (rulers imported from MapComponents)
 
 // ── Bed icon helpers ──────────────────────────────────────────────────────────
 function getRepeatedPositionsPx(widthPx, heightPx, spacingPx, maxIcons = 80) {
@@ -248,9 +523,9 @@ function BedRowPreview({ row, bedWM, bedHM, pxPerM, selected, onDragStart, onCli
     const xM = row.x || 0; const yM = row.y || 0;
     const wM = row.widthM || 1; const hM = row.heightM || 0.3;
     const leftPct = `${Math.max(0, Math.min(1, xM / bedWM)) * 100}%`;
-    const topPct  = `${Math.max(0, Math.min(1, yM / bedHM)) * 100}%`;
-    const widPct  = `${Math.max(0.1, Math.min(1 - xM / bedWM, wM / bedWM)) * 100}%`;
-    const hgtPct  = `${Math.max(0.1, Math.min(1 - yM / bedHM, hM / bedHM)) * 100}%`;
+    const topPct = `${Math.max(0, Math.min(1, yM / bedHM)) * 100}%`;
+    const widPct = `${Math.max(0.1, Math.min(1 - xM / bedWM, wM / bedWM)) * 100}%`;
+    const hgtPct = `${Math.max(0.1, Math.min(1 - yM / bedHM, hM / bedHM)) * 100}%`;
 
     const plant = row.plant;
     const companions = row.companions || [];
@@ -261,8 +536,8 @@ function BedRowPreview({ row, bedWM, bedHM, pxPerM, selected, onDragStart, onCli
     const showIcons = plant && iconSz >= 5 && rowPxW >= 10 && rowPxH >= 5;
 
     const mainPos = showIcons ? getRepeatedPositionsPx(rowPxW, rowPxH, spacingPx, 80) : [];
-    const compSp  = spacingPx * 1.6;
-    const compSz  = iconSz * 0.62;
+    const compSp = spacingPx * 1.6;
+    const compSz = iconSz * 0.62;
     const compPos = companions.length > 0 && showIcons ? getRepeatedPositionsPx(rowPxW, rowPxH, compSp, 30) : [];
 
     return (
@@ -308,9 +583,9 @@ function BedBlockPreview({ block, bedWM, bedHM, pxPerM, selected, onDragStart, o
     const xM = block.x || 0; const yM = block.y || 0;
     const wM = block.widthM || 0.8; const hM = block.heightM || 0.8;
     const leftPct = `${Math.max(0, Math.min(1, xM / bedWM)) * 100}%`;
-    const topPct  = `${Math.max(0, Math.min(1, yM / bedHM)) * 100}%`;
-    const widPct  = `${Math.max(0.1, Math.min(1 - xM / bedWM, wM / bedWM)) * 100}%`;
-    const hgtPct  = `${Math.max(0.1, Math.min(1 - yM / bedHM, hM / bedHM)) * 100}%`;
+    const topPct = `${Math.max(0, Math.min(1, yM / bedHM)) * 100}%`;
+    const widPct = `${Math.max(0.1, Math.min(1 - xM / bedWM, wM / bedWM)) * 100}%`;
+    const hgtPct = `${Math.max(0.1, Math.min(1 - yM / bedHM, hM / bedHM)) * 100}%`;
 
     const plant = block.plant;
     const companions = block.companions || [];
@@ -321,8 +596,8 @@ function BedBlockPreview({ block, bedWM, bedHM, pxPerM, selected, onDragStart, o
     const showIcons = plant && iconSz >= 5 && blkPxW >= 10 && blkPxH >= 10;
 
     const mainPos = showIcons ? getRepeatedPositionsPx(blkPxW, blkPxH, spacingPx, 80) : [];
-    const compSp  = spacingPx * 1.6;
-    const compSz  = iconSz * 0.62;
+    const compSp = spacingPx * 1.6;
+    const compSz = iconSz * 0.62;
     const compPos = companions.length > 0 && showIcons ? getRepeatedPositionsPx(blkPxW, blkPxH, compSp, 30) : [];
 
     return (
@@ -363,47 +638,129 @@ function BedBlockPreview({ block, bedWM, bedHM, pxPerM, selected, onDragStart, o
     );
 }
 
+// ── AI area visual style table ────────────────────────────────────────────────
+const AREA_TYPE_STYLE = {
+    vegetable_garden: { bg: 'rgba(50,130,50,0.14)', border: '#3a8a30', label: '#1a4a10' },
+    orchard: { bg: 'rgba(100,120,35,0.14)', border: '#7a9020', label: '#3a4a10' },
+    food_forest: { bg: 'rgba(70,110,28,0.14)', border: '#608020', label: '#304010' },
+    berry_patch: { bg: 'rgba(150,45,125,0.11)', border: '#9c3080', label: '#5a1050' },
+    guild: { bg: 'rgba(80,110,40,0.13)', border: '#607830', label: '#304020' },
+    herb_garden: { bg: 'rgba(30,150,70,0.12)', border: '#208848', label: '#0a4a20' },
+    pond: { bg: 'rgba(30,100,200,0.12)', border: '#2060c8', label: '#0a3878' },
+    swale: { bg: 'rgba(50,130,210,0.10)', border: '#4090d0', label: '#183870' },
+    compost: { bg: 'rgba(130,70,20,0.15)', border: '#8a5018', label: '#5a2808' },
+    path: { bg: 'rgba(150,130,75,0.18)', border: '#a09060', label: '#504020' },
+    greenhouse: { bg: 'rgba(50,170,100,0.12)', border: '#309860', label: '#0a4828' },
+    coop: { bg: 'rgba(190,120,30,0.14)', border: '#c07820', label: '#603808' },
+    beehive: { bg: 'rgba(210,170,20,0.15)', border: '#c8a810', label: '#604008' },
+    wild_zone: { bg: 'rgba(70,150,48,0.13)', border: '#509830', label: '#204018' },
+    windbreak: { bg: 'rgba(50,100,30,0.12)', border: '#3a6820', label: '#1a3010' },
+    default_area: { bg: 'rgba(70,120,50,0.13)', border: '#508830', label: '#204018' },
+    default_struct: { bg: 'rgba(160,140,80,0.10)', border: '#a09060', label: '#504020' },
+};
+
+function getOverlayVisualStyle(item) {
+    const ck = (item.catalogKey || item.canonicalType || '').toLowerCase();
+    const n = (item.name || '').toLowerCase();
+    const mode = item.renderMode;
+    let key = 'default_area';
+    if (mode === 'path' || ck === 'path' || /\bpath\b/.test(n)) key = 'path';
+    else if (ck === 'vegetable_garden' || n.includes('vegetable')) key = 'vegetable_garden';
+    else if (ck === 'orchard' || n.includes('orchard')) key = 'orchard';
+    else if (ck === 'food_forest' || n.includes('food forest')) key = 'food_forest';
+    else if (ck === 'berry_patch' || n.includes('berry')) key = 'berry_patch';
+    else if (ck === 'guild' || n.includes('guild')) key = 'guild';
+    else if (ck === 'herb_garden' || n.includes('herb')) key = 'herb_garden';
+    else if (ck === 'pond' || n.includes('pond')) key = 'pond';
+    else if (ck === 'swale' || n.includes('swale')) key = 'swale';
+    else if (ck === 'compost' || n.includes('compost')) key = 'compost';
+    else if (ck === 'greenhouse' || n.includes('greenhouse')) key = 'greenhouse';
+    else if (ck === 'coop' || n.includes('coop') || n.includes('chicken')) key = 'coop';
+    else if (ck === 'beehive' || n.includes('beehive') || n.includes(' bee')) key = 'beehive';
+    else if (ck === 'wild_zone' || n.includes('meadow') || n.includes('wild')) key = 'wild_zone';
+    else if (ck === 'windbreak' || n.includes('windbreak') || n.includes('hedge')) key = 'windbreak';
+    else if (mode !== 'area') key = 'default_struct';
+    return AREA_TYPE_STYLE[key] || AREA_TYPE_STYLE.default_area;
+}
+
 // ── Free-floating overlay item ────────────────────────────────────────────────
 // ── Vegetable Garden zone-portal mini-bed preview ─────────────────────────────
-function VegGardenPreview({ item, pxPerM, bedLayout }) {
-    const rows = bedLayout?.rows || [];
-    if (!rows.length) {
-        // Fallback: show repeating horizontal strips
-        const stripH = Math.max(18, ((item.hM || 5) * pxPerM) / 4);
+function VegGardenPreview({ item, pxPerM, bedLayout, zoneBeds }) {
+    const totalHM = item.hM || 5;
+    const totalWM = item.wM || 8;
+
+    // Prefer new raisedBed data from zoneItems — most accurate
+    if (zoneBeds && zoneBeds.length > 0) {
         return (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 3, padding: 4, overflow: 'hidden' }}>
-                {[0,1,2,3].map(i => (
-                    <div key={i} style={{ flex: 1, borderRadius: 3, background: 'rgba(90,130,60,0.22)', border: '1px solid rgba(90,130,60,0.35)', minHeight: 8 }} />
-                ))}
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '4px 5px', overflow: 'hidden' }}>
+                {zoneBeds.slice(0, 12).map((bed, i) => {
+                    const bedHFrac = ((bed.hM || 1.2) / totalHM);
+                    const plants = (bed.plants || []).map(p => p.plantName).filter(Boolean);
+                    return (
+                        <div key={bed.id || i} style={{
+                            flex: `0 0 ${Math.max(10, bedHFrac * 100)}%`,
+                            borderRadius: 3,
+                            background: 'rgba(22,12,6,0.70)',
+                            border: '1.5px solid rgba(139,94,60,0.75)',
+                            display: 'flex', alignItems: 'center', paddingLeft: 5,
+                            overflow: 'hidden', minHeight: 9, boxSizing: 'border-box',
+                        }}>
+                            {plants.length > 0 && (
+                                <span style={{
+                                    fontSize: 8, color: 'rgba(220,185,110,0.92)',
+                                    fontWeight: 600, whiteSpace: 'nowrap',
+                                    overflow: 'hidden', textOverflow: 'ellipsis',
+                                }}>
+                                    {plants.slice(0, 4).join(' · ')}
+                                </span>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
         );
     }
-    const totalHM = item.hM || 5;
+
+    // Fall back to old bedLayout.rows format
+    const rows = bedLayout?.rows || [];
+    if (rows.length > 0) {
+        return (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '3px 4px', overflow: 'hidden' }}>
+                {rows.map((row, i) => {
+                    const rowHFrac = (row.heightM || 1) / totalHM;
+                    const companions = (row.companions || []).slice(0, 2).map(c => c.name).filter(Boolean);
+                    return (
+                        <div key={row.id || i} style={{
+                            flex: `0 0 ${Math.max(12, rowHFrac * 100)}%`,
+                            borderRadius: 3,
+                            background: 'rgba(22,12,6,0.65)',
+                            border: '1.5px solid rgba(139,94,60,0.65)',
+                            display: 'flex', alignItems: 'center', paddingLeft: 4,
+                            overflow: 'hidden', minHeight: 10,
+                        }}>
+                            {row.plant?.name && (
+                                <span style={{ fontSize: 9, color: 'rgba(220,185,110,0.88)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {[row.plant.name, ...companions].join(' · ')}
+                                </span>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+
+    // Generic placeholder strips
     return (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '3px 4px', overflow: 'hidden' }}>
-            {rows.map((row, i) => {
-                const rowHFrac = (row.heightM || 1) / totalHM;
-                return (
-                    <div key={row.id || i} style={{
-                        flex: `0 0 ${Math.max(12, rowHFrac * 100)}%`,
-                        borderRadius: 3,
-                        background: 'rgba(90,130,60,0.20)',
-                        border: '1px solid rgba(90,130,60,0.40)',
-                        display: 'flex', alignItems: 'center', paddingLeft: 4, overflow: 'hidden', minHeight: 10,
-                    }}>
-                        {row.plant?.name && (
-                            <span style={{ fontSize: 9, color: 'rgba(30,60,20,0.75)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {row.plant.name}
-                            </span>
-                        )}
-                    </div>
-                );
-            })}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 3, padding: 4, overflow: 'hidden' }}>
+            {[0, 1, 2, 3].map(i => (
+                <div key={i} style={{ flex: 1, borderRadius: 3, background: 'rgba(22,12,6,0.45)', border: '1px solid rgba(139,94,60,0.50)', minHeight: 8 }} />
+            ))}
         </div>
     );
 }
 
-function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeStart, onRotateStart, onSelectBed, selectedBedId, bedLayout, selectedBedElementId, onSelectBedElement, onUpdateBedLayout, onOpenZonePortal }) {
+function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeStart, onRotateStart, onSelectBed, selectedBedId, bedLayout, selectedBedElementId, onSelectBedElement, onUpdateBedLayout, onOpenZonePortal, zoneBeds = [] }) {
     const [hovered, setHovered] = useState(false);
     const mouseDownPos = useRef(null);
     const [bedElemDrag, setBedElemDrag] = useState(null);
@@ -472,18 +829,27 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
     };
 
     const iconSrc = resolveIconSrc(item.iconData);
-    const isLinear = LINEAR_STRUCTURES.has(item.name);
-    const isRotatable = ROTATABLE_STRUCTURES.has(item.name);
-    const isCircular = CIRCULAR_STRUCTURES.has(item.name);
-    const isZonePortal = !!(item.isZonePortal || ZONE_PORTAL_TYPES.has(item.type));
-    const isBedLike    = BED_LIKE_STRUCTURES.has(item.name) && !isZonePortal;
+    const isLinear = LINEAR_STRUCTURES.has(item.name) || LINEAR_STRUCTURES.has(item.structureKey);
+    const isPathLike = isLinear || item.renderMode === 'path' || /\bpath\b/i.test(item.name || '');
+    const isRotatable = ROTATABLE_STRUCTURES.has(item.name) || ROTATABLE_STRUCTURES.has(item.structureKey) || (isPathLike && !!item.aiGenerated);
+    const isCircular = CIRCULAR_STRUCTURES.has(item.name) || CIRCULAR_STRUCTURES.has(item.structureKey);
+    const isZonePortal = !!(item.isZonePortal || ZONE_PORTAL_TYPES.has(item.type) || ZONE_PORTAL_TYPES.has(item.structureKey));
+    const isBedLike = BED_LIKE_STRUCTURES.has(item.name) && !isZonePortal;
+    const isAreaBlock = item.renderMode === 'area' && !!item.aiGenerated && !isZonePortal && !isBedLike && !isPathLike;
     const isSelectedBed = isBedLike && selectedBedId === item.id;
+
+    const posLeft = item.xM != null ? item.xM * pxPerM : item.x * zoom;
+    const posTop = item.yM != null ? item.yM * pxPerM : item.y * zoom;
 
     const rawW = Math.max(pxPerM * 2, (item.wM ?? 4) * pxPerM);
     const rawH = Math.max(isRotatable ? 28 : pxPerM, (item.hM ?? 4) * pxPerM);
     const pxW = isCircular ? Math.max(rawW, rawH) : rawW;
     const pxH = isCircular ? Math.max(rawW, rawH) : rawH;
-    const iconSize = Math.min(pxW * 0.45, (pxH - (isRotatable ? 16 : 0)) * 0.7, 32);
+    const isNewStyle = !!(item.structureKey && GENERAL_KEYS_SET.has(item.structureKey));
+    const gsVis = isNewStyle ? (GENERAL_VISUAL_CONFIG[item.structureKey] || { radius: 8, pattern: null }) : null;
+    const iconSize = isNewStyle
+        ? Math.max(18, Math.min(pxW * 0.38, (pxH - (isRotatable ? 22 : 8)) * 0.55, 52))
+        : Math.min(pxW * 0.45, (pxH - (isRotatable ? 16 : 0)) * 0.7, 32);
     const rotation = item.rotation ?? 0;
 
     const bedRows = bedLayout?.rows || [];
@@ -493,7 +859,7 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
     return (
         <div
             style={{
-                position: 'absolute', left: item.x * zoom, top: item.y * zoom,
+                position: 'absolute', left: posLeft, top: posTop,
                 width: pxW, height: pxH,
                 transform: `rotate(${rotation}deg)`,
                 transformOrigin: '50% 50%',
@@ -522,69 +888,219 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
                 <div style={{ position: 'absolute', top: -20, left: '50%', transform: 'translateX(-50%)', background: '#a8d870', color: '#1a3a0a', fontSize: 9, fontWeight: 700, borderRadius: 4, padding: '1px 7px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 25 }}>Editing</div>
             )}
 
-            <div style={{
-                position: 'relative', width: '100%', height: '100%',
-                borderRadius: isCircular ? '50%' : isLinear ? 4 : (isZonePortal ? 8 : 10),
-                background: isZonePortal
-                    ? (hovered ? 'rgba(90,130,60,0.18)' : 'rgba(90,130,60,0.12)')
-                    : (item.color ? item.color + '28' : 'rgba(61,107,52,0.10)'),
-                border: isZonePortal
-                    ? `${hovered ? '2px' : '1.5px'} solid rgba(90,130,60,${hovered ? '0.75' : '0.45'})`
+            {(() => {
+                if (isAreaBlock) {
+                    const vs = getOverlayVisualStyle(item);
+                    const borderW = hovered ? 2.5 : 2;
+                    const conf = item.confidence;
+                    const plants = item.plants || [];
+                    return (
+                        <div style={{
+                            position: 'relative', width: '100%', height: '100%',
+                            borderRadius: isPathLike ? 4 : 10,
+                            background: hovered ? vs.bg.replace(/[\d.]+\)$/, v => String(Math.min(1, parseFloat(v) * 2.2) + ')')) : vs.bg,
+                            border: `${borderW}px dashed ${vs.border}`,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: hovered ? `0 4px 16px ${vs.border}30, 0 0 0 1px ${vs.border}20` : `0 2px 8px rgba(0,0,0,0.10)`,
+                            overflow: 'hidden',
+                            transition: 'border-color 0.1s, box-shadow 0.1s, background 0.1s',
+                        }}>
+                            {isRotatable && (
+                                <div title="Drag to rotate" style={{ position: 'absolute', top: 4, left: 4, width: 18, height: 18, borderRadius: '50%', background: hovered ? 'white' : 'rgba(255,255,255,0.55)', border: `1.5px solid ${vs.border}88`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'crosshair', zIndex: 2 }}
+                                    onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onRotateStart(e, item.id); }}>↻</div>
+                            )}
+                            {conf != null && (
+                                <div style={{ position: 'absolute', top: 5, right: 5, background: conf >= 0.85 ? 'rgba(60,110,40,0.82)' : conf >= 0.65 ? 'rgba(150,100,40,0.82)' : 'rgba(160,50,50,0.82)', color: '#fff', fontSize: 8, borderRadius: 3, padding: '1px 4px', fontWeight: 700, zIndex: 2 }}>
+                                    {Math.round(conf * 100)}%
+                                </div>
+                            )}
+                            <div style={{ color: vs.label, fontWeight: 700, fontSize: Math.max(9, Math.min(14, pxW * 0.09)), textAlign: 'center', padding: '0 8px', lineHeight: 1.25, zIndex: 1, pointerEvents: 'none' }}>
+                                {item.name}
+                            </div>
+                            {item.wM && item.hM && (
+                                <div style={{ color: vs.label, fontSize: 8, opacity: 0.7, marginTop: 2, pointerEvents: 'none' }}>
+                                    {item.wM.toFixed(1)} × {item.hM.toFixed(1)} m
+                                </div>
+                            )}
+                            {plants.length > 0 && pxH > 60 && (
+                                <div style={{ position: 'absolute', bottom: 5, left: 6, right: 6, fontSize: 8, color: vs.label, opacity: hovered ? 0.9 : 0.65, fontStyle: 'italic', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', pointerEvents: 'none' }}>
+                                    {plants.slice(0, 4).join(' · ')}
+                                </div>
+                            )}
+                        </div>
+                    );
+                }
+
+                const borderCol = item.borderColor || item.color || '#3d6b34';
+                const gsRadius = isNewStyle
+                    ? (typeof gsVis.radius === 'string' ? gsVis.radius : `${gsVis.radius}px`)
+                    : isCircular ? '50%' : isPathLike ? '4px' : isZonePortal ? '8px' : '10px';
+                const cBg = isNewStyle
+                    ? (hovered ? item.color + 'd0' : item.color + 'b8')
+                    : isZonePortal
+                        ? (hovered ? 'rgba(90,130,60,0.18)' : 'rgba(90,130,60,0.12)')
+                        : (item.color ? item.color + '28' : 'rgba(61,107,52,0.10)');
+                const cBorder = isNewStyle
+                    ? `2px solid ${borderCol}`
+                    : isZonePortal ? `${hovered ? '2px' : '1.5px'} solid rgba(90,130,60,${hovered ? '0.75' : '0.45'})`
                     : isSelectedBed ? '2px solid #a8d870'
-                    : hovered ? `1.5px dashed ${item.color || '#3d6b34'}aa`
-                    : `1.5px dashed ${item.color || '#3d6b34'}60`,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                boxShadow: isZonePortal
-                    ? (hovered ? '0 4px 16px rgba(60,100,40,0.22)' : '0 2px 8px rgba(60,100,40,0.14)')
+                    : hovered ? `1.5px dashed ${borderCol}aa` : `1.5px dashed ${borderCol}60`;
+                const cShadow = isNewStyle
+                    ? (hovered ? `0 4px 16px ${borderCol}40, 0 0 0 1px ${borderCol}20` : `0 2px 8px rgba(0,0,0,0.12)`)
+                    : isZonePortal ? (hovered ? '0 4px 16px rgba(60,100,40,0.22)' : '0 2px 8px rgba(60,100,40,0.14)')
                     : isSelectedBed ? '0 0 0 2px rgba(168,216,112,0.35), 0 4px 14px rgba(0,0,0,0.18)'
-                    : hovered ? '0 4px 14px rgba(0,0,0,0.15)' : '0 2px 6px rgba(0,0,0,0.10)',
-                overflow: 'hidden', transition: 'border-color 0.1s, box-shadow 0.1s, background 0.1s', gap: 4,
-            }}>
-                {isRotatable && (
-                    <div title="Drag to rotate" style={{ width: 18, height: 18, flexShrink: 0, borderRadius: '50%', background: hovered ? 'white' : 'rgba(255,255,255,0.4)', border: '1.5px solid rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'crosshair', transition: 'background 0.15s', position: 'relative', zIndex: 2 }}
-                        onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onRotateStart(e, item.id); }}>↻</div>
-                )}
-                {isZonePortal && (
-                    <VegGardenPreview item={item} pxPerM={pxPerM} bedLayout={bedLayout} />
-                )}
-                {!isZonePortal && !hasBedContent && (
-                    iconSrc
-                        ? <img src={iconSrc} alt={item.name} style={{ width: iconSize, height: iconSize, flexShrink: 0, position: 'relative', zIndex: 1 }} className="object-contain" draggable={false} />
-                        : <span style={{ fontSize: Math.max(10, Math.min(iconSize, 20)), pointerEvents: 'none', position: 'relative', zIndex: 1 }}>🌱</span>
-                )}
-                {!isZonePortal && hasBedContent && (
-                    <div style={{ position: 'absolute', inset: isRotatable ? '22px 0 0 0' : 0, overflow: 'hidden' }}>
-                        {bedRows.map(row => (
-                            <BedRowPreview key={row.id}
-                                row={row} bedWM={item.wM || 3} bedHM={item.hM || 1.2} pxPerM={pxPerM}
-                                selected={row.id === selectedBedElementId}
-                                onDragStart={e => startElemDrag(e, row.id, true)}
-                                onClick={() => onSelectBedElement?.(row.id === selectedBedElementId ? null : row.id)}
-                                onResizeStart={e => startElemResize(e, row.id, true)}
-                            />
-                        ))}
-                        {bedBlocks.map(block => (
-                            <BedBlockPreview key={block.id}
-                                block={block} bedWM={item.wM || 3} bedHM={item.hM || 1.2} pxPerM={pxPerM}
-                                selected={block.id === selectedBedElementId}
-                                onDragStart={e => startElemDrag(e, block.id, false)}
-                                onClick={() => onSelectBedElement?.(block.id === selectedBedElementId ? null : block.id)}
-                                onResizeStart={e => startElemResize(e, block.id, false)}
-                            />
-                        ))}
-                    </div>
-                )}
-                {/* Always-visible paper label */}
-                {!hasBedContent && pxH >= 48 && (
+                    : hovered ? '0 4px 14px rgba(0,0,0,0.15)' : '0 2px 6px rgba(0,0,0,0.10)';
+                return (
                     <div style={{
-                        ...PAPER_LABEL_STYLE,
-                        fontSize: Math.max(8, Math.min(11, pxW * 0.14)),
-                        padding: pxH < 70 ? '2px 7px' : '3px 10px',
-                        maxWidth: pxW - 10, overflow: 'hidden', textOverflow: 'ellipsis',
-                        position: 'relative', zIndex: 2,
-                    }}>{item.name}</div>
-                )}
-            </div>
+                        position: 'relative', width: '100%', height: '100%',
+                        borderRadius: gsRadius,
+                        background: cBg,
+                        border: cBorder,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: cShadow,
+                        overflow: 'hidden', transition: 'border-color 0.1s, box-shadow 0.1s, background 0.1s', gap: 4,
+                    }}>
+                        {/* Pattern overlay — behind everything, clipped by overflow:hidden */}
+                        {isNewStyle && gsVis?.pattern && (
+                            <PatternOverlay pattern={gsVis.pattern} width={pxW} height={pxH} color={item.color} borderColor={borderCol} />
+                        )}
+                        {isRotatable && (
+                            <div title="Drag to rotate" style={{ width: 18, height: 18, flexShrink: 0, borderRadius: '50%', background: hovered ? 'white' : 'rgba(255,255,255,0.4)', border: '1.5px solid rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'crosshair', transition: 'background 0.15s', position: 'relative', zIndex: 2 }}
+                                onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onRotateStart(e, item.id); }}>↻</div>
+                        )}
+                        {/* ── GENERAL_STRUCTURES: icon + label always shown ── */}
+                        {isNewStyle && (() => {
+                            const LIcon = item.iconKey ? LUCIDE_ICONS_MAP[item.iconKey] : null;
+                            const gsConf = GENERAL_STRUCTURES_MAP[item.structureKey];
+                            const iconColor = gsConf?.textColor || item.borderColor || '#4a5a40';
+                            const labelSize = Math.max(8, Math.min(11, pxW * 0.12));
+                            const showLabel = pxH >= 36;
+                            const showIcon = pxH >= 24 && pxW >= 24;
+                            return (
+                                <>
+                                    {/* Bed content for zone portals with layout */}
+                                    {hasBedContent && (
+                                        <div style={{ position: 'absolute', inset: isRotatable ? '22px 0 24px 0' : '4px 0 24px 0', overflow: 'hidden' }}>
+                                            {bedRows.map(row => (
+                                                <BedRowPreview key={row.id}
+                                                    row={row} bedWM={item.wM || 3} bedHM={item.hM || 1.2} pxPerM={pxPerM}
+                                                    selected={row.id === selectedBedElementId}
+                                                    onDragStart={e => startElemDrag(e, row.id, true)}
+                                                    onClick={() => onSelectBedElement?.(row.id === selectedBedElementId ? null : row.id)}
+                                                    onResizeStart={e => startElemResize(e, row.id, true)}
+                                                />
+                                            ))}
+                                            {bedBlocks.map(block => (
+                                                <BedBlockPreview key={block.id}
+                                                    block={block} bedWM={item.wM || 3} bedHM={item.hM || 1.2} pxPerM={pxPerM}
+                                                    selected={block.id === selectedBedElementId}
+                                                    onDragStart={e => startElemDrag(e, block.id, false)}
+                                                    onClick={() => onSelectBedElement?.(block.id === selectedBedElementId ? null : block.id)}
+                                                    onResizeStart={e => startElemResize(e, block.id, false)}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                    {/* Icon — centered, absolute so it doesn't fight with label */}
+                                    {showIcon && LIcon && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: isRotatable ? 24 : 0, left: 0, right: 0,
+                                            bottom: showLabel ? 20 : 0,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            pointerEvents: 'none', zIndex: 1,
+                                        }}>
+                                            <LIcon
+                                                size={Math.round(iconSize)}
+                                                color={iconColor}
+                                                strokeWidth={1.6}
+                                                style={{ opacity: hasBedContent ? 0.25 : 0.75, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.18))' }}
+                                            />
+                                        </div>
+                                    )}
+                                    {/* Zone-portal preview — all productive zone portals */}
+                                    {isZonePortal && !hasBedContent && (
+                                        <VegGardenPreview item={item} pxPerM={pxPerM} bedLayout={bedLayout} zoneBeds={zoneBeds} />
+                                    )}
+                                    {/* Name label pinned to bottom */}
+                                    {showLabel && (
+                                        <div style={{
+                                            position: 'absolute', bottom: 4, left: 4, right: 4,
+                                            display: 'flex', justifyContent: 'center', zIndex: 2, pointerEvents: 'none',
+                                        }}>
+                                            <div style={{
+                                                background: gsConf?.labelBg || '#fff4cf',
+                                                border: `1px solid ${borderCol}88`,
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                                                color: '#3a2808',
+                                                fontFamily: 'Georgia, "Times New Roman", serif',
+                                                fontSize: Math.max(7, Math.min(10, pxW / 14)),
+                                                fontWeight: 700,
+                                                letterSpacing: pxW > 80 ? '0.04em' : '0.08em',
+                                                textTransform: 'uppercase',
+                                                padding: '1px 6px',
+                                                borderRadius: 2,
+                                                maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                pointerEvents: 'none',
+                                            }}>{item.name}</div>
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
+
+                        {/* ── Legacy / non-GENERAL_STRUCTURES items ── */}
+                        {!isNewStyle && (
+                            <>
+                                {isZonePortal && (
+                                    <VegGardenPreview item={item} pxPerM={pxPerM} bedLayout={bedLayout} zoneBeds={zoneBeds} />
+                                )}
+                                {!isZonePortal && !hasBedContent && (() => {
+                                    const LIcon = item.iconKey ? LUCIDE_ICONS_MAP[item.iconKey] : null;
+                                    if (LIcon) {
+                                        const iconColor = item.borderColor || '#4a5a40';
+                                        return <LIcon size={Math.round(iconSize)} color={iconColor} strokeWidth={1.8} style={{ flexShrink: 0, position: 'relative', zIndex: 1 }} />;
+                                    }
+                                    return iconSrc
+                                        ? <img src={iconSrc} alt={item.name} style={{ width: iconSize, height: iconSize, flexShrink: 0, position: 'relative', zIndex: 1 }} className="object-contain" draggable={false} />
+                                        : <span style={{ fontSize: Math.max(10, Math.min(iconSize, 20)), pointerEvents: 'none', position: 'relative', zIndex: 1 }}>🌱</span>;
+                                })()}
+                                {!isZonePortal && hasBedContent && (
+                                    <div style={{ position: 'absolute', inset: isRotatable ? '22px 0 0 0' : 0, overflow: 'hidden' }}>
+                                        {bedRows.map(row => (
+                                            <BedRowPreview key={row.id}
+                                                row={row} bedWM={item.wM || 3} bedHM={item.hM || 1.2} pxPerM={pxPerM}
+                                                selected={row.id === selectedBedElementId}
+                                                onDragStart={e => startElemDrag(e, row.id, true)}
+                                                onClick={() => onSelectBedElement?.(row.id === selectedBedElementId ? null : row.id)}
+                                                onResizeStart={e => startElemResize(e, row.id, true)}
+                                            />
+                                        ))}
+                                        {bedBlocks.map(block => (
+                                            <BedBlockPreview key={block.id}
+                                                block={block} bedWM={item.wM || 3} bedHM={item.hM || 1.2} pxPerM={pxPerM}
+                                                selected={block.id === selectedBedElementId}
+                                                onDragStart={e => startElemDrag(e, block.id, false)}
+                                                onClick={() => onSelectBedElement?.(block.id === selectedBedElementId ? null : block.id)}
+                                                onResizeStart={e => startElemResize(e, block.id, false)}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                                {!hasBedContent && pxH >= 48 && (
+                                    <div style={{
+                                        ...PAPER_LABEL_STYLE,
+                                        fontSize: Math.max(8, Math.min(11, pxW * 0.14)),
+                                        padding: pxH < 70 ? '2px 7px' : '3px 10px',
+                                        maxWidth: pxW - 10, overflow: 'hidden', textOverflow: 'ellipsis',
+                                        position: 'relative', zIndex: 2,
+                                    }}>{item.name}</div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                );
+            })()}
 
             {(hovered || isSelectedBed) && (
                 /* paddingBottom bridges the gap so the cursor stays inside a descendant
@@ -1024,7 +1540,7 @@ function ZoneBlock({ zone, grid, position, zoneIdx, selected, cellSizeM, plantLi
 
 // ── General overview canvas ───────────────────────────────────────────────────
 
-function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList, setup, onSelectZone, onUpdatePositions, onUpdateOverlayItems, onAddZone, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, proposedItems = [], proposedHoveredName = null, proposedSelectedNames = null, onOpenZonePortal }) {
+function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList, setup, onSelectZone, onUpdatePositions, onUpdateOverlayItems, onAddZone, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, proposedItems = [], proposedHoveredName = null, proposedSelectedNames = null, onOpenZonePortal, neighbourhood = null, onRotateNorth, hideCompass = false, zoneItems = {} }) {
     const { t } = useLanguage();
     const widthM = setup.widthM || 100;
     const heightM = setup.heightM || 60;
@@ -1095,10 +1611,23 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
     // Overlay drag
     useEffect(() => {
         if (!overlayDragState) return;
-        const { itemId, startX, startY, origX, origY } = overlayDragState;
-        const onMove = (e) => setLiveOverlayPos({ [itemId]: { x: Math.max(0, origX + (e.clientX - startX) / zoom), y: Math.max(0, origY + (e.clientY - startY) / zoom) } });
+        const { itemId, startX, startY, origX, origY, origXM, origYM } = overlayDragState;
+        const onMove = (e) => {
+            const newX = Math.max(0, origX + (e.clientX - startX) / zoom);
+            const newY = Math.max(0, origY + (e.clientY - startY) / zoom);
+            const pos = { x: newX, y: newY };
+            if (origXM != null) { pos.xM = Math.max(0, origXM + (e.clientX - startX) / pxPerM); pos.yM = Math.max(0, origYM + (e.clientY - startY) / pxPerM); }
+            setLiveOverlayPos({ [itemId]: pos });
+        };
         const onUp = (e) => {
-            onUpdateOverlayItems(overlayItems.map(it => it.id === itemId ? { ...it, x: Math.max(0, origX + (e.clientX - startX) / zoom), y: Math.max(0, origY + (e.clientY - startY) / zoom) } : it));
+            const newX = Math.max(0, origX + (e.clientX - startX) / zoom);
+            const newY = Math.max(0, origY + (e.clientY - startY) / zoom);
+            onUpdateOverlayItems(overlayItems.map(it => {
+                if (it.id !== itemId) return it;
+                const upd = { ...it, x: newX, y: newY };
+                if (origXM != null) { upd.xM = Math.max(0, origXM + (e.clientX - startX) / pxPerM); upd.yM = Math.max(0, origYM + (e.clientY - startY) / pxPerM); }
+                return upd;
+            }));
             setLiveOverlayPos({}); setOverlayDragState(null);
         };
         window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
@@ -1162,7 +1691,11 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
     const handleOverlayMouseDown = (e, itemId) => {
         const item = overlayItems.find(it => it.id === itemId);
         if (!item) return;
-        setOverlayDragState({ itemId, startX: e.clientX, startY: e.clientY, origX: item.x, origY: item.y });
+        setOverlayDragState({
+            itemId, startX: e.clientX, startY: e.clientY,
+            origX: item.x, origY: item.y,
+            origXM: item.xM ?? null, origYM: item.yM ?? null,
+        });
     };
 
     const handleOverlayResizeStart = (e, itemId) => {
@@ -1179,9 +1712,11 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
         const scrollY = containerRef.current.scrollTop;
         const pxW = (item.wM ?? 4) * pxPerM;
         const pxH = (item.hM ?? 4) * pxPerM;
+        const itemLeft = item.xM != null ? item.xM * pxPerM : item.x * zoom;
+        const itemTop = item.yM != null ? item.yM * pxPerM : item.y * zoom;
         // Screen coordinates of item centre
-        const cx = rect.left + RULER_SIZE + item.x + pxW / 2 - scrollX;
-        const cy = rect.top + RULER_SIZE + item.y + pxH / 2 - scrollY;
+        const cx = rect.left + RULER_SIZE + itemLeft + pxW / 2 - scrollX;
+        const cy = rect.top + RULER_SIZE + itemTop + pxH / 2 - scrollY;
         const startAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
         const offset = (item.rotation ?? 0) - startAngle;
         setRotateState({ itemId, cx, cy, offset });
@@ -1214,28 +1749,41 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
             const baseX = rawX / zoom;
             const baseY = rawY / zoom;
 
-            if (dropped.isStructure && ZONE_STRUCTURES.has(dropped.name)) {
+            // Block individual plants from the General map
+            if (!dropped.isStructure) return;
+
+            // Legacy: Greenhouse creates a real zone
+            if (ZONE_STRUCTURES.has(dropped.name) && !dropped.structureKey) {
                 const def = STRUCTURE_DEFAULTS[dropped.name] || { wM: 5, hM: 4 };
-                const wBase = def.wM * basePxPerM;   // base px (zoom=1)
+                const wBase = def.wM * basePxPerM;
                 const hBase = def.hM * basePxPerM;
                 onAddZone(dropped.name, true, { x: baseX + wBase / 2, y: baseY + hBase / 2, w: wBase, h: hBase });
                 return;
             }
 
-            const def = dropped.isStructure ? (STRUCTURE_DEFAULTS[dropped.name] || { wM: 4, hM: 4 }) : DEFAULT_PLANT_SIZE;
+            // Resolve config from GENERAL_STRUCTURES if structureKey is provided
+            const gsConfig = dropped.structureKey ? GENERAL_STRUCTURES_MAP[dropped.structureKey] : null;
+            const def = gsConfig?.defaultSize || STRUCTURE_DEFAULTS[dropped.name] || { wM: 4, hM: 4 };
             const wBase = def.wM * basePxPerM;
             const hBase = def.hM * basePxPerM;
-            onUpdateOverlayItems([...overlayItems, {
+
+            const newItem = {
                 id: Date.now() + Math.random(),
-                name: dropped.name,
+                name: gsConfig?.name || dropped.name,
+                type: dropped.structureKey || null,
+                structureKey: dropped.structureKey || null,
+                iconKey: dropped.iconKey || gsConfig?.iconKey || null,
                 iconData: dropped.iconData || dropped.icon || null,
-                color: dropped.color || null,
-                isStructure: dropped.isStructure || false,
+                color: dropped.color || gsConfig?.color || null,
+                borderColor: dropped.borderColor || gsConfig?.borderColor || null,
+                isStructure: true,
+                isZonePortal: gsConfig ? gsConfig.canOpenZone : false,
                 x: Math.max(0, baseX - wBase / 2),
                 y: Math.max(0, baseY - hBase / 2),
                 wM: def.wM, hM: def.hM,
                 rotation: 0,
-            }]);
+            };
+            onUpdateOverlayItems([...overlayItems, newItem]);
         } catch { /* ignore */ }
     };
 
@@ -1244,24 +1792,26 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
 
     return (
         <div className="flex-1" style={{ position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <CompassLabels labels={t.canvas} northDirection={setup?.northDirection || 'top'} />
+            {!hideCompass && (
+                <CompassRose northDirection={setup?.northDirection || 'top'} onRotate={onRotateNorth} />
+            )}
 
             {/* ── Proposed elements legend — fixed in viewport, shown only while preview is active ── */}
             {proposedItems.length > 0 && (
                 <div style={{
-                    position:       'absolute',
-                    bottom:         14,
-                    left:           RULER_SIZE + 8,
-                    zIndex:         20,
-                    pointerEvents:  'none',
-                    background:     'rgba(15,12,40,0.72)',
-                    borderRadius:   8,
-                    padding:        '5px 11px 5px 9px',
-                    display:        'flex',
-                    alignItems:     'center',
-                    gap:            8,
+                    position: 'absolute',
+                    bottom: 14,
+                    left: RULER_SIZE + 8,
+                    zIndex: 20,
+                    pointerEvents: 'none',
+                    background: 'rgba(15,12,40,0.72)',
+                    borderRadius: 8,
+                    padding: '5px 11px 5px 9px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
                     backdropFilter: 'blur(4px)',
-                    boxShadow:      '0 2px 8px rgba(0,0,0,0.3)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                 }}>
                     {/* Dashed line sample matching the proposed border style */}
                     <svg width="22" height="10" style={{ flexShrink: 0 }}>
@@ -1270,11 +1820,11 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
                             strokeLinecap="round" />
                     </svg>
                     <span style={{
-                        color:         'rgba(195,185,255,0.95)',
-                        fontSize:      10,
-                        fontWeight:    600,
+                        color: 'rgba(195,185,255,0.95)',
+                        fontSize: 10,
+                        fontWeight: 600,
                         letterSpacing: 0.2,
-                        whiteSpace:    'nowrap',
+                        whiteSpace: 'nowrap',
                     }}>
                         Proposed — not yet saved
                     </span>
@@ -1304,12 +1854,18 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
                         <div
                             style={{
                                 position: 'relative', width: canvasW, height: canvasH,
-                                background: '#fbf4df',
+                                background: 'radial-gradient(circle at 50% 40%, #f3ecd8 0%, #eadfc4 70%, #e3d6b6 100%)',
                                 backgroundImage: 'radial-gradient(circle, rgba(94,80,45,0.10) 1.5px, transparent 1.5px)',
                                 backgroundSize: `${smallGrid}px ${smallGrid}px`,
                             }}
                             onClick={() => { onSelectZone(-1); if (onSelectBed) { onSelectBed(null); if (onSelectBedElement) onSelectBedElement(null); } }}
                         >
+                            <NeighbourhoodBands
+                                neighbourhood={neighbourhood}
+                                northDirection={setup?.northDirection || 'top'}
+                                canvasW={canvasW}
+                                canvasH={canvasH}
+                            />
                             {generalZones.length === 0 && overlayItems.length === 0 && (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none">
                                     <p style={{ color: 'rgba(72,85,71,0.45)', fontSize: 13 }}>No zones on the map yet.</p>
@@ -1349,6 +1905,11 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
                                 const lp = liveOverlayPos[item.id] || {};
                                 const ls = liveOverlaySize[item.id] || {};
                                 const lr = liveRotation[item.id];
+                                // Collect raisedBed items for this zone portal so VegGardenPreview can show real beds
+                                const zoneRef = item.zoneRef || null;
+                                const zoneBeds = (item.isZonePortal && zoneRef)
+                                    ? (zoneItems[zoneRef] || []).filter(it => it.type === 'raisedBed' || it.name === 'Raised Bed')
+                                    : [];
                                 return (
                                     <OverlayItem
                                         key={item.id}
@@ -1366,6 +1927,7 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
                                         onSelectBedElement={onSelectBedElement}
                                         onUpdateBedLayout={onUpdateBedLayout}
                                         onOpenZonePortal={onOpenZonePortal}
+                                        zoneBeds={zoneBeds}
                                     />
                                 );
                             })}
@@ -1395,7 +1957,7 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
 }
 
 // ── Main canvas ───────────────────────────────────────────────────────────────
-export default function GardenCanvas({ zones, grids, positions, setup, currentZone, onSelectZone, onUpdateGrid, onUpdatePositions, onAddZone, onDeleteZone, onRenameZone, plantList, overlayItems = [], onUpdateOverlayItems, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, zoneItems, onUpdateZoneItems, onAddZoneItem, onResetZone, proposedItems = [], proposedHoveredName = null, proposedSelectedNames = null, onOpenZonePortal }) {
+export default function GardenCanvas({ zones, grids, positions, setup, currentZone, onSelectZone, onUpdateGrid, onUpdatePositions, onAddZone, onDeleteZone, onRenameZone, plantList, overlayItems = [], onUpdateOverlayItems, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, zoneItems, onUpdateZoneItems, onAddZoneItem, onResetZone, proposedItems = [], proposedHoveredName = null, proposedSelectedNames = null, onOpenZonePortal, neighbourhood = null, onRotateNorth, hideCompass = false }) {
     const { t, language } = useLanguage();
     const [resizeState, setResizeState] = useState(null);
     const [plantResizeState, setPlantResizeState] = useState(null);
@@ -1520,17 +2082,9 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
     const handleRenameConfirm = () => { if (!renaming) return; const updated = [...zones]; updated[renaming.idx] = renaming.value.trim() || zones[renaming.idx]; onRenameZone(updated); setRenaming(null); };
 
     const isGeneralView = currentZone === -1;
-    const currentZoneName = !isGeneralView ? zones[currentZone] : null;
+    const isValidZone = currentZone >= 0 && currentZone < zones.length;
+    const currentZoneName = isValidZone ? zones[currentZone] : null;
     const currentZoneItems = currentZoneName ? (zoneItems?.[currentZoneName] || []) : [];
-    const currentZoneStyle = currentZoneName ? (ZONE_STYLES[detectZoneType(currentZoneName)] || ZONE_STYLES.general) : ZONE_STYLES.general;
-    // Vegetable garden portals use a beige paper-like zone background
-    const isVegGardenZone = currentZoneName ? detectZoneType(currentZoneName) === 'vegetable' : false;
-    const zonePxPerM = CELL_PX * detailZoom;
-
-    const currentDetailType = currentZoneName ? detectDetailType(currentZoneName) : null;
-    const hasDetailView = !!(currentDetailType && DETAIL_REGISTRY[currentDetailType]);
-    const detailMode = detailModeMap[currentZoneName] ?? (hasDetailView ? 'illustrative' : 'grid');
-    const setDetMode = (mode) => setDetailModeMap(prev => ({ ...prev, [currentZoneName]: mode }));
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -1541,87 +2095,32 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
             </div>
 
             {isGeneralView ? (
-                <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} onAddZone={onAddZone} selectedBedId={selectedBedId} onSelectBed={onSelectBed} selectedBedElementId={selectedBedElementId} onSelectBedElement={onSelectBedElement} bedLayouts={bedLayouts} onUpdateBedLayout={onUpdateBedLayout} proposedItems={proposedItems} proposedHoveredName={proposedHoveredName} proposedSelectedNames={proposedSelectedNames} onOpenZonePortal={onOpenZonePortal} />
+                <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} onAddZone={onAddZone} selectedBedId={selectedBedId} onSelectBed={onSelectBed} selectedBedElementId={selectedBedElementId} onSelectBedElement={onSelectBedElement} bedLayouts={bedLayouts} onUpdateBedLayout={onUpdateBedLayout} proposedItems={proposedItems} proposedHoveredName={proposedHoveredName} proposedSelectedNames={proposedSelectedNames} onOpenZonePortal={onOpenZonePortal} neighbourhood={neighbourhood} onRotateNorth={onRotateNorth} hideCompass={hideCompass || addZoneOpen || !!pendingDrop} zoneItems={zoneItems} />
             ) : (
                 <div className="flex-1" style={{ position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    <CompassLabels labels={t.canvas} northDirection={setup?.northDirection || 'top'} />
-                    {/* Zone item toolbar */}
-                    <div style={{ background: '#1f3a18', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '4px 12px', display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, zIndex: 5 }}>
-                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Add to zone:</span>
-                        <button onClick={() => onAddZoneItem?.(currentZoneName, 'Raised Bed')} style={{ fontSize: 11, background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>+ Raised Bed</button>
-                        <button onClick={() => onAddZoneItem?.(currentZoneName, 'Path')} style={{ fontSize: 11, background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>+ Path</button>
-                        {hasDetailView && (
-                            <button
-                                onClick={() => setDetMode(detailMode === 'illustrative' ? 'grid' : 'illustrative')}
-                                style={{ marginLeft: 'auto', fontSize: 11, background: detailMode === 'illustrative' ? 'rgba(247,236,208,0.18)' : 'rgba(255,255,255,0.12)', color: detailMode === 'illustrative' ? '#f7ecd0' : 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.28)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}
-                            >
-                                {detailMode === 'illustrative' ? (t.canvas?.editGrid || 'Edit Grid') : (t.canvas?.illustration || 'Illustration')}
-                            </button>
-                        )}
-                    </div>
-                    {detailMode === 'illustrative' && hasDetailView ? (
-                        <div className="flex-1" style={{ position: 'relative', overflow: 'hidden' }}>
-                            <ZoneDetailCanvas
-                                zoneName={currentZoneName}
-                                language={language}
-                                onEditGrid={() => setDetMode('grid')}
-                            />
+                    {!hideCompass && !addZoneOpen && !pendingDrop && (
+                        <CompassRose northDirection={setup?.northDirection || 'top'} onRotate={onRotateNorth} />
+                    )}
+                    {currentZoneName ? (() => {
+                        const _zPortal = overlayItems.find(it => it.isZonePortal && it.zoneRef === currentZoneName);
+                        const _zWM = _zPortal?.wM ?? null;
+                        const _zHM = _zPortal?.hM ?? null;
+                        const _zType = detectZoneType(currentZoneName);
+                        const _zProps = {
+                            zoneName: currentZoneName,
+                            items: currentZoneItems,
+                            onUpdateItems: newItems => onUpdateZoneItems?.(currentZoneName, newItems),
+                            plantList,
+                            setup,
+                            zoneWidthM: _zWM,
+                            zoneHeightM: _zHM,
+                        };
+                        if (_zType === 'orchard') return <OrchardZoneCanvas {..._zProps} />;
+                        return <RaisedBedZoneCanvas {..._zProps} />;
+                    })() : (
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7c857a', fontSize: 13 }}>
+                            No zone selected.
                         </div>
-                    ) : (
-                        <>
-                            {/* Scrollable zone area */}
-                            <div
-                                ref={detailContainerRef}
-                                className="overflow-auto flex-1"
-                                style={{
-                                    cursor: resizeState || plantResizeState ? 'crosshair' : 'default',
-                                    background: isVegGardenZone ? '#f0e8d0' : '#3d6b34',
-                                    backgroundImage: isVegGardenZone
-                                        ? 'radial-gradient(circle, rgba(120,90,40,0.08) 1px, transparent 1px)'
-                                        : 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
-                                    backgroundSize: '40px 40px',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    padding: '28px',
-                                }}
-                            >
-                                {currentZoneName && (
-                                    <div style={{ position: 'relative' }}>
-                                        <ZoneBlock zone={currentZoneName} grid={grids[currentZone] || []} position={{ x: 0, y: 0 }} zoneIdx={currentZone} selected detailView zoom={detailZoom} cellSizeM={cellSizeM} plantList={plantList} onResizeMouseDown={handleResizeMouseDown} onZoneDrop={handleZoneDrop} onRemovePlant={handleRemovePlant} onPlantResizeStart={handlePlantResizeStart} onDelete={onDeleteZone} onStartRename={(idx, value) => setRenaming({ idx, value })} renameValue={renaming?.value || ''} onRenameChange={e => setRenaming(r => ({ ...r, value: e.target.value }))} onRenameConfirm={handleRenameConfirm} onRenameCancel={() => setRenaming(null)} isRenaming={renaming?.idx === currentZone} resizePreview={resizePreview} plantResizePreview={plantResizePreview} />
-                                        <ZoneItemLayer
-                                            items={currentZoneItems}
-                                            pxPerM={zonePxPerM}
-                                            zoneName={currentZoneName}
-                                            selectedBedId={selectedBedId}
-                                            onSelectBed={onSelectBed}
-                                            onUpdateItems={items => onUpdateZoneItems?.(currentZoneName, items)}
-                                            onRemoveItem={id => onUpdateZoneItems?.(currentZoneName, currentZoneItems.filter(it => it.id !== id))}
-                                            bedLayouts={bedLayouts}
-                                            selectedBedElementId={selectedBedElementId}
-                                            onSelectBedElement={onSelectBedElement}
-                                            onUpdateBedLayout={onUpdateBedLayout}
-                                            borderW={currentZoneStyle.bw}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Zoom pill — sibling of scroll container, always stays in corner */}
-                            <div style={{
-                                position: 'absolute', bottom: 12, right: 12,
-                                background: 'rgba(0,0,0,0.55)', borderRadius: 20,
-                                display: 'flex', alignItems: 'center', gap: 2,
-                                padding: '3px 6px', zIndex: 100, userSelect: 'none',
-                            }}>
-                                <button onClick={() => setDetailZoom(z => Math.max(0.05, z / 1.25))}
-                                    style={{ color: 'white', fontSize: 16, cursor: 'pointer', background: 'none', border: 'none', lineHeight: 1, padding: '0 4px' }}>−</button>
-                                <span onClick={() => setDetailZoom(computeFitZoom())} title="Click to fit zone in view"
-                                    style={{ color: 'white', fontSize: 11, cursor: 'pointer', minWidth: 38, textAlign: 'center' }}>
-                                    {Math.round(detailZoom * 100)}%
-                                </span>
-                                <button onClick={() => setDetailZoom(z => Math.min(5, z * 1.25))}
-                                    style={{ color: 'white', fontSize: 16, cursor: 'pointer', background: 'none', border: 'none', lineHeight: 1, padding: '0 4px' }}>+</button>
-                            </div>
-                        </>
                     )}
                 </div>
             )}
