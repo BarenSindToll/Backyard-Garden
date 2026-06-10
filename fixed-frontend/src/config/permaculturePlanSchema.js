@@ -23,6 +23,8 @@ export const PERMACULTURE_ELEMENT_TYPES = [
     'herb-garden',
     'food-forest',
     'wild-zone',
+    'vegetable-garden',
+    'staple-crops',
     'permaculture-zone',
 ];
 
@@ -44,6 +46,8 @@ export const ELEMENT_TYPE_TO_MAP_STRUCTURE = {
     'herb-garden':       'Herb Garden',
     'food-forest':       'Food Forest',
     'wild-zone':         'Wild Zone',
+    'vegetable-garden':  'Vegetable Garden',
+    'staple-crops':      'Staple Crops',
     'permaculture-zone': 'Permaculture Zone',
 };
 
@@ -72,6 +76,8 @@ export const CANONICAL_TYPE_COLORS = {
     herb_garden:    '#3a7058',
     food_forest:    '#2a5a28',
     wild_zone:      '#587038',
+    vegetable_garden: '#5a9030',
+    staple_crops:   '#a8821c',
     'permaculture-zone': '#6040a0',
 };
 
@@ -93,11 +99,14 @@ export const CANONICAL_TYPE_DEFAULTS = {
     herb_garden: { wM: 5,  hM: 4   },
     food_forest: { wM: 16, hM: 12  },
     wild_zone:   { wM: 12, hM: 10  },
+    vegetable_garden: { wM: 12, hM: 8 },
+    staple_crops:     { wM: 12, hM: 8 },
 };
 
 export const ZONE_AREA_ELEMENT_TYPES = new Set([
     'orchard', 'guild', 'berry-patch', 'herb-garden',
-    'food-forest', 'wild-zone', 'patio', 'permaculture-zone',
+    'food-forest', 'wild-zone', 'vegetable-garden', 'staple-crops',
+    'patio', 'permaculture-zone',
 ]);
 
 export const PHYSICAL_STRUCTURE_ELEMENT_TYPES = new Set([
@@ -123,6 +132,8 @@ export const ELEMENT_ZONE_AFFINITY = {
     'herb-garden':   ['1', '2'],
     'food-forest':   ['3', '4'],
     'wild-zone':     ['4', '5'],
+    'vegetable-garden': ['1', '2'],
+    'staple-crops':  ['2', '3'],
     'permaculture-zone': [],
 };
 
@@ -195,10 +206,12 @@ export const STRUCTURAL_ELEMENT_TYPES = new Set([
 
 export const OPENABLE_ELEMENT_TYPES = new Set([
     'raised-bed', 'greenhouse', 'orchard', 'guild', 'berry-patch', 'herb-garden', 'food-forest',
+    'vegetable-garden', 'staple-crops',
 ]);
 
 export const DETAIL_PLAN_CAPABLE_TYPES = new Set([
     'raised-bed', 'greenhouse', 'orchard', 'guild', 'berry-patch', 'herb-garden',
+    'vegetable-garden', 'staple-crops',
 ]);
 
 export const MIN_ELEMENT_SIZES = {
@@ -219,6 +232,8 @@ export const MIN_ELEMENT_SIZES = {
     food_forest: { w: 5,    h: 5    },
     wild_zone:   { w: 2,    h: 1    },
     compost:     { w: 0.8,  h: 0.8  },
+    vegetable_garden: { w: 3, h: 3  },
+    staple_crops: { w: 3,   h: 3    },
 };
 
 export const ASPECT_RATIO_RULES = {

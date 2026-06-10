@@ -118,21 +118,7 @@ export default function ZoneTabs({ zones, currentZone, setCurrentZone, setZones,
                 </div>
             ))}
 
-            {/* Add zone */}
-            <button
-                onClick={onAddZone}
-                style={{
-                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4,
-                    padding: '5px 10px', borderRadius: 9999, fontSize: 12,
-                    background: 'transparent', color: '#7c857a',
-                    border: '1px dashed #d3cdb8',
-                    cursor: 'pointer', transition: 'all 0.12s', whiteSpace: 'nowrap',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = '#3d6b34'; e.currentTarget.style.color = '#3d6b34'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#d3cdb8'; e.currentTarget.style.color = '#7c857a'; }}
-            >
-                + {g.addZone}
-            </button>
+            {/* Zone tabs are created automatically when openable elements are placed on the General Map */}
         </div>
     );
 }

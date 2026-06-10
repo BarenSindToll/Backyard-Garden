@@ -94,7 +94,7 @@ export const GENERAL_STRUCTURES = [
     { key: 'outdoorKitchen',  name: 'Outdoor Kitchen',  category: 'building',       color: '#C87058', borderColor: '#7A2E18', textColor: '#FFFFFF', labelBg: '#FCE8E0', iconKey: 'CookingPot', defaultSize: { wM: 5,  hM: 4  }, canOpenZone: false, description: 'Outdoor cooking area'             },
     { key: 'greenhouse',      name: 'Greenhouse',       category: 'building',       color: '#B8EAC0', borderColor: '#308050', textColor: '#1A5030', labelBg: '#E8FAF0', iconKey: 'Sprout',     defaultSize: { wM: 6,  hM: 4  }, canOpenZone: true,  description: 'Protected growing space'          },
     { key: 'compost',         name: 'Compost',          category: 'utility',        color: '#7A5038', borderColor: '#3A1C0A', textColor: '#FFFFFF', labelBg: '#E8D8C8', iconKey: 'Recycle',    defaultSize: { wM: 3,  hM: 2  }, canOpenZone: false, description: 'Composting area'                  },
-    { key: 'pond',            name: 'Pond',             category: 'water',          color: '#4A90D0', borderColor: '#1050A0', textColor: '#FFFFFF', labelBg: '#DCF0FF', iconKey: 'Waves',      defaultSize: { wM: 6,  hM: 5  }, canOpenZone: false, description: 'Water feature'                    },
+    { key: 'pond',            name: 'Pond',             category: 'water',          color: '#4A90D0', borderColor: '#1050A0', textColor: '#FFFFFF', labelBg: '#DCF0FF', iconKey: 'Waves',      defaultSize: { wM: 6,  hM: 5  }, canOpenZone: true,  description: 'Water feature'                    },
     { key: 'workshop',        name: 'Workshop',         category: 'building',       color: '#A09080', borderColor: '#50402C', textColor: '#2A1808', labelBg: '#E8E0D0', iconKey: 'Hammer',     defaultSize: { wM: 6,  hM: 4  }, canOpenZone: false, description: 'Tool storage & workspace'         },
     { key: 'carRoad',         name: 'Car Road',         category: 'infrastructure', color: '#B0A898', borderColor: '#605850', textColor: '#2A2018', labelBg: '#ECEAE4', iconKey: 'Car',        defaultSize: { wM: 20, hM: 3  }, canOpenZone: false, description: 'Vehicle access road', linear: true },
     { key: 'coop',            name: 'Coop',             category: 'animal',         color: '#D8C880', borderColor: '#806020', textColor: '#50380A', labelBg: '#FFF4D0', iconKey: 'Bird',       defaultSize: { wM: 4,  hM: 4  }, canOpenZone: false, description: 'Chicken / bird housing'           },
@@ -105,12 +105,18 @@ export const GENERAL_STRUCTURES = [
     { key: 'vegetableGarden', name: 'Vegetable Garden', category: 'planting',       color: '#B8D888', borderColor: '#407820', textColor: '#204008', labelBg: '#F0FAE0', iconKey: 'Carrot',     defaultSize: { wM: 12, hM: 8  }, canOpenZone: true,  description: 'Beds, rows, intensive veg'        },
     { key: 'beehives',        name: 'Beehives',         category: 'animal',         color: '#F0C820', borderColor: '#A07000', textColor: '#5A3800', labelBg: '#FFF8D8', iconKey: 'Hexagon',    defaultSize: { wM: 5,  hM: 3  }, canOpenZone: false, description: 'Apiary / honey bees'              },
     { key: 'kidsPlayground',  name: 'Kids Playground',  category: 'amenity',        color: '#F8E040', borderColor: '#A07818', textColor: '#604800', labelBg: '#FFFCE0', iconKey: 'Smile',      defaultSize: { wM: 6,  hM: 5  }, canOpenZone: false, description: 'Play area for children'           },
-    { key: 'stapleCrops',     name: 'Staple Crops',     category: 'planting',       color: '#C8A840', borderColor: '#806010', textColor: '#3A2808', labelBg: '#FFF0C8', iconKey: 'Wheat',      defaultSize: { wM: 12, hM: 8  }, canOpenZone: false, description: 'Potatoes, corn, beans, grains'    },
+    { key: 'stapleCrops',     name: 'Staple Crops',     category: 'planting',       color: '#C8A840', borderColor: '#806010', textColor: '#3A2808', labelBg: '#FFF0C8', iconKey: 'Wheat',      defaultSize: { wM: 12, hM: 8  }, canOpenZone: true,  description: 'Potatoes, corn, beans, grains'    },
     { key: 'woodlot',         name: 'Woodlot',          category: 'planting',       color: '#286828', borderColor: '#103010', textColor: '#FFFFFF', labelBg: '#D8EED8', iconKey: 'Trees',      defaultSize: { wM: 12, hM: 10 }, canOpenZone: false, description: 'Coppice, firewood, biomass'       },
 ];
 
 export const GENERAL_STRUCTURES_MAP = Object.fromEntries(GENERAL_STRUCTURES.map(s => [s.key, s]));
 export const GENERAL_KEYS_SET = new Set(GENERAL_STRUCTURES.map(s => s.key));
+
+// Zone tabs are auto-created when one of these is placed on the General Map
+export const OPENABLE_ZONE_KEYS = new Set([
+    'greenhouse', 'pond', 'guild', 'orchard',
+    'berryPatch', 'vegetableGarden', 'stapleCrops',
+]);
 
 // Maps legacy overlay item names → new GENERAL_STRUCTURES key
 export const LEGACY_NAME_TO_KEY = {

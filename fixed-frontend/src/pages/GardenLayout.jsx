@@ -11,7 +11,7 @@ import BedSidebar from '../components/garden-layout/BedSidebar';
 import PermaculturePlanWizard from '../components/permaculture/PermaculturePlanWizard';
 import PermaculturePlanSidePreview from '../components/permaculture/PermaculturePlanSidePreview';
 import SiteAnalysisWizard from '../components/garden-layout/SiteAnalysisWizard';
-import { STRUCTURES, GENERAL_STRUCTURES_MAP, LEGACY_NAME_TO_KEY } from '../components/garden-layout/gardenZoneConfig';
+import { STRUCTURES, GENERAL_STRUCTURES_MAP, LEGACY_NAME_TO_KEY, OPENABLE_ZONE_KEYS } from '../components/garden-layout/gardenZoneConfig';
 import { fetchCurrentUser } from '../utils/fetchCurrentUser';
 import { useLanguage } from '../utils/languageContext';
 
@@ -333,19 +333,16 @@ export default function GardenLayout() {
                 if (layoutData.success) {
                     // Respect explicitly-saved empty zones array (e.g. after a full reset).
                     // Only fall back to ['Zone 1'] when the backend has NO saved layout yet.
-                    const loadedZones = Array.isArray(layoutData.zones) ? layoutData.zones : ['Zone 1'];
+                    const rawZones = Array.isArray(layoutData.zones) ? layoutData.zones : ['Zone 1'];
                     const enriched = (layoutData.grids || []).map(g => enrichGrid(g, plants));
-                    const loadedGrids = enriched.length ? enriched : [createEmptyGrid()];
-                    setZones(loadedZones);
-                    setGrids(loadedGrids);
-                    setPositions(
-                        layoutData.positions?.length === loadedZones.length
-                            ? layoutData.positions.map(p => ({ inGeneral: false, shape: 'circle', ...p }))
-                            : defaultPositions(loadedZones.length)
-                    );
+                    const rawGrids = enriched.length ? enriched : [createEmptyGrid()];
+                    const rawPositions = layoutData.positions?.length === rawZones.length
+                        ? layoutData.positions.map(p => ({ inGeneral: false, shape: 'circle', ...p }))
+                        : defaultPositions(rawZones.length);
+
+                    // Normalize overlay items: upgrade legacy + stamp zoneRef on openable items
                     const normalizedOverlay = (layoutData.overlayItems || []).map(it => {
                         let norm = it.id != null ? it : { ...it, id: Date.now() + Math.random() };
-                        // Upgrade legacy items to new GENERAL_STRUCTURES format when safe
                         if (!norm.structureKey && norm.isStructure && norm.name) {
                             const key = LEGACY_NAME_TO_KEY[norm.name];
                             if (key) {
@@ -361,8 +358,51 @@ export default function GardenLayout() {
                                 };
                             }
                         }
+                        // Ensure openable items always carry zoneRef
+                        if (OPENABLE_ZONE_KEYS.has(norm.structureKey) && !norm.zoneRef) {
+                            norm = { ...norm, zoneRef: norm.name || norm.structureKey };
+                        }
                         return norm;
                     });
+
+                    // Sync: auto-create zone tabs for any openable overlay item that lacks one
+                    let syncZones     = [...rawZones];
+                    let syncGrids     = [...rawGrids];
+                    let syncPositions = [...rawPositions];
+                    for (const item of normalizedOverlay.filter(i => OPENABLE_ZONE_KEYS.has(i.structureKey))) {
+                        const zName = item.zoneRef || item.name || item.structureKey;
+                        if (!syncZones.includes(zName)) {
+                            syncZones     = [...syncZones, zName];
+                            syncGrids     = [...syncGrids, createEmptyGrid(10, 10)];
+                            syncPositions = [...syncPositions, { inGeneral: false, shape: 'circle', x: 0, y: 0 }];
+                        }
+                    }
+
+                    // Dedup: for same-name zones keep the first; silently drop later empty duplicates
+                    const loadedZoneItemsData = layoutData.zoneItems && typeof layoutData.zoneItems === 'object'
+                        ? layoutData.zoneItems : {};
+                    const seenNames = new Set();
+                    const finalZones = [], finalGrids = [], finalPositions = [];
+                    for (let i = 0; i < syncZones.length; i++) {
+                        const name = syncZones[i];
+                        if (seenNames.has(name)) {
+                            const hasZoneData = (loadedZoneItemsData[name] || []).length > 0;
+                            const hasGridData = (syncGrids[i] || []).some(row => row.some(c => !!c));
+                            if (!hasZoneData && !hasGridData) continue; // drop empty duplicate
+                        }
+                        seenNames.add(name);
+                        finalZones.push(name);
+                        finalGrids.push(syncGrids[i]);
+                        finalPositions.push(syncPositions[i]);
+                    }
+
+                    setZones(finalZones);
+                    setGrids(finalGrids.length ? finalGrids : [createEmptyGrid()]);
+                    setPositions(
+                        finalPositions.length === finalZones.length
+                            ? finalPositions
+                            : defaultPositions(finalZones.length)
+                    );
                     if (normalizedOverlay.length) setOverlayItems(normalizedOverlay);
                     if (layoutData.bedLayouts && typeof layoutData.bedLayouts === 'object') setBedLayouts(layoutData.bedLayouts);
                     if (layoutData.zoneItems && typeof layoutData.zoneItems === 'object') setZoneItems(layoutData.zoneItems);
@@ -455,8 +495,38 @@ export default function GardenLayout() {
     };
 
     const handleUpdateOverlayItems = (newItems) => {
-        setOverlayItems(newItems);
-        if (userId) saveToBackend(grids, zones, setup, positions, newItems);
+        // Detect newly added openable items (in newItems but not in current overlayItems)
+        const oldIds = new Set(overlayItems.map(i => i.id));
+        const addedOpenable = newItems.filter(
+            i => !oldIds.has(i.id) && OPENABLE_ZONE_KEYS.has(i.structureKey)
+        );
+
+        let nextZones     = zones;
+        let nextGrids     = grids;
+        let nextPositions = positions;
+        let patchedItems  = newItems;
+
+        for (const item of addedOpenable) {
+            const zoneName = item.name || item.structureKey;
+            // Stamp zoneRef onto the item so handleOpenZonePortal can find the zone
+            patchedItems = patchedItems.map(i =>
+                i.id === item.id ? { ...i, zoneRef: zoneName } : i
+            );
+            // Create zone tab only if it doesn't already exist
+            if (!nextZones.includes(zoneName)) {
+                nextZones     = [...nextZones, zoneName];
+                nextGrids     = [...nextGrids, createEmptyGrid(10, 10)];
+                nextPositions = [...nextPositions, { inGeneral: false, shape: 'circle', x: 0, y: 0 }];
+            }
+        }
+
+        if (nextZones !== zones) {
+            setZones(nextZones);
+            setGrids(nextGrids);
+            setPositions(nextPositions);
+        }
+        setOverlayItems(patchedItems);
+        if (userId) saveToBackend(nextGrids, nextZones, setup, nextPositions, patchedItems);
     };
 
     // ── Bed handlers ──────────────────────────────────────────────────────────
@@ -615,7 +685,7 @@ export default function GardenLayout() {
     // Called when the user clicks "Open zone" on a vegetableGarden overlay item.
     // Finds or creates the matching zone tab and switches to it.
     const handleOpenZonePortal = (item) => {
-        const zoneName = item.zoneRef || item.name || 'Vegetable Garden';
+        const zoneName = item.zoneRef || item.name || item.structureKey || 'Zone';
 
         // If zone already exists, switch to it
         const existingIdx = zones.indexOf(zoneName);

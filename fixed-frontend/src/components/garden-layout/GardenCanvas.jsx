@@ -28,7 +28,7 @@ const CIRCULAR_STRUCTURES = new Set(['Pond', 'pond']);
 const ZONE_STRUCTURES = new Set(['Greenhouse']);
 // Overlay items that open a zone tab when clicked — productive areas only
 const ZONE_PORTAL_TYPES = new Set([
-    'vegetableGarden', 'greenhouse', 'guild', 'orchard', 'berryPatch',
+    'vegetableGarden', 'greenhouse', 'guild', 'orchard', 'berryPatch', 'pond', 'stapleCrops',
 ]);
 // Structures that open the Bed Editor when clicked
 const BED_LIKE_STRUCTURES = new Set(['Raised Bed', 'Greenhouse']);
@@ -472,6 +472,253 @@ function PatternOverlay({ pattern, width, height, color, borderColor }) {
     return null;
 }
 
+// ── Per-structure SVG visual (replaces background rectangles) ─────────────────
+function StructureVisual({ sk, W, H, borderColor, hovered }) {
+    const bc = borderColor || '#608040';
+    const abs = { position: 'absolute', inset: 0, pointerEvents: 'none' };
+
+    switch (sk) {
+        case 'pond': {
+            const cx = W / 2, cy = (Math.max(4, H - 20)) / 2, rx = W * 0.42, ry = (Math.max(4, H - 20)) * 0.42;
+            const rings = Math.max(1, Math.min(3, Math.floor(Math.min(W, Math.max(4, H - 20)) / 24)));
+            return <svg style={abs} width={W} height={H}>
+                <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="rgba(40,110,200,0.18)" stroke={bc} strokeWidth={1.5} />
+                {Array.from({ length: rings }, (_, i) => (
+                    <ellipse key={i} cx={cx} cy={cy}
+                        rx={rx * (i + 1) / rings * 0.78} ry={ry * (i + 1) / rings * 0.78}
+                        fill="none" stroke={bc} strokeWidth={0.8} opacity={0.28} />
+                ))}
+            </svg>;
+        }
+        case 'guild': {
+            const cx = W / 2, h0 = Math.max(4, H - 20), cy = h0 / 2, r = Math.min(W, h0) * 0.40;
+            const compR = r * 0.76, n = 6;
+            return <svg style={abs} width={W} height={H}>
+                <circle cx={cx} cy={cy} r={r} fill="rgba(100,50,160,0.15)" stroke={bc} strokeWidth={1.5} strokeDasharray="5 3" />
+                <circle cx={cx} cy={cy} r={r * 0.54} fill="rgba(100,50,160,0.12)" stroke={bc} strokeWidth={1} />
+                <circle cx={cx} cy={cy} r={r * 0.14} fill={bc} opacity={0.42} />
+                {Array.from({ length: n }, (_, i) => {
+                    const a = (i / n) * Math.PI * 2;
+                    return <circle key={i} cx={cx + Math.cos(a) * compR} cy={cy + Math.sin(a) * compR} r={Math.max(2.5, r * 0.08)} fill={bc} opacity={0.38} />;
+                })}
+            </svg>;
+        }
+        case 'house': {
+            const h0 = Math.max(4, H - 20), bw = W * 0.74, bh = h0 * 0.50, bx = (W - bw) / 2, by = h0 * 0.34, rh = h0 * 0.34;
+            return <svg style={abs} width={W} height={H}>
+                <rect x={bx + 2} y={by + 2} width={bw} height={bh} rx={2} fill="rgba(0,0,0,0.05)" />
+                <rect x={bx} y={by} width={bw} height={bh} rx={2} fill="rgba(195,160,110,0.24)" stroke={bc} strokeWidth={1.5} />
+                <polygon points={`${W / 2},${by - rh} ${bx - 3},${by + 2} ${bx + bw + 3},${by + 2}`} fill="rgba(140,85,45,0.26)" stroke={bc} strokeWidth={1.5} />
+                <rect x={W / 2 - 6} y={by + bh * 0.35} width={12} height={bh * 0.60} rx={2} fill="rgba(100,55,15,0.28)" stroke={bc} strokeWidth={1} />
+                {[bx + bw * 0.18 - 6, bx + bw * 0.82 - 6].map((wx, i) => (
+                    <rect key={i} x={wx} y={by + bh * 0.22} width={12} height={9} rx={1} fill="rgba(160,205,235,0.35)" stroke={bc} strokeWidth={0.8} />
+                ))}
+            </svg>;
+        }
+        case 'greenhouse': {
+            const h0 = Math.max(4, H - 20), gw = W * 0.80, gh = h0 * 0.68, gx = (W - gw) / 2, gy = h0 * 0.16, rh = gh * 0.38, bodyY = gy + rh;
+            const panes = Math.max(3, Math.floor(gw / 18));
+            return <svg style={abs} width={W} height={H}>
+                <rect x={gx} y={bodyY} width={gw} height={gh - rh} fill="rgba(130,205,155,0.18)" stroke={bc} strokeWidth={1.5} />
+                <polygon points={`${W / 2},${gy} ${gx - 3},${bodyY} ${gx + gw + 3},${bodyY}`} fill="rgba(90,175,115,0.16)" stroke={bc} strokeWidth={1.5} />
+                {Array.from({ length: panes - 1 }, (_, i) => (
+                    <line key={i} x1={gx + gw * (i + 1) / panes} y1={bodyY} x2={gx + gw * (i + 1) / panes} y2={gy + gh - 2} stroke={bc} strokeWidth={0.8} opacity={0.28} />
+                ))}
+                <line x1={gx + 4} y1={bodyY + 4} x2={gx + 4} y2={gy + gh - 4} stroke="white" strokeWidth={2} opacity={0.14} />
+            </svg>;
+        }
+        case 'compost': {
+            const h0 = Math.max(4, H - 20), nb = 3, gap = 4, bh = h0 * 0.54, bw2 = Math.min(20, (W * 0.78 - (nb - 1) * gap) / nb);
+            const sx = (W - (nb * bw2 + (nb - 1) * gap)) / 2, sy = h0 * 0.18;
+            return <svg style={abs} width={W} height={H}>
+                {Array.from({ length: nb }, (_, i) => (
+                    <g key={i}>
+                        <rect x={sx + i * (bw2 + gap)} y={sy + 6} width={bw2} height={bh} rx={2}
+                            fill={i === 1 ? 'rgba(110,70,20,0.21)' : 'rgba(90,55,15,0.15)'} stroke={bc} strokeWidth={1.5} />
+                        <rect x={sx + i * (bw2 + gap) - 1} y={sy} width={bw2 + 2} height={8} rx={1}
+                            fill="rgba(70,35,5,0.22)" stroke={bc} strokeWidth={1} />
+                    </g>
+                ))}
+            </svg>;
+        }
+        case 'beehives': {
+            const h0 = Math.max(4, H - 20), nh = Math.max(2, Math.min(3, Math.floor(W / 28)));
+            const bw2 = Math.min(20, (W * 0.78) / nh - 5), bh = Math.min(28, h0 * 0.60);
+            const tw = nh * (bw2 + 5) - 5, sx = (W - tw) / 2, sy = h0 * 0.14;
+            return <svg style={abs} width={W} height={H}>
+                {Array.from({ length: nh }, (_, i) => (
+                    <g key={i}>
+                        <rect x={sx + i * (bw2 + 5)} y={sy + 8} width={bw2} height={bh} rx={2} fill="rgba(210,165,30,0.20)" stroke={bc} strokeWidth={1.5} />
+                        <rect x={sx + i * (bw2 + 5) - 2} y={sy} width={bw2 + 4} height={10} rx={1} fill="rgba(155,105,10,0.24)" stroke={bc} strokeWidth={1} />
+                        <rect x={sx + i * (bw2 + 5) + bw2 * 0.28} y={sy + 8 + bh - 4} width={bw2 * 0.44} height={3} rx={1} fill="rgba(70,35,5,0.32)" />
+                        {[1, 2].map(j => (
+                            <line key={j} x1={sx + i * (bw2 + 5) + 1} y1={sy + 8 + bh * j / 3} x2={sx + i * (bw2 + 5) + bw2 - 1} y2={sy + 8 + bh * j / 3} stroke={bc} strokeWidth={0.8} opacity={0.28} />
+                        ))}
+                    </g>
+                ))}
+            </svg>;
+        }
+        case 'coop': {
+            const h0 = Math.max(4, H - 20), bw = W * 0.50, bh = h0 * 0.50, bx = (W - W * 0.74) / 2, by = h0 * 0.30, rh = h0 * 0.26;
+            return <svg style={abs} width={W} height={H}>
+                <rect x={bx + bw + 2} y={by} width={W * 0.24} height={bh} rx={2} fill="rgba(160,195,100,0.10)" stroke={bc} strokeWidth={1} strokeDasharray="4 3" />
+                <rect x={bx + 2} y={by + 2} width={bw} height={bh} rx={2} fill="rgba(0,0,0,0.04)" />
+                <rect x={bx} y={by} width={bw} height={bh} rx={2} fill="rgba(195,170,90,0.22)" stroke={bc} strokeWidth={1.5} />
+                <polygon points={`${bx - 2},${by} ${bx + bw + 2},${by} ${bx + bw / 2},${by - rh}`} fill="rgba(130,95,30,0.25)" stroke={bc} strokeWidth={1.5} />
+                <rect x={bx + bw * 0.20} y={by + bh * 0.40} width={bw * 0.22} height={bh * 0.50} rx={1} fill="rgba(90,55,15,0.28)" stroke={bc} strokeWidth={1} />
+            </svg>;
+        }
+        case 'workshop': {
+            const h0 = Math.max(4, H - 20), bw = W * 0.70, bh = h0 * 0.50, bx = (W - bw) / 2, by = h0 * 0.28, rh = h0 * 0.26;
+            return <svg style={abs} width={W} height={H}>
+                <rect x={bx + 2} y={by + 2} width={bw} height={bh} rx={2} fill="rgba(0,0,0,0.05)" />
+                <rect x={bx} y={by} width={bw} height={bh} rx={2} fill="rgba(145,125,95,0.20)" stroke={bc} strokeWidth={1.5} />
+                <polygon points={`${W / 2},${by - rh} ${bx - 3},${by + 2} ${bx + bw + 3},${by + 2}`} fill="rgba(95,75,45,0.24)" stroke={bc} strokeWidth={1.5} />
+                <rect x={bx + bw * 0.62} y={by + bh * 0.22} width={bw * 0.24} height={bh * 0.52} rx={2} fill="rgba(80,55,15,0.22)" stroke={bc} strokeWidth={1} />
+                {[0.45, 0.62].map((fy, i) => (
+                    <line key={i} x1={bx + bw * 0.12} y1={by + bh * fy} x2={bx + bw * 0.48} y2={by + bh * fy} stroke={bc} strokeWidth={1} opacity={0.28} />
+                ))}
+            </svg>;
+        }
+        case 'outdoorKitchen': {
+            const h0 = Math.max(4, H - 20), bw = W * 0.68, bh = h0 * 0.46, bx = (W - bw) / 2, by = h0 * 0.22;
+            return <svg style={abs} width={W} height={H}>
+                <rect x={bx} y={by} width={bw} height={bh} rx={3} fill="rgba(180,85,55,0.18)" stroke={bc} strokeWidth={1.5} />
+                <rect x={bx - 3} y={by - 6} width={bw + 6} height={8} rx={2} fill="rgba(120,45,15,0.22)" stroke={bc} strokeWidth={1} />
+                {[0.28, 0.72].map((fx, i) => (
+                    <circle key={i} cx={bx + bw * fx} cy={by + bh * 0.52} r={Math.max(4, bw * 0.12)} fill="none" stroke={bc} strokeWidth={1.2} opacity={0.38} />
+                ))}
+            </svg>;
+        }
+        case 'orchard': {
+            const h0 = Math.max(4, H - 20), pr = 5;
+            const cols = Math.max(2, Math.floor(W / 26)), rows = Math.max(2, Math.floor(h0 / 26));
+            const tr = Math.max(3.5, Math.min(9, Math.min(W / cols, h0 / rows) * 0.26));
+            const trees = [];
+            for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+                const ox = r % 2 === 1 ? (W / cols) * 0.5 : 0;
+                const tx = pr + (W - 2 * pr) / cols * (c + 0.5) + ox, ty = pr + (h0 - 2 * pr) / rows * (r + 0.5);
+                if (tx > pr && tx < W - pr && ty > pr && ty < h0 - pr)
+                    trees.push(<g key={`${r}-${c}`}><circle cx={tx} cy={ty} r={tr} fill={bc + '30'} /><circle cx={tx} cy={ty} r={tr * 0.5} fill={bc + '55'} /></g>);
+            }
+            return <svg style={abs} width={W} height={H}>
+                <rect x={2} y={2} width={W - 4} height={h0} rx={10} fill="rgba(70,140,30,0.13)" stroke={bc} strokeWidth={1.5} strokeDasharray="6 4" opacity={0.70} />
+                {trees}
+            </svg>;
+        }
+        case 'berryPatch': {
+            const h0 = Math.max(4, H - 20), pr = 5;
+            const cols = Math.max(3, Math.floor(W / 16)), rows = Math.max(2, Math.floor(h0 / 16));
+            const dr = Math.max(2.5, Math.min(W / cols, h0 / rows) * 0.17);
+            const dots = [];
+            for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+                const dx = pr + (W - 2 * pr) / cols * (c + 0.5), dy = pr + (h0 - 2 * pr) / rows * (r + 0.5);
+                if (dx > pr && dx < W - pr && dy > pr && dy < h0 - pr)
+                    dots.push(<circle key={`${r}-${c}`} cx={dx} cy={dy} r={dr} fill={bc + '50'} />);
+            }
+            return <svg style={abs} width={W} height={H}>
+                <rect x={2} y={2} width={W - 4} height={h0} rx={14} fill="rgba(150,30,80,0.12)" stroke={bc} strokeWidth={1.5} strokeDasharray="5 3" opacity={0.70} />
+                {dots}
+            </svg>;
+        }
+        case 'vegetableGarden': {
+            const h0 = Math.max(4, H - 20), pr = 5;
+            const bedH = Math.max(5, Math.min(13, (h0 - pr * 2) / Math.max(3, Math.floor(h0 / 16))));
+            const nb = Math.max(2, Math.floor((h0 - pr * 2) / (bedH + 5)));
+            const totalH = nb * (bedH + 5) - 5;
+            return <svg style={abs} width={W} height={H}>
+                <rect x={2} y={2} width={W - 4} height={h0} rx={8} fill="rgba(90,150,40,0.13)" stroke={bc} strokeWidth={1.5} strokeDasharray="6 4" opacity={0.70} />
+                {Array.from({ length: nb }, (_, i) => {
+                    const by = pr + (h0 - pr * 2 - totalH) / 2 + i * (bedH + 5);
+                    return <rect key={i} x={pr + 5} y={by} width={W - pr * 2 - 10} height={bedH} rx={2} fill="rgba(45,90,25,0.22)" stroke={bc} strokeWidth={1} opacity={0.70} />;
+                })}
+            </svg>;
+        }
+        case 'stapleCrops': {
+            const h0 = Math.max(4, H - 20), pr = 5, nl = Math.max(4, Math.floor(h0 / 9));
+            return <svg style={abs} width={W} height={H}>
+                <rect x={2} y={2} width={W - 4} height={h0} rx={5} fill="rgba(170,130,20,0.13)" stroke={bc} strokeWidth={1.5} strokeDasharray="6 4" opacity={0.70} />
+                {Array.from({ length: nl }, (_, i) => {
+                    const y = pr + (h0 - 2 * pr) * i / (nl - 1);
+                    return <line key={i} x1={pr + 4} y1={y} x2={W - pr - 4} y2={y} stroke={bc} strokeWidth={i % 2 === 0 ? 1.4 : 0.7} opacity={i % 2 === 0 ? 0.42 : 0.22} />;
+                })}
+            </svg>;
+        }
+        case 'pasture': {
+            const h0 = Math.max(4, H - 20), pr = 5;
+            const cols = Math.max(2, Math.floor(W / 22)), rows = Math.max(2, Math.floor(h0 / 22));
+            const dots = [];
+            for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+                if ((r + c) % 3 !== 0) dots.push(<circle key={`${r}-${c}`} cx={pr + (W - 2 * pr) / cols * (c + 0.5)} cy={pr + (h0 - 2 * pr) / rows * (r + 0.5)} r={1.8} fill={bc} opacity={0.28} />);
+            }
+            return <svg style={abs} width={W} height={H}>
+                <rect x={2} y={2} width={W - 4} height={h0} rx={12} fill="rgba(90,165,40,0.13)" stroke={bc} strokeWidth={1.5} strokeDasharray="6 4" opacity={0.70} />
+                {dots}
+            </svg>;
+        }
+        case 'animalRun': {
+            const h0 = Math.max(4, H - 20), pr = 5;
+            const cols = Math.max(3, Math.floor(W / 20)), rows = Math.max(2, Math.floor(h0 / 20));
+            const dots = [];
+            for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+                if ((r * cols + c) % 4 !== 0) dots.push(<circle key={`${r}-${c}`} cx={pr + (W - 2 * pr) / cols * (c + 0.5)} cy={pr + (h0 - 2 * pr) / rows * (r + 0.5)} r={1.5} fill={bc} opacity={0.26} />);
+            }
+            return <svg style={abs} width={W} height={H}>
+                <rect x={2} y={2} width={W - 4} height={h0} rx={5} fill="rgba(80,160,40,0.13)" stroke={bc} strokeWidth={1.5} strokeDasharray="4 3" opacity={0.70} />
+                {dots}
+            </svg>;
+        }
+        case 'woodlot': {
+            const h0 = Math.max(4, H - 20), pr = 5;
+            const cols = Math.max(2, Math.floor(W / 22)), rows = Math.max(2, Math.floor(h0 / 22));
+            const trees = [];
+            for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+                const ox = r % 2 === 1 ? (W / cols) * 0.5 : 0;
+                const tx = pr + (W - 2 * pr) / cols * (c + 0.5) + ox, ty = pr + (h0 - 2 * pr) / rows * (r + 0.5);
+                const th = Math.min(14, (h0 - 2 * pr) / rows * 0.68), tw = th * 0.65;
+                if (tx > pr && tx < W - pr)
+                    trees.push(<polygon key={`${r}-${c}`} points={`${tx},${ty - th * 0.55} ${tx - tw / 2},${ty + th * 0.45} ${tx + tw / 2},${ty + th * 0.45}`} fill={bc} opacity={0.28} />);
+            }
+            return <svg style={abs} width={W} height={H}>
+                <rect x={2} y={2} width={W - 4} height={h0} rx={10} fill="rgba(25,70,25,0.13)" stroke={bc} strokeWidth={1.5} strokeDasharray="6 4" opacity={0.70} />
+                {trees}
+            </svg>;
+        }
+        case 'carRoad': {
+            const isH = W >= H;
+            return <svg style={abs} width={W} height={H}>
+                <rect x={0} y={0} width={W} height={H} rx={3} fill="rgba(145,135,115,0.16)" stroke={bc} strokeWidth={1.2} opacity={0.65} />
+                {isH
+                    ? Array.from({ length: Math.floor(W / 20) }, (_, i) => (
+                        <line key={i} x1={12 + i * 20} y1={H / 2} x2={12 + i * 20 + 10} y2={H / 2} stroke={bc} strokeWidth={1.2} opacity={0.28} />
+                    ))
+                    : Array.from({ length: Math.floor(H / 20) }, (_, i) => (
+                        <line key={i} x1={W / 2} y1={12 + i * 20} x2={W / 2} y2={12 + i * 20 + 10} stroke={bc} strokeWidth={1.2} opacity={0.28} />
+                    ))
+                }
+            </svg>;
+        }
+        case 'kidsPlayground': {
+            const h0 = Math.max(4, H - 20), y1 = h0 * 0.22, y2 = h0 * 0.70;
+            return <svg style={abs} width={W} height={H}>
+                <line x1={W * 0.22} y1={y1} x2={W * 0.5} y2={y2} stroke={bc} strokeWidth={2} opacity={0.38} />
+                <line x1={W * 0.78} y1={y1} x2={W * 0.5} y2={y2} stroke={bc} strokeWidth={2} opacity={0.38} />
+                <line x1={W * 0.22} y1={y1} x2={W * 0.78} y2={y1} stroke={bc} strokeWidth={2} opacity={0.38} />
+                <line x1={W * 0.38} y1={y1} x2={W * 0.38} y2={y2 * 0.87} stroke={bc} strokeWidth={1.2} opacity={0.28} />
+                <line x1={W * 0.62} y1={y1} x2={W * 0.62} y2={y2 * 0.87} stroke={bc} strokeWidth={1.2} opacity={0.28} />
+                <rect x={W * 0.31} y={y2 * 0.83} width={W * 0.14} height={5} rx={1} fill={bc} opacity={0.30} />
+                <rect x={W * 0.55} y={y2 * 0.83} width={W * 0.14} height={5} rx={1} fill={bc} opacity={0.30} />
+            </svg>;
+        }
+        default: {
+            const h0 = Math.max(4, H - 20);
+            return <svg style={abs} width={W} height={H}>
+                <rect x={2} y={2} width={W - 4} height={h0} rx={8} fill="rgba(80,120,50,0.12)" stroke={bc} strokeWidth={1.5} strokeDasharray="6 4" opacity={0.65} />
+            </svg>;
+        }
+    }
+}
+
 function resizeGridLocal(grid, newRows, newCols) {
     return Array.from({ length: newRows }, (_, r) =>
         Array.from({ length: newCols }, (_, c) => grid[r]?.[c] ?? null)
@@ -687,27 +934,26 @@ function getOverlayVisualStyle(item) {
 // ── Vegetable Garden zone-portal mini-bed preview ─────────────────────────────
 function VegGardenPreview({ item, pxPerM, bedLayout, zoneBeds }) {
     const totalHM = item.hM || 5;
-    const totalWM = item.wM || 8;
 
     // Prefer new raisedBed data from zoneItems — most accurate
     if (zoneBeds && zoneBeds.length > 0) {
         return (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '4px 5px', overflow: 'hidden' }}>
-                {zoneBeds.slice(0, 12).map((bed, i) => {
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '4px 5px 22px', overflow: 'hidden' }}>
+                {zoneBeds.slice(0, 10).map((bed, i) => {
                     const bedHFrac = ((bed.hM || 1.2) / totalHM);
                     const plants = (bed.plants || []).map(p => p.plantName).filter(Boolean);
                     return (
                         <div key={bed.id || i} style={{
                             flex: `0 0 ${Math.max(10, bedHFrac * 100)}%`,
-                            borderRadius: 3,
-                            background: 'rgba(22,12,6,0.70)',
-                            border: '1.5px solid rgba(139,94,60,0.75)',
+                            borderRadius: 2,
+                            background: 'rgba(80,130,40,0.10)',
+                            border: '1px solid rgba(80,130,40,0.28)',
                             display: 'flex', alignItems: 'center', paddingLeft: 5,
                             overflow: 'hidden', minHeight: 9, boxSizing: 'border-box',
                         }}>
                             {plants.length > 0 && (
                                 <span style={{
-                                    fontSize: 8, color: 'rgba(220,185,110,0.92)',
+                                    fontSize: 7.5, color: 'rgba(30,70,10,0.82)',
                                     fontWeight: 600, whiteSpace: 'nowrap',
                                     overflow: 'hidden', textOverflow: 'ellipsis',
                                 }}>
@@ -725,21 +971,21 @@ function VegGardenPreview({ item, pxPerM, bedLayout, zoneBeds }) {
     const rows = bedLayout?.rows || [];
     if (rows.length > 0) {
         return (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '3px 4px', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '3px 4px 22px', overflow: 'hidden' }}>
                 {rows.map((row, i) => {
                     const rowHFrac = (row.heightM || 1) / totalHM;
                     const companions = (row.companions || []).slice(0, 2).map(c => c.name).filter(Boolean);
                     return (
                         <div key={row.id || i} style={{
                             flex: `0 0 ${Math.max(12, rowHFrac * 100)}%`,
-                            borderRadius: 3,
-                            background: 'rgba(22,12,6,0.65)',
-                            border: '1.5px solid rgba(139,94,60,0.65)',
+                            borderRadius: 2,
+                            background: 'rgba(80,130,40,0.10)',
+                            border: '1px solid rgba(80,130,40,0.28)',
                             display: 'flex', alignItems: 'center', paddingLeft: 4,
                             overflow: 'hidden', minHeight: 10,
                         }}>
                             {row.plant?.name && (
-                                <span style={{ fontSize: 9, color: 'rgba(220,185,110,0.88)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <span style={{ fontSize: 8, color: 'rgba(30,70,10,0.82)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {[row.plant.name, ...companions].join(' · ')}
                                 </span>
                             )}
@@ -750,11 +996,11 @@ function VegGardenPreview({ item, pxPerM, bedLayout, zoneBeds }) {
         );
     }
 
-    // Generic placeholder strips
+    // Generic placeholder strips — only shown for non-isNewStyle portals with no data
     return (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 3, padding: 4, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 3, padding: '4px 4px 22px', overflow: 'hidden' }}>
             {[0, 1, 2, 3].map(i => (
-                <div key={i} style={{ flex: 1, borderRadius: 3, background: 'rgba(22,12,6,0.45)', border: '1px solid rgba(139,94,60,0.50)', minHeight: 8 }} />
+                <div key={i} style={{ flex: 1, borderRadius: 2, background: 'rgba(80,130,40,0.08)', border: '1px solid rgba(80,130,40,0.22)', minHeight: 8 }} />
             ))}
         </div>
     );
@@ -936,33 +1182,34 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
                     ? (typeof gsVis.radius === 'string' ? gsVis.radius : `${gsVis.radius}px`)
                     : isCircular ? '50%' : isPathLike ? '4px' : isZonePortal ? '8px' : '10px';
                 const cBg = isNewStyle
-                    ? (hovered ? item.color + 'd0' : item.color + 'b8')
+                    ? 'transparent'
                     : isZonePortal
                         ? (hovered ? 'rgba(90,130,60,0.18)' : 'rgba(90,130,60,0.12)')
                         : (item.color ? item.color + '28' : 'rgba(61,107,52,0.10)');
                 const cBorder = isNewStyle
-                    ? `2px solid ${borderCol}`
+                    ? 'none'
                     : isZonePortal ? `${hovered ? '2px' : '1.5px'} solid rgba(90,130,60,${hovered ? '0.75' : '0.45'})`
                     : isSelectedBed ? '2px solid #a8d870'
                     : hovered ? `1.5px dashed ${borderCol}aa` : `1.5px dashed ${borderCol}60`;
                 const cShadow = isNewStyle
-                    ? (hovered ? `0 4px 16px ${borderCol}40, 0 0 0 1px ${borderCol}20` : `0 2px 8px rgba(0,0,0,0.12)`)
+                    ? 'none'
                     : isZonePortal ? (hovered ? '0 4px 16px rgba(60,100,40,0.22)' : '0 2px 8px rgba(60,100,40,0.14)')
                     : isSelectedBed ? '0 0 0 2px rgba(168,216,112,0.35), 0 4px 14px rgba(0,0,0,0.18)'
                     : hovered ? '0 4px 14px rgba(0,0,0,0.15)' : '0 2px 6px rgba(0,0,0,0.10)';
                 return (
                     <div style={{
                         position: 'relative', width: '100%', height: '100%',
-                        borderRadius: gsRadius,
+                        borderRadius: isNewStyle ? 0 : gsRadius,
                         background: cBg,
                         border: cBorder,
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                         boxShadow: cShadow,
-                        overflow: 'hidden', transition: 'border-color 0.1s, box-shadow 0.1s, background 0.1s', gap: 4,
+                        overflow: isNewStyle ? 'visible' : 'hidden',
+                        transition: 'border-color 0.1s, box-shadow 0.1s, background 0.1s', gap: 4,
                     }}>
-                        {/* Pattern overlay — behind everything, clipped by overflow:hidden */}
-                        {isNewStyle && gsVis?.pattern && (
-                            <PatternOverlay pattern={gsVis.pattern} width={pxW} height={pxH} color={item.color} borderColor={borderCol} />
+                        {/* Structure visual SVG — replaces background rectangle */}
+                        {isNewStyle && (
+                            <StructureVisual sk={item.structureKey} W={pxW} H={pxH} borderColor={item.borderColor || borderCol} hovered={hovered} />
                         )}
                         {isRotatable && (
                             <div title="Drag to rotate" style={{ width: 18, height: 18, flexShrink: 0, borderRadius: '50%', background: hovered ? 'white' : 'rgba(255,255,255,0.4)', border: '1.5px solid rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'crosshair', transition: 'background 0.15s', position: 'relative', zIndex: 2 }}
@@ -1001,27 +1248,7 @@ function OverlayItem({ item, pxPerM, zoom = 1, onMouseDown, onRemove, onResizeSt
                                             ))}
                                         </div>
                                     )}
-                                    {/* Icon — centered, absolute so it doesn't fight with label */}
-                                    {showIcon && LIcon && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: isRotatable ? 24 : 0, left: 0, right: 0,
-                                            bottom: showLabel ? 20 : 0,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            pointerEvents: 'none', zIndex: 1,
-                                        }}>
-                                            <LIcon
-                                                size={Math.round(iconSize)}
-                                                color={iconColor}
-                                                strokeWidth={1.6}
-                                                style={{ opacity: hasBedContent ? 0.25 : 0.75, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.18))' }}
-                                            />
-                                        </div>
-                                    )}
-                                    {/* Zone-portal preview — all productive zone portals */}
-                                    {isZonePortal && !hasBedContent && (
-                                        <VegGardenPreview item={item} pxPerM={pxPerM} bedLayout={bedLayout} zoneBeds={zoneBeds} />
-                                    )}
+                                    {/* StructureVisual handles all visual rendering for isNewStyle items */}
                                     {/* Name label pinned to bottom */}
                                     {showLabel && (
                                         <div style={{

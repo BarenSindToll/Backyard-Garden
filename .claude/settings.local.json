@@ -5,7 +5,8 @@
       "Bash(node server.js)",
       "Bash(kill %1)",
       "Bash(echo \"EXIT:$?\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(npm install *)"
     ]
   }
 }

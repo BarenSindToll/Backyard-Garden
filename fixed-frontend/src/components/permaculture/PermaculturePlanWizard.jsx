@@ -833,25 +833,25 @@ function StepConditions({ cond, setCond, siteAnalysis, onOpenSiteAnalysis }) {
                 <div>
                     <FieldLabel>Terrain</FieldLabel>
                     <div style={{ display: 'grid', gap: 6 }}>
-                        {TERRAIN.map(o => <OptionCard key={o.key} {...o} selected={cond.terrain === o.key} onClick={() => setCond(c => ({ ...c, terrain: o.key }))} />)}
+                        {TERRAIN.map(({ key, ...o }) => <OptionCard key={key} {...o} selected={cond.terrain === key} onClick={() => setCond(c => ({ ...c, terrain: key }))} />)}
                     </div>
                 </div>
                 <div>
                     <FieldLabel>Water access</FieldLabel>
                     <div style={{ display: 'grid', gap: 6 }}>
-                        {WATER.map(o => <OptionCard key={o.key} {...o} selected={cond.water === o.key} onClick={() => setCond(c => ({ ...c, water: o.key }))} />)}
+                        {WATER.map(({ key, ...o }) => <OptionCard key={key} {...o} selected={cond.water === key} onClick={() => setCond(c => ({ ...c, water: key }))} />)}
                     </div>
                 </div>
                 <div>
                     <FieldLabel>Sun exposure</FieldLabel>
                     <div style={{ display: 'grid', gap: 6 }}>
-                        {SUN.map(o => <OptionCard key={o.key} {...o} selected={cond.sun === o.key} onClick={() => setCond(c => ({ ...c, sun: o.key }))} />)}
+                        {SUN.map(({ key, ...o }) => <OptionCard key={key} {...o} selected={cond.sun === key} onClick={() => setCond(c => ({ ...c, sun: key }))} />)}
                     </div>
                 </div>
                 <div>
                     <FieldLabel>Soil type</FieldLabel>
                     <div style={{ display: 'grid', gap: 6 }}>
-                        {SOIL.map(o => <OptionCard key={o.key} {...o} selected={cond.soil === o.key} onClick={() => setCond(c => ({ ...c, soil: o.key }))} />)}
+                        {SOIL.map(({ key, ...o }) => <OptionCard key={key} {...o} selected={cond.soil === key} onClick={() => setCond(c => ({ ...c, soil: key }))} />)}
                     </div>
                 </div>
             </div>

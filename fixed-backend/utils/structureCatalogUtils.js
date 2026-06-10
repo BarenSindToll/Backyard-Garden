@@ -146,6 +146,21 @@ export const STRUCTURE_CATALOG = [
         allowedActions:     ['create_new', 'enhance_existing', 'plant_inside_existing'],
     },
 
+    // ── Staple crops zone portal ──────────────────────────────────────────────
+    {
+        catalogKey:         'staple_crops',
+        displayName:        'Staple Crops',
+        canonicalType:      'staple_crops',
+        category:           'productive',
+        defaultWidthM:      12,
+        defaultHeightM:     8,
+        canCreateNew:       true,
+        canContainPlants:   true,
+        canBeEnhanced:      true,
+        isStableByDefault:  false,
+        allowedActions:     ['create_new', 'enhance_existing', 'plant_inside_existing'],
+    },
+
     // ── Permaculture functional areas ─────────────────────────────────────────
     {
         catalogKey:         'orchard',
@@ -374,6 +389,16 @@ const ALIAS_MAP = new Map([
     ['main vegetable garden', 'vegetable_garden'],
     ['vegetable production area', 'vegetable_garden'],
 
+    // Staple crops (zone portal)
+    ['staple crops', 'staple_crops'],
+    ['staple crops plot', 'staple_crops'],
+    ['staple_crops', 'staple_crops'],
+    ['grain plot', 'staple_crops'],
+    ['crop field', 'staple_crops'],
+    ['staple crop field', 'staple_crops'],
+    ['potato plot', 'staple_crops'],
+    ['potato field', 'staple_crops'],
+
     // Orchard
     ['orchard', 'orchard'],
     ['fruit tree area', 'orchard'],
@@ -564,6 +589,9 @@ const CATALOG_TO_CANONICAL = {
     raised_bed:        { key: 'vegetableGarden', name: 'Vegetable Garden' },
     // Herb garden — maps to vegetableGarden visual but keeps its own zone tab name
     herb_garden:       { key: 'vegetableGarden', name: 'Herb Garden' },
+    // Staple crops group
+    staple_crops:      { key: 'stapleCrops',     name: 'Staple Crops' },
+    grain_plot:        { key: 'stapleCrops',     name: 'Staple Crops' },
     // Orchard group
     orchard:           { key: 'orchard',         name: null },   // keep original (e.g. "Apple Orchard")
     fruit_trees:       { key: 'orchard',         name: 'Orchard' },
