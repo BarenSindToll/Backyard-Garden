@@ -109,6 +109,17 @@ R16. Use short, clean names only. Never use verbose AI-generated names:
      ✓ "Beehives" — ✗ "Apiary Pollination Station"
      ✓ "Herb Garden" — ✗ "Culinary Herb Production Zone"
      Keep names under 25 characters. Use the catalog's displayName as your reference.
+R17. "type" must be "structure" for every create_new / enhance_existing / plant_inside_existing /
+     add_near_existing element — including garden zones (vegetable_garden, herb_garden, orchard,
+     berry_patch, guild, food_forest, wild_zone, staple_crops, greenhouse, pond). These ARE real,
+     applyable map elements and count toward the element totals in E1–E5.
+     "type": "permaculture-zone" is RESERVED for the conceptual Zone 0–5 overlay only — that overlay
+     has action="recommendation_only", no catalogKey, and is never placed on the map. Do not use
+     "permaculture-zone" for any other element.
+R18. Garden zones (vegetable_garden, herb_garden, orchard, berry_patch, guild, greenhouse,
+     food_forest, staple_crops, pond) must each be a complete, openable element — never an empty
+     placeholder. Each must include a populated detailPlan (and internalBeds where applicable, see
+     VG6) so its zone tab is fully usable immediately after apply.
 
 SITE ANALYSIS AUTHORITY:
 A1. The SITE ANALYSIS SUMMARY section contains authoritative facts provided by the user. Use every fact listed under "Used facts" when it influences placement or reasoning.
@@ -186,7 +197,7 @@ REQUIRED OUTPUT SCHEMA:
       "action": "create_new",
       "catalogKey": "<key from availableStructureCatalog>",
       "canonicalType": "<same as catalogKey>",
-      "type": "<structure | water-feature | permaculture-zone>",
+      "type": "<structure | water-feature>",
       "name": "<descriptive name>",
       "permacultureZone": <integer 0-5>,
       "targetZone": "<0-5>",
@@ -234,6 +245,17 @@ D8. confidence: 0.9–1.0 = well-supported by site data; 0.65–0.85 = estimated
 D9. Include at least Mollison (1988) and Holmgren (2002) in bibliography.
 D10. Output nothing except the JSON object.
 D11. Never generate a path/walkway/road element (see R13). Use the element count budget for productive zones instead.
+
+FIXED STRUCTURES & ACCESS (CRITICAL):
+FX1. Any existingMapStructures entry marked [FIXED] (House, Car Road) must NEVER be moved, resized,
+     removed, overlapped, or recreated. Treat its position/size as immutable ground truth.
+FX2. House is the Zone 0/1 anchor. Place daily-use elements (greenhouse, herb_garden,
+     vegetable_garden, compost) close to it, respecting its minimum clearance.
+FX3. Car Road is marked [ACCESS AXIS] — use its position only to reason about ease of access
+     (e.g. "near the car road for easy unloading of compost/harvests"). Do NOT generate any new
+     path, driveway, or road element, and do NOT treat Car Road as buildable space.
+FX4. Maintain at least the stated minimum clearance from House and Car Road for all create_new
+     elements — do not place anything overlapping or flush against them.
 
 VEGETABLE GARDEN GROUPING (REQUIRED):
 VG1. Never generate multiple standalone raised_bed elements for individual crops (e.g. "Tomato Bed", "Leafy Greens Bed").
@@ -337,11 +359,16 @@ function buildContextMessage(siteContext) {
         const policy             = siteContext.plannerPolicy || {};
 
         const existingStructureLines = existingStructures.length
-            ? existingStructures.map(s =>
-                `  • id="${s.id}" name="${s.name}" canonicalType=${s.canonicalType} ` +
-                `pos=(${s.xM ?? '?'},${s.yM ?? '?'})m size=${s.wM ?? '?'}×${s.hM ?? '?'}m ` +
-                `canEnhance=${s.canBeEnhanced} canPlantInside=${s.canContainPlants}`
-              ).join('\n')
+            ? existingStructures.map(s => {
+                const flags = [];
+                if (s.fixed)            flags.push('FIXED — never move/overlap/remove');
+                if (s.accessAxis)       flags.push('ACCESS AXIS — anchor for access scoring, do not generate paths');
+                if (s.noOverlapBufferM) flags.push(`min clearance ${s.noOverlapBufferM}m`);
+                return `  • id="${s.id}" name="${s.name}" canonicalType=${s.canonicalType} ` +
+                    `pos=(${s.xM ?? '?'},${s.yM ?? '?'})m size=${s.wM ?? '?'}×${s.hM ?? '?'}m ` +
+                    `canEnhance=${s.canBeEnhanced} canPlantInside=${s.canContainPlants}` +
+                    (flags.length ? ` [${flags.join('; ')}]` : '');
+              }).join('\n')
             : '  (none)';
 
         const catalogLines = catalog.length
@@ -507,6 +534,14 @@ N4. Crop field side: plant windbreak hedge on that boundary to intercept pestici
 N5. Pasture side: plan fencing and integrate manure composting into a loop; potential rotational grazing or chicken tractor near pasture edge.
 N6. Buildings side: account for shade cast; use heat reflected from walls for heat-loving climbers; avoid fruit trees directly under building overhang.
 N7. EVERY proposed element reason MUST acknowledge relevant neighbourhood boundary if within 10m of that boundary.
+N8. Forest-edge shade buffer: if a "forest" boundary is present, keep vegetable_garden and
+     greenhouse at least 10–15m from that forest edge whenever full-sun space is available
+     elsewhere in the garden — forest edges cast shade that reduces yield for sun-hungry crops.
+     food_forest, wild_zone, windbreak, and guild elements are well-suited near the forest edge
+     and should be placed there instead. berry_patch can tolerate the partial shade of a forest
+     edge — if placed there, note the shade tolerance in its reason. orchard may sit near a
+     forest edge only if intentional (e.g. extending an existing tree line) and the reason
+     explains the trade-off.
 
 `;
 })()}VARIANT STRATEGY
@@ -550,7 +585,9 @@ DESIGN VARIANT: ${siteContext.variantType === 'B'
 
 ELEMENT SELF-CHECK before outputting:
   1. Count actionable elements. Meeting target of ${elementTarget}?
-  2. Every openable element (raised_bed, greenhouse, orchard, guild, berry_patch, herb_garden) has a detailPlan with suggestedPlants?
+  2. Every openable element (vegetable_garden, herb_garden, greenhouse, orchard, guild, berry_patch, food_forest, wild_zone, staple_crops, pond) has a detailPlan with suggestedPlants (and internalBeds where applicable)?
+  2b. No element has "type": "permaculture-zone" except the conceptual Zone 0–5 overlay (no catalogKey, action=recommendation_only)?
+  2c. House and Car Road (if marked [FIXED]) are not overlapped, moved, or recreated by any proposed element?
   3. Every reason cites a source (site fact, existing structure, crop, animal, goal, zone rule)?
   4. No individual crop names as standalone create_new elements?
   5. ${siteContext.variantType === 'B'

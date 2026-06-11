@@ -12,6 +12,11 @@ import PermaculturePlanWizard from '../components/permaculture/PermaculturePlanW
 import PermaculturePlanSidePreview from '../components/permaculture/PermaculturePlanSidePreview';
 import SiteAnalysisWizard from '../components/garden-layout/SiteAnalysisWizard';
 import { STRUCTURES, GENERAL_STRUCTURES_MAP, LEGACY_NAME_TO_KEY, OPENABLE_ZONE_KEYS } from '../components/garden-layout/gardenZoneConfig';
+import { isApplyableElement, getSelectedApplyableElements } from '../config/permaculturePlanSchema';
+
+// Existing structures that must never be overlapped by AI-proposed elements,
+// in preview repacking or in the final apply.
+const FIXED_OBSTACLE_NAMES = new Set(['House', 'Car Road']);
 import { fetchCurrentUser } from '../utils/fetchCurrentUser';
 import { useLanguage } from '../utils/languageContext';
 
@@ -217,11 +222,25 @@ export default function GardenLayout() {
             ? [...elements].sort((a, b) => (a.permacultureZone ?? 5) - (b.permacultureZone ?? 5))
             : elements;
 
-        const placed = [];
+        // Seed the occupied-space map with fixed structures (House, Car Road) so
+        // proposed elements are repacked away from them — matching the backend's
+        // overlap repair during apply.
+        const placed = (overlayItems || [])
+            .filter(it => FIXED_OBSTACLE_NAMES.has(it.name))
+            .map(it => {
+                const buffer = it.name === 'House' ? 1.5 : 1.0; // matches backend noOverlapBufferM
+                return {
+                    x: (it.xM ?? 0) - buffer,
+                    y: (it.yM ?? 0) - buffer,
+                    w: (it.wM || 2) + buffer * 2,
+                    h: (it.hM || 2) + buffer * 2,
+                };
+            });
+
         return ordered.map(el => {
             const isSelected = previewSelectedNames === null || previewSelectedNames.has(el.name);
             // Non-map or deselected: pass through as-is (overlay handles opacity)
-            if (!isSelected || el.action === 'recommendation_only' || el.type === 'permaculture-zone') {
+            if (!isSelected || !isApplyableElement(el)) {
                 return el;
             }
 
@@ -261,7 +280,7 @@ export default function GardenLayout() {
                 ? { ...base, warnings: [...(base.warnings || []), ...extraWarnings] }
                 : base;
         });
-    }, [permPlanDraft?.proposedElements, permPlanDraft?.sourceContext?.variantStrategy, previewSelectedNames, previewHidden, setup?.widthM, setup?.heightM]);
+    }, [permPlanDraft?.proposedElements, permPlanDraft?.sourceContext?.variantStrategy, previewSelectedNames, previewHidden, setup?.widthM, setup?.heightM, overlayItems]);
 
     // ── Apply state (lifted from wizard, now owned by GardenLayout) ───────────
     const [applying, setApplying] = useState(false);
@@ -883,18 +902,29 @@ export default function GardenLayout() {
             'x','y','width','height','rotation','targetZone','permacultureZone',
             'targetElementId','plants','reason','confidence','warnings','detailPlan',
             'bedLayoutSuggestion','variantStrategy','strategyReason','strategyTags'];
-        const selectedPreviewElements = displayProposedElements
-            .filter(el => {
-                if (el.action === 'recommendation_only') return false;
-                if (el.type === 'permaculture-zone') return false;
-                if (selectedSet && !selectedSet.has(el.name)) return false;
-                return true;
-            })
-            .map(el => {
-                const out = {};
-                PREVIEW_FIELDS.forEach(k => { if (el[k] !== undefined) out[k] = el[k]; });
-                return out;
+        // Same selection logic used by the side preview's count/button — the
+        // apply payload must contain exactly the elements the user was shown.
+        const selectedElements = getSelectedApplyableElements(displayProposedElements, selectedSet);
+        const selectedPreviewElements = selectedElements.map(el => {
+            const out = {};
+            PREVIEW_FIELDS.forEach(k => { if (el[k] !== undefined) out[k] = el[k]; });
+            return out;
+        });
+
+        // ── Apply tracing: log exactly what we're asking the backend to apply ──
+        console.group('[Apply Plan] Selected elements');
+        selectedElements.forEach(el => {
+            console.log({
+                name: el.name,
+                type: el.type,
+                canonicalType: el.canonicalType,
+                catalogKey: el.catalogKey,
+                applyMode: el.applyMode,
+                action: el.action,
+                x: el.x, y: el.y, width: el.width, height: el.height,
             });
+        });
+        console.groupEnd();
 
         setApplying(true);
         setApplyError('');
@@ -926,14 +956,31 @@ export default function GardenLayout() {
                 if (data.layout?.zones)       setZones(data.layout.zones);
                 if (data.layout?.grids)       setGrids(data.layout.grids);
                 if (data.layout?.positions)   setPositions(data.layout.positions);
+
+                // ── Apply tracing: log what the backend actually created/skipped ──
+                const createdItems = (data.appliedElements || []).map(a => {
+                    const item = (data.layout?.overlayItems || []).find(it => String(it.id) === String(a.id));
+                    return item ? {
+                        id: item.id, name: item.name, type: item.type,
+                        canonicalKey: item.canonicalKey || item.structureKey,
+                        x: item.xM, y: item.yM, wM: item.wM, hM: item.hM,
+                        zoneId: item.isZonePortal ? item.zoneRef : undefined,
+                    } : { id: a.id, name: a.name, x: a.x, y: a.y, wM: a.wM, hM: a.hM };
+                });
+                console.group('[Apply Plan] Created overlay items');
+                createdItems.forEach(item => console.log(item));
+                console.groupEnd();
+                (data.skipped || []).forEach(s => {
+                    console.warn('[Apply Plan] Skipped element', { name: s.element, reason: s.reason });
+                });
+
+                const message = data.summaryMessage
+                    || `Applied ${data.appliedCount ?? createdItems.length} of ${selectedElements.length} elements.`;
                 if (!data.skipped?.length) {
                     clearPreview();
-                    toast.success('Plan applied to your garden map.', { position: 'top-center', autoClose: 3000 });
+                    toast.success(message, { position: 'top-center', autoClose: 3000 });
                 } else {
-                    toast.success(
-                        `Plan applied — ${data.skipped.length} element(s) could not be placed. See panel for details.`,
-                        { position: 'top-center', autoClose: 4000 }
-                    );
+                    toast.success(message, { position: 'top-center', autoClose: 6000 });
                 }
             } else {
                 setApplyError(data.message || 'Apply failed. Please try again.');

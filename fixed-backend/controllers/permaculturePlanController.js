@@ -74,6 +74,42 @@ function clampToGarden(xM, yM, wM, hM, widthM, heightM) {
     return { x, y };
 }
 
+// Minimum distance (m) to keep sun-hungry zones (Vegetable Garden, Greenhouse)
+// away from a forest boundary, which casts shade along that edge.
+const FOREST_SHADE_BUFFER_M = 12;
+
+// Returns the garden edges ('top'|'right'|'bottom'|'left') that border a forest,
+// based on the saved site analysis neighbourhood data.
+function getForestEdges(neighbourhood, northDirection) {
+    if (!neighbourhood) return [];
+    const edges = [];
+    [['north', 'N'], ['east', 'E'], ['south', 'S'], ['west', 'W']].forEach(([dir, compass]) => {
+        if (neighbourhood[dir]?.type === 'forest') {
+            const edge = getEdgeForDirection(compass, northDirection);
+            if (edge) edges.push(edge);
+        }
+    });
+    return edges;
+}
+
+// Shift a placement rect away from forest-bordered edges if there's room to do
+// so elsewhere in the garden — keeps sun-hungry zones out of forest shade.
+function avoidForestShadeBuffer(xM, yM, wM, hM, widthM, heightM, forestEdges, bufferM = FOREST_SHADE_BUFFER_M) {
+    let x = xM, y = yM;
+    forestEdges.forEach(edge => {
+        if (edge === 'left' && x < bufferM && widthM - bufferM - wM > bufferM) {
+            x = bufferM;
+        } else if (edge === 'right' && x + wM > widthM - bufferM && widthM - bufferM - wM > bufferM) {
+            x = Math.max(0, widthM - bufferM - wM);
+        } else if (edge === 'top' && y < bufferM && heightM - bufferM - hM > bufferM) {
+            y = bufferM;
+        } else if (edge === 'bottom' && y + hM > heightM - bufferM && heightM - bufferM - hM > bufferM) {
+            y = Math.max(0, heightM - bufferM - hM);
+        }
+    });
+    return clampToGarden(x, y, wM, hM, widthM, heightM);
+}
+
 // Find the approximate centre of existing house/shed structures in metres.
 // Falls back to (widthM/2, heightM/2) if no stable structure is found.
 function findAnchorM(existingMapStructures, widthM, heightM) {
@@ -423,6 +459,10 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
         confidence: 1.0, warnings: [],
     });
 
+    // Forest-bordered edges — Vegetable Garden / Greenhouse get pushed away from
+    // these (forest shade reduces yield) when there's room to do so elsewhere.
+    const forestEdges = getForestEdges(saved?.neighbourhood, northDirection);
+
     // ──────────────────────────────────────────────────────────────────────────
     // VARIANT A — SOLAR PRIORITY
     // Spatial strategy: place elements according to sun exposure.
@@ -460,7 +500,10 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             const vgH = areaM2 < 200 ? 5 : areaM2 < 1000 ? 7 : 8;
             const bedX = Math.max(1, Math.min(widthM * sunnyPos.xFrac, widthM - vgW - 1));
             const bedY = Math.max(1, Math.min(heightM * sunnyPos.yFrac, heightM - vgH - 1));
-            const vgPos = clampToGarden(bedX, bedY, vgW, vgH, widthM, heightM);
+            let vgPos = clampToGarden(bedX, bedY, vgW, vgH, widthM, heightM);
+            const vgShifted = avoidForestShadeBuffer(vgPos.x, vgPos.y, vgW, vgH, widthM, heightM, forestEdges);
+            const vgForestShadeAvoided = vgShifted.x !== vgPos.x || vgShifted.y !== vgPos.y;
+            vgPos = vgShifted;
 
             const sunFact = saved?.sectors?.sunnyAreas
                 ? `Sunniest area per site analysis: ${saved.sectors.sunnyAreas}`
@@ -468,6 +511,9 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             const soilFact = saved?.soil?.soilType
                 ? `Site analysis: ${saved.soil.soilType} soil`
                 : null;
+            const forestFact = vgForestShadeAvoided
+                ? ` Shifted away from the forest-bordered edge to avoid shade on this sun-hungry zone.`
+                : '';
 
             // Determine which internal beds to include based on crop preferences
             const inclTomato = !wantGreenhouse;   // if greenhouse selected, tomatoes go there
@@ -500,7 +546,7 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
                 strategyTags: ['full-sun', 'zone-1', 'daily-harvest'],
                 x: vgPos.x, y: vgPos.y, width: vgW, height: vgH, rotation: 0,
                 plants: ['Marigold', 'Nasturtium'],
-                reason: `Solar Priority: ${sunFact}. All vegetable production grouped in one area facing the sun. ${soilFact ? soilFact + ' — raised bed rows improve drainage.' : ''}`,
+                reason: `Solar Priority: ${sunFact}. All vegetable production grouped in one area facing the sun.${forestFact} ${soilFact ? soilFact + ' — raised bed rows improve drainage.' : ''}`,
                 confidence: 0.93, warnings: [],
                 internalBeds: beds,
                 detailPlan: {
@@ -527,13 +573,15 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
                 bedLayoutSuggestion: makeBedLayoutFromPlants(['Tomato (Greenhouse)', 'Pepper', 'Cucumber'], gh),
             });
         } else if (areaM2 > 120 && canAddGreenhouse) {
-            const ghPos = clampToGarden(widthM * sunnyPos.xFrac, heightM * sunnyPos.yFrac, 5.0, 4.0, widthM, heightM);
+            const ghPosRaw = clampToGarden(widthM * sunnyPos.xFrac, heightM * sunnyPos.yFrac, 5.0, 4.0, widthM, heightM);
+            const ghPos = avoidForestShadeBuffer(ghPosRaw.x, ghPosRaw.y, 5.0, 4.0, widthM, heightM, forestEdges);
+            const ghForestShadeAvoided = ghPos.x !== ghPosRaw.x || ghPos.y !== ghPosRaw.y;
             proposed.push({
                 action: 'create_new', catalogKey: 'greenhouse', canonicalType: 'greenhouse',
                 type: 'structure', name: 'Greenhouse', targetZone: '1',
                 x: ghPos.x, y: ghPos.y, width: 5.0, height: 4.0, rotation: 0,
                 plants: ['Tomato (Greenhouse)', 'Pepper', 'Cucumber'],
-                reason: `Placed toward the ${sunEdge}-facing (sunniest) side of the garden. A greenhouse here extends the productive season significantly and allows heat-loving crops that cannot succeed outdoors.`,
+                reason: `Placed toward the ${sunEdge}-facing (sunniest) side of the garden.${ghForestShadeAvoided ? ' Shifted away from the forest-bordered edge to avoid shade.' : ''} A greenhouse here extends the productive season significantly and allows heat-loving crops that cannot succeed outdoors.`,
                 confidence: 0.78,
                 warnings: [`Requires adequate water supply. Orient the long axis toward the sunniest (${sunEdge}) side for maximum light. Secure planning permission if required.`],
             });
@@ -1721,7 +1769,7 @@ export const updateStatus = async (req, res) => {
 // ── Apply helpers ─────────────────────────────────────────────────────────────
 
 const STABLE_STRUCTURE_NAMES = new Set([
-    'House', 'Shed', 'Fence', 'Tree', 'Well', 'Water Butt', 'Gate', 'Wall',
+    'House', 'Shed', 'Fence', 'Tree', 'Well', 'Water Butt', 'Gate', 'Wall', 'Car Road',
     'Greenhouse',  // treat as stable if already on map
 ]);
 
@@ -1825,6 +1873,8 @@ function resolvePortalTypeInfo(ck) {
     if (ck === 'berry_patch' || ck === 'berry_strip') return { type: 'berryPatch', structureKey: 'berryPatch' };
     if (ck === 'guild') return { type: 'guild', structureKey: 'guild' };
     if (ck === 'greenhouse') return { type: 'greenhouse', structureKey: 'greenhouse' };
+    if (ck === 'pond') return { type: 'pond', structureKey: 'pond' };
+    if (ck === 'staple_crops') return { type: 'stapleCrops', structureKey: 'stapleCrops' };
     return { type: 'vegetableGarden', structureKey: 'vegetableGarden' };
 }
 
@@ -1878,6 +1928,10 @@ function getAiDefaultDimensions(catalogKey, name) {
     return { w: 6, h: 4 };
 }
 
+// Fixed obstacles get a larger no-overlap buffer than ordinary stable
+// structures — House anchors Zone 0/1, Car Road is the access axis.
+const FIXED_OBSTACLE_BUFFERS_M = { House: 1.5, 'Car Road': 1.0 };
+
 // Resolve stable structure positions from current overlay items (metres).
 // Supports both legacy pixel-based x/y and new xM/yM metre fields.
 function resolveStableStructures(overlayItems, pxPerM) {
@@ -1889,6 +1943,8 @@ function resolveStableStructures(overlayItems, pxPerM) {
             yM: i.yM != null ? i.yM : (i.y || 0) / pxPerM,
             wM: i.wM || 2,
             hM: i.hM || 2,
+            marginM: FIXED_OBSTACLE_BUFFERS_M[i.name] ?? 0.25,
+            fixed: !!FIXED_OBSTACLE_BUFFERS_M[i.name],
         }));
 }
 
@@ -1898,6 +1954,33 @@ function rectsOverlapM(ax, ay, aw, ah, bx, by, bw, bh, margin = 0.25) {
         ax + aw > bx - margin &&
         ay < by + bh + margin &&
         ay + ah > by - margin;
+}
+
+// Try to find a nearby free position for (wM × hM) that doesn't overlap any
+// obstacle (each with its own margin) and stays within the garden bounds.
+// Returns { x, y, repaired } or null if no free spot could be found.
+function repairPlacement(xM, yM, wM, hM, widthM, heightM, obstacles) {
+    const fits = (x, y) => {
+        if (x < 0 || y < 0 || x + wM > widthM || y + hM > heightM) return false;
+        return !obstacles.some(o => rectsOverlapM(x, y, wM, hM, o.xM, o.yM, o.wM, o.hM, o.marginM ?? 0.25));
+    };
+
+    if (fits(xM, yM)) return { x: xM, y: yM, repaired: false };
+
+    const step = 0.5;
+    const maxRadius = Math.max(widthM, heightM);
+    for (let r = step; r <= maxRadius; r += step) {
+        const candidates = [
+            [xM + r, yM], [xM - r, yM], [xM, yM + r], [xM, yM - r],
+            [xM + r, yM + r], [xM - r, yM - r], [xM + r, yM - r], [xM - r, yM + r],
+        ];
+        for (const [cx, cy] of candidates) {
+            const nx = Math.max(0, Math.min(widthM - wM, cx));
+            const ny = Math.max(0, Math.min(heightM - hM, cy));
+            if (fits(nx, ny)) return { x: nx, y: ny, repaired: true };
+        }
+    }
+    return null;
 }
 
 // POST /api/permaculture-plans/:id/apply
@@ -1992,7 +2075,11 @@ export const applyPlan = async (req, res) => {
             }
 
             // ── recommendation_only: save as note, never add to map ──────────
-            if (action === 'recommendation_only' || el.type === 'permaculture-zone') {
+            // 'permaculture-zone' is reserved for the conceptual Zone 0-5 overlay
+            // (no catalogKey/canonicalType). Any element with a real catalogKey is
+            // a real garden zone and must be applied, even if mislabeled by the AI.
+            const hasCatalogKey = !!(el.catalogKey || el.canonicalType);
+            if (action === 'recommendation_only' || (el.type === 'permaculture-zone' && !hasCatalogKey)) {
                 skipped.push({
                     element: elName,
                     reason: action === 'recommendation_only'
@@ -2057,42 +2144,50 @@ export const applyPlan = async (req, res) => {
             const dims = getAiDefaultDimensions(sourceEl.catalogKey || el.catalogKey || '', elName);
             const wM = Math.max(0.5, sourceEl.width ?? el.width ?? dims.w);
             const hM = Math.max(0.3, sourceEl.height ?? el.height ?? dims.h);
-            // Use EXACT preview positions (metres) — do not re-layout or shift.
-            // Only clamp to garden bounds to prevent off-canvas placement.
-            const xM = Math.max(0, Math.min(widthM - wM, sourceEl.x ?? el.x ?? 0));
-            const yM = Math.max(0, Math.min(heightM - hM, sourceEl.y ?? el.y ?? 0));
+            // Start from the EXACT preview position (metres), clamped to bounds.
+            const previewXM = Math.max(0, Math.min(widthM - wM, sourceEl.x ?? el.x ?? 0));
+            const previewYM = Math.max(0, Math.min(heightM - hM, sourceEl.y ?? el.y ?? 0));
 
-            // Boundary sanity check (should always pass after clamping, but guard anyway)
-            if (xM < 0 || yM < 0 || xM + wM > widthM + 0.01 || yM + hM > heightM + 0.01) {
+            if (wM > widthM + 0.01 || hM > heightM + 0.01) {
                 skipped.push({
                     element: elName,
-                    reason: `Outside garden bounds after clamping: (${xM.toFixed(1)},${yM.toFixed(1)}) ${wM.toFixed(1)}×${hM.toFixed(1)} m in ${widthM}×${heightM} m garden.`,
+                    reason: `Element is ${wM.toFixed(1)}×${hM.toFixed(1)}m, larger than the ${widthM}×${heightM}m garden — cannot place.`,
                 });
                 continue;
             }
 
-            // Overlap check with stable existing structures.
-            // When preview placement is preserved we WARN instead of silently moving —
-            // consistent with "show it where it was previewed or skip it".
-            const overlapping = stables.find(s => rectsOverlapM(xM, yM, wM, hM, s.xM, s.yM, s.wM, s.hM));
-            if (overlapping) {
-                if (preservePreviewPlacement) {
-                    skipped.push({
-                        element: elName,
-                        reason: `Overlaps stable structure "${overlapping.name}" at preview position. Move manually or regenerate.`,
-                    });
-                } else {
-                    skipped.push({
-                        element: elName,
-                        reason: `Overlaps stable structure "${overlapping.name}" — move it manually after applying.`,
-                    });
-                }
+            // ── Placement repair ─────────────────────────────────────────────
+            // Never overlap House/Car Road (or other stable structures) or items
+            // already placed in this batch. If the preview position collides,
+            // nudge to the nearest free spot rather than silently dropping the
+            // element. Only skip if no free spot exists at all.
+            const placedObstacles = newOverlayItems
+                .filter(it => !STABLE_STRUCTURE_NAMES.has(it.name) && it.xM != null && it.yM != null && it.wM != null && it.hM != null)
+                .map(it => ({ xM: it.xM, yM: it.yM, wM: it.wM, hM: it.hM, marginM: 0.25 }));
+            const obstacles = [...stables, ...placedObstacles];
+
+            const placement = repairPlacement(previewXM, previewYM, wM, hM, widthM, heightM, obstacles);
+            if (!placement) {
+                skipped.push({
+                    element: elName,
+                    reason: `No free space found for "${elName}" (${wM.toFixed(1)}×${hM.toFixed(1)}m) without overlapping House, Car Road, or other elements.`,
+                });
+                console.warn(`[applyPlan] Skipped "${elName}" — no free placement found near (${previewXM.toFixed(1)},${previewYM.toFixed(1)})`);
                 continue;
+            }
+            const xM = placement.x;
+            const yM = placement.y;
+            const wasRepositioned = placement.repaired;
+            if (wasRepositioned) {
+                console.log(`[applyPlan] Repositioned "${elName}" from (${previewXM.toFixed(1)},${previewYM.toFixed(1)}) to (${xM.toFixed(1)},${yM.toFixed(1)}) to avoid overlap`);
             }
 
             // ── Canonical-type duplicate guard ───────────────────────────────
             // Normalize the incoming element and skip if the same singular canonical type
             // already exists on the map (either from before apply or added in this batch).
+            // Only applies to types where multiple instances genuinely don't make sense
+            // (e.g. Greenhouse, Compost) — productive zones (vegetableGarden, orchard,
+            // berryPatch, pond, guild) are MULTI_ALLOWED and never hit this guard.
             {
                 const normCheck = normalizeGeneralStructure({ catalogKey: sourceEl.catalogKey || el.catalogKey || '', name: elName });
                 if (normCheck) {
@@ -2107,7 +2202,7 @@ export const applyPlan = async (req, res) => {
                                 element: elName,
                                 reason: `A ${CANONICAL_DISPLAY_NAMES[canonicalKey] || canonicalKey} already exists on the map — skipped to prevent duplicate.`,
                             });
-                            console.log(`[applyPlan] Skipped duplicate ${canonicalKey}: "${elName}" — already on map`);
+                            console.log(`[applyPlan] Skipped duplicate ${canonicalKey}: "${elName}" (catalogKey="${sourceEl.catalogKey || el.catalogKey || ''}") — already on map`);
                             continue;
                         }
                     }
@@ -2212,7 +2307,8 @@ export const applyPlan = async (req, res) => {
                 targetElementId: sourceEl.targetElementId || el.targetElementId || null,
                 variantStrategy: sourceEl.variantStrategy || el.variantStrategy || null,
                 createdFromPreview: true,
-                previewPositionUsed: preservePreviewPlacement,
+                previewPositionUsed: preservePreviewPlacement && !wasRepositioned,
+                repositionedFromPreview: wasRepositioned,
                 ...(isNewZonePortal ? {
                     type: portalTypeInfo.type,
                     isZonePortal: true,
@@ -2273,8 +2369,22 @@ export const applyPlan = async (req, res) => {
                 type: sourceEl.type || el.type,
                 catalogKey: item.catalogKey,
                 x: xM, y: yM, wM, hM,
+                repositioned: wasRepositioned,
             });
-            console.log(`[applyPlan] ${action} "${elName}" placed at (${xM.toFixed(1)},${yM.toFixed(1)}) m${preservePreviewPlacement ? ' [preview position]' : ''} size=${wM.toFixed(1)}×${hM.toFixed(1)}`);
+            console.log(`[applyPlan] ${action} "${elName}" placed at (${xM.toFixed(1)},${yM.toFixed(1)}) m${wasRepositioned ? ' [repositioned to avoid overlap]' : preservePreviewPlacement ? ' [preview position]' : ''} size=${wM.toFixed(1)}×${hM.toFixed(1)}`);
+        }
+
+        // ── Post-apply validation: catch elements selected by the frontend that
+        // were never matched against plan.proposedElements (e.g. a name mismatch),
+        // so nothing disappears without a visible reason.
+        if (selectedSet) {
+            const accountedNames = new Set([...applied.map(a => a.element), ...skipped.map(s => s.element)]);
+            for (const name of selectedSet) {
+                if (!accountedNames.has(name)) {
+                    skipped.push({ element: name, reason: 'Selected element not found in plan — could not be applied.' });
+                    console.warn(`[applyPlan] Selected element "${name}" not found in plan.proposedElements`);
+                }
+            }
         }
 
         // ── Persist updated layout ─────────────────────────────────────────
@@ -2313,10 +2423,14 @@ export const applyPlan = async (req, res) => {
                 y: a.y,
                 wM: a.wM,
                 hM: a.hM,
+                repositioned: a.repositioned || false,
             })),
             skipped,
             appliedCount: applied.length,
             skippedCount: skipped.length,
+            summaryMessage: skipped.length === 0
+                ? `Applied ${applied.length} of ${applied.length} elements.`
+                : `Applied ${applied.length} of ${applied.length + skipped.length} elements. ${skipped.length} skipped: ${skipped.map(s => s.element).join(', ')}.`,
             previewPlacementUsed: preservePreviewPlacement,
             warning: changeReport.changed ? changeReport.summary : null,
         });

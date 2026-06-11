@@ -223,6 +223,15 @@ export function normalizeGeneratedElement(element, gardenSetup) {
     if (WATER_FEATURE_CATALOG_KEYS.has(catalogKey)) schemaType = 'water-feature';
     if (MUST_BE_STRUCTURE.has(catalogKey))           schemaType = 'structure';
 
+    // 'permaculture-zone' is reserved for the conceptual Zone 0-5 overlays,
+    // which never have a catalogKey. Any element with a real catalogKey
+    // (orchard, vegetable_garden, berry_patch, etc.) that the AI mislabeled
+    // as 'permaculture-zone' is a real, applyable garden zone — coerce it
+    // back to 'structure' so it isn't excluded from the apply pipeline.
+    if (schemaType === 'permaculture-zone' && catalogKey) {
+        schemaType = 'structure';
+    }
+
     // Openability
     const isOpenable    = OPENABLE_ELEMENT_TYPES.has(rawType);
     const hasDetailPlan = DETAIL_PLAN_CAPABLE_TYPES.has(rawType);

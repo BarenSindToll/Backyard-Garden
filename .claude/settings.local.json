@@ -6,7 +6,14 @@
       "Bash(kill %1)",
       "Bash(echo \"EXIT:$?\")",
       "Bash(npm run *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(cd \"/c/Users/anama/Documents/GitHub/Backyard Garden/Backyard-Garden/fixed-frontend\" && cat package.json | grep -A5 '\"scripts\"')",
+      "Read(//c/c/Users/anama/Documents/GitHub/Backyard Garden/Backyard-Garden/fixed-frontend/**)",
+      "Bash(node -e ' *)",
+      "Bash(node --check controllers/permaculturePlanController.js)",
+      "Bash(node verify_setup.mjs)",
+      "Bash(sleep 4 && cat /tmp/backend2.log 2>/dev/null | tail -10)",
+      "Read(//tmp/**)"
     ]
   }
 }

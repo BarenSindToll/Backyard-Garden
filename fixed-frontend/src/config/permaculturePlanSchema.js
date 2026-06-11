@@ -206,7 +206,7 @@ export const STRUCTURAL_ELEMENT_TYPES = new Set([
 
 export const OPENABLE_ELEMENT_TYPES = new Set([
     'raised-bed', 'greenhouse', 'orchard', 'guild', 'berry-patch', 'herb-garden', 'food-forest',
-    'vegetable-garden', 'staple-crops',
+    'vegetable-garden', 'staple-crops', 'pond',
 ]);
 
 export const DETAIL_PLAN_CAPABLE_TYPES = new Set([
@@ -249,6 +249,138 @@ export function elementTypeToCatalogKey(elementType) {
 
 export function catalogKeyToElementType(catalogKey) {
     return (catalogKey || '').replace(/_/g, '-');
+}
+
+// ── Apply-pipeline normalization helpers ─────────────────────────────────────
+// Single source of truth for: which proposed elements are applyable, which
+// create a linked zone tab, and which group they belong to in the side panel.
+// Used by both PermaculturePlanSidePreview and GardenLayout so the preview map,
+// the selection state, and the apply payload always agree.
+
+// Actions that result in a real change to the map (vs. advice-only notes).
+export const APPLY_ACTIONS = new Set([
+    'create_new',
+    'enhance_existing',
+    'plant_inside_existing',
+    'add_near_existing',
+]);
+
+// Element types whose "create_new" / "add_near_existing" placement also opens
+// a linked internal zone tab (General Map parent item + zone detail view).
+export const ZONE_PORTAL_ELEMENT_TYPES = new Set([
+    'vegetable-garden',
+    'herb-garden',
+    'orchard',
+    'berry-patch',
+    'guild',
+    'greenhouse',
+    'food-forest',
+    'staple-crops',
+    'pond',
+]);
+
+// Group buckets for the side preview panel.
+export const PRODUCTIVE_GROUP_TYPES = new Set([
+    'vegetable-garden',
+    'herb-garden',
+    'orchard',
+    'berry-patch',
+    'guild',
+    'food-forest',
+    'staple-crops',
+    'raised-bed',
+    'wild-zone',
+]);
+
+export const WATER_ECOLOGY_GROUP_TYPES = new Set([
+    'pond',
+    'swale',
+]);
+
+export const STRUCTURE_GROUP_TYPES = new Set([
+    'greenhouse',
+    'compost',
+    'coop',
+    'beehive',
+    'shed',
+    'patio',
+    'windbreak',
+    'path',
+]);
+
+// Resolve the normalized catalog key (snake_case) for a proposed element,
+// falling back from catalogKey -> canonicalType.
+export function normalizedCatalogKey(el) {
+    return (el?.catalogKey || el?.canonicalType || '').replace(/-/g, '_');
+}
+
+/**
+ * Classify how a proposed element should be treated by the apply pipeline:
+ *  - 'mapElement'        — a real, applyable map element
+ *  - 'linkedZoneElement' — applyable AND creates/links a zone tab on apply
+ *  - 'recommendationOnly' — advice/notes only, never placed on the map
+ *
+ * Crucially this does NOT trust the raw `type` field alone (AI output may
+ * mislabel real garden zones as 'permaculture-zone'). It is derived from
+ * `action` + `catalogKey`/`canonicalType`.
+ */
+export function getApplyMode(el) {
+    if (!el) return 'recommendationOnly';
+    const action = el.action || 'create_new';
+    if (!APPLY_ACTIONS.has(action)) return 'recommendationOnly';
+
+    const catalogKey = normalizedCatalogKey(el);
+    // Conceptual Zone 0-5 overlays have no catalogKey and are never applyable.
+    if (!catalogKey && (el.type === 'permaculture-zone' || el.canonicalType === 'permaculture-zone')) {
+        return 'recommendationOnly';
+    }
+
+    // Path elements are always rejected by the apply pipeline (users add paths
+    // manually) — treat as recommendation-only so they never inflate the
+    // "Apply N elements" count or get sent to the apply endpoint.
+    if (catalogKey === 'path') {
+        return 'recommendationOnly';
+    }
+
+    const elementType = catalogKeyToElementType(catalogKey);
+    if (ZONE_PORTAL_ELEMENT_TYPES.has(elementType)) return 'linkedZoneElement';
+    return 'mapElement';
+}
+
+export function isApplyableElement(el) {
+    return getApplyMode(el) !== 'recommendationOnly';
+}
+
+/**
+ * Single source of truth for "which elements does Apply act on".
+ * Used by the side preview (selection count + Apply button label),
+ * the map preview overlay, and GardenLayout's apply payload — so all
+ * three always agree on the same set of elements.
+ *
+ * @param {object[]} elements — proposedElements (or a re-laid-out copy of them)
+ * @param {Set<string>|null} selectedNames — null means "all applyable elements selected"
+ * @returns {object[]} the elements that will actually be sent to the apply endpoint
+ */
+export function getSelectedApplyableElements(elements, selectedNames) {
+    const applyable = (elements || []).filter(isApplyableElement);
+    if (selectedNames === null || selectedNames === undefined) return applyable;
+    return applyable.filter(el => selectedNames.has(el.name));
+}
+
+/**
+ * Classify a proposed element into one of the side-panel group buckets:
+ * 'structures' | 'productive' | 'water_ecology' | 'recommendations'
+ */
+export function classifyApplyGroup(el) {
+    if (getApplyMode(el) === 'recommendationOnly') return 'recommendations';
+
+    const elementType = catalogKeyToElementType(normalizedCatalogKey(el));
+    if (WATER_ECOLOGY_GROUP_TYPES.has(elementType)) return 'water_ecology';
+    if (STRUCTURE_GROUP_TYPES.has(elementType)) return 'structures';
+    if (PRODUCTIVE_GROUP_TYPES.has(elementType)) return 'productive';
+
+    if (el.type === 'water-feature') return 'water_ecology';
+    return 'structures';
 }
 
 const SCHEMA_TYPE_FALLBACK_COLORS = {

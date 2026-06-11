@@ -48,7 +48,7 @@ import {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STABLE_NAMES = new Set([
-    'House', 'Shed', 'Fence', 'Tree', 'Well', 'Water Butt', 'Gate', 'Wall',
+    'House', 'Shed', 'Fence', 'Tree', 'Well', 'Water Butt', 'Gate', 'Wall', 'Car Road',
 ]);
 const SEMI_STABLE_NAMES = new Set([
     'Greenhouse', 'Compost', 'Pond', 'Path',
@@ -763,6 +763,8 @@ function buildExistingMapStructures(layout = {}) {
     const fromOverlay = (layout.overlayItems || []).map(item => {
         const canonicalType = resolveCanonicalType(item.name || '');
         const entry         = getCatalogEntry(canonicalType);
+        const isHouse       = item.name === 'House';
+        const isCarRoad     = item.name === 'Car Road';
         return {
             id:               String(item.id ?? ''),
             name:             (item.name || 'Unknown').trim(),
@@ -777,6 +779,10 @@ function buildExistingMapStructures(layout = {}) {
             wM:               item.wM ?? null,
             hM:               item.hM ?? null,
             rotation:         item.rotation || 0,
+            // House and Car Road are hard placement constraints: never overlap,
+            // move, or remove. House anchors Zone 0/1; Car Road anchors access.
+            ...(isHouse   ? { fixed: true, noOverlapBufferM: 1.5 } : {}),
+            ...(isCarRoad ? { fixed: true, accessAxis: true, noOverlapBufferM: 1.0 } : {}),
         };
     });
 

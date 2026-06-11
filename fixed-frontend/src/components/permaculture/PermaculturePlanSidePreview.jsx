@@ -5,6 +5,7 @@
  * variant cards, sticky footer with Apply / Edit / Regenerate / Discard.
  */
 import { useMemo, useState } from 'react';
+import { getApplyMode, isApplyableElement, classifyApplyGroup, getSelectedApplyableElements } from '../../config/permaculturePlanSchema';
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -189,24 +190,13 @@ function FoodStrategyPanel({ strategy }) {
 }
 
 // ── Element classification ─────────────────────────────────────────────────────
-const APPLY_ACTIONS = new Set(['create_new', 'enhance_existing', 'plant_inside_existing', 'add_near_existing']);
-
-const WATER_STRUCT_KEYWORDS = ['water', 'pond', 'path', 'greenhouse', 'compost', 'house', 'shed', 'coop', 'fence', 'wall', 'gate', 'building', 'structure'];
-
-function classifyEl(el) {
-    if (el.action === 'recommendation_only') return 'tips';
-    const type = (el.type || '').toLowerCase();
-    if (type === 'permaculture-zone' || type.includes('zone')) return 'zones';
-    if (WATER_STRUCT_KEYWORDS.some(k => type.includes(k))) return 'water_struct';
-    const name = (el.name || '').toLowerCase();
-    if (WATER_STRUCT_KEYWORDS.some(k => name.includes(k))) return 'water_struct';
-    return 'planting';
-}
-
+// Grouping is derived from `action` + `catalogKey`/`canonicalType` via
+// classifyApplyGroup (shared with GardenLayout's apply pipeline) — never from
+// the raw `type` field alone, which the AI can mislabel.
 function groupElements(elements) {
-    const groups = { planting: [], water_struct: [], zones: [], tips: [] };
+    const groups = { structures: [], productive: [], water_ecology: [], recommendations: [] };
     elements.forEach(el => {
-        const g = classifyEl(el);
+        const g = classifyApplyGroup(el);
         (groups[g] = groups[g] || []).push(el);
     });
     return groups;
@@ -309,7 +299,9 @@ function VariantCard({ label, sub, confidence, active, onClick }) {
 
 // ── Element card ───────────────────────────────────────────────────────────────
 function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHoverLeave, applying, variantStrategy }) {
-    const isApplyable = el.type !== 'permaculture-zone' && APPLY_ACTIONS.has(el.action || 'create_new');
+    const applyMode   = getApplyMode(el);
+    const isApplyable = applyMode !== 'recommendationOnly';
+    const createsZoneTab = applyMode === 'linkedZoneElement';
     const isTip       = el.action === 'recommendation_only';
     const dim = formatDim(el);
     const fit = fitFromConf(el.confidence);
@@ -364,6 +356,15 @@ function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHover
                                     <span style={{ fontSize: 11, color: fit.color, fontWeight: 500 }}>{fit.label}</span>
                                 </span>
                             </>
+                        )}
+                        {createsZoneTab && (
+                            <span style={{
+                                fontSize: 10, fontWeight: 600, color: '#4a3a90',
+                                background: 'rgba(91,78,192,0.10)', border: '1px solid rgba(91,78,192,0.25)',
+                                borderRadius: 999, padding: '1px 7px',
+                            }}>
+                                ↗ creates zone tab
+                            </span>
                         )}
                     </div>
 
@@ -496,7 +497,7 @@ export default function PermaculturePlanSidePreview({
     const waterGravityAvailable = !!(plan.sourceContext?.siteAnalysisSummary?.usedFacts?.some(f => /slope|water flow|pooling|low point/i.test(f)));
 
     const applyableElements = useMemo(
-        () => proposedElements.filter(e => e.type !== 'permaculture-zone' && APPLY_ACTIONS.has(e.action || 'create_new')),
+        () => proposedElements.filter(isApplyableElement),
         [proposedElements]
     );
 
@@ -506,7 +507,15 @@ export default function PermaculturePlanSidePreview({
     );
 
     const allChecked  = applyableElements.length > 0 && selected.size === applyableElements.length;
-    const noneChecked = selected.size === 0;
+
+    // Same selection used by GardenLayout's apply payload — keeps the button
+    // count and the actual number of elements applied in sync.
+    const selectedApplyableElements = useMemo(
+        () => getSelectedApplyableElements(proposedElements, selectedNames),
+        [proposedElements, selectedNames]
+    );
+    const applyCount  = selectedApplyableElements.length;
+    const noneChecked = applyCount === 0;
 
     const toggleElement = (name) => {
         const next = new Set(selected);
@@ -590,7 +599,7 @@ export default function PermaculturePlanSidePreview({
                     }}>
                         {allChecked && <span style={{ fontSize: 8, fontWeight: 700 }}>✓</span>}
                     </span>
-                    {allChecked ? 'Deselect all' : 'Select all'} ({selected.size}/{applyableElements.length})
+                    {allChecked ? 'Deselect all' : 'Select all'} ({applyCount}/{applyableElements.length})
                 </button>
                 <button onClick={onToggleHide}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: `1px solid ${C.line}`, color: C.inkSoft, fontSize: 11.5, padding: '4px 10px', borderRadius: 999, cursor: 'pointer' }}>
@@ -632,10 +641,10 @@ export default function PermaculturePlanSidePreview({
                 )}
 
                 {/* Grouped sections */}
-                <PlanSection title="What will grow"         items={groups.planting}    selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
-                <PlanSection title="Water & structures"     items={groups.water_struct} selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
-                <PlanSection title="Garden zones"           items={groups.zones}        selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
-                <PlanSection title="Tips & recommendations" items={groups.tips}         selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
+                <PlanSection title="Structures"               items={groups.structures}     selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
+                <PlanSection title="Productive zones"         items={groups.productive}     selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
+                <PlanSection title="Water & ecology"          items={groups.water_ecology}  selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
+                <PlanSection title="Recommendations & warnings" items={groups.recommendations} selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
 
                 {/* Skipped elements */}
                 {skipped.length > 0 && (
@@ -708,7 +717,7 @@ export default function PermaculturePlanSidePreview({
                         ) : noneChecked ? (
                             'Select elements to apply'
                         ) : (
-                            `✓ Apply ${selected.size} element${selected.size !== 1 ? 's' : ''} to map`
+                            `✓ Apply ${applyCount} element${applyCount !== 1 ? 's' : ''} to map`
                         )}
                     </button>
                 )}

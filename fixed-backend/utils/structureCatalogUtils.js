@@ -92,6 +92,19 @@ export const STRUCTURE_CATALOG = [
         allowedActions:     ['recommendation_only'],
     },
     {
+        catalogKey:         'car_road',
+        displayName:        'Car Road',
+        canonicalType:      'car_road',
+        category:           'stable',
+        defaultWidthM:      6,
+        defaultHeightM:     4,
+        canCreateNew:       false,  // cannot be created — must already exist; fixed access route/anchor
+        canContainPlants:   false,
+        canBeEnhanced:      false,
+        isStableByDefault:  true,
+        allowedActions:     ['recommendation_only'],
+    },
+    {
         catalogKey:         'shed',
         displayName:        'Shed',
         canonicalType:      'shed',
@@ -358,6 +371,14 @@ const ALIAS_MAP = new Map([
     ['main house', 'house'],
     ['home', 'house'],
 
+    // Car road / driveway / access route — fixed access anchor, never re-created
+    ['car road', 'car_road'],
+    ['car park', 'car_road'],
+    ['carpark', 'car_road'],
+    ['driveway', 'car_road'],
+    ['parking', 'car_road'],
+    ['access road', 'car_road'],
+
     // Shed
     ['shed', 'shed'],
     ['barn', 'shed'],
@@ -573,7 +594,7 @@ export const CANONICAL_DISPLAY_NAMES = {
  * All other types are singular — only one instance is allowed.
  */
 export const MULTI_ALLOWED_CANONICAL_KEYS = new Set([
-    'guild', 'orchard', 'berryPatch', 'vegetableGarden', 'pond',
+    'guild', 'orchard', 'berryPatch', 'vegetableGarden', 'pond', 'woodlot',
 ]);
 
 // Map: catalog key (snake_case) → { key: camelCase canonical, name: forced display name or null }
@@ -597,10 +618,12 @@ const CATALOG_TO_CANONICAL = {
     fruit_trees:       { key: 'orchard',         name: 'Orchard' },
     // Guild — keep original for multi-instance naming (e.g. "Apple Guild", "Pear Guild")
     guild:             { key: 'guild',            name: null },
-    // Woodlot group — normalize to Woodlot
-    food_forest:       { key: 'woodlot',          name: 'Woodlot' },
-    forest_garden:     { key: 'woodlot',          name: 'Woodlot' },
-    wild_zone:         { key: 'woodlot',          name: 'Woodlot' },
+    // Woodlot group — multi-allowed (food forest, wild zone, windbreak can all
+    // coexist), keep each element's own descriptive name (e.g. "Food Forest",
+    // "Windbreak Hedge", "Wild Meadow") rather than forcing a single label.
+    food_forest:       { key: 'woodlot',          name: null },
+    forest_garden:     { key: 'woodlot',          name: null },
+    wild_zone:         { key: 'woodlot',          name: null },
     // Berry patch group
     berry_patch:       { key: 'berryPatch',       name: 'Berry Patch' },
     berry_strip:       { key: 'berryPatch',       name: 'Berry Patch' },
@@ -614,10 +637,12 @@ const CATALOG_TO_CANONICAL = {
     shed:              { key: 'workshop',         name: 'Workshop' },
     house:             { key: 'house',            name: 'House' },
     patio:             { key: 'outdoorKitchen',   name: 'Outdoor Kitchen' },
+    // Windbreak is a real, applyable map element (woodlot group) — keep its
+    // own descriptive name (e.g. "Windbreak Hedge").
+    windbreak:         { key: 'woodlot',          name: null },
     // Explicitly skipped — not placeable on General Map
     path:              null,
     fence:             null,
-    windbreak:         null,
     swale:             null,
 };
 
