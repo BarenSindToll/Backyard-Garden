@@ -107,6 +107,8 @@ export const GENERAL_STRUCTURES = [
     { key: 'kidsPlayground',  name: 'Kids Playground',  category: 'amenity',        color: '#F8E040', borderColor: '#A07818', textColor: '#604800', labelBg: '#FFFCE0', iconKey: 'Smile',      defaultSize: { wM: 6,  hM: 5  }, canOpenZone: false, description: 'Play area for children'           },
     { key: 'stapleCrops',     name: 'Staple Crops',     category: 'planting',       color: '#C8A840', borderColor: '#806010', textColor: '#3A2808', labelBg: '#FFF0C8', iconKey: 'Wheat',      defaultSize: { wM: 12, hM: 8  }, canOpenZone: true,  description: 'Potatoes, corn, beans, grains'    },
     { key: 'woodlot',         name: 'Woodlot',          category: 'planting',       color: '#286828', borderColor: '#103010', textColor: '#FFFFFF', labelBg: '#D8EED8', iconKey: 'Trees',      defaultSize: { wM: 12, hM: 10 }, canOpenZone: false, description: 'Coppice, firewood, biomass'       },
+    { key: 'herbGarden',      name: 'Herb Garden',      category: 'planting',       color: '#A8D0B0', borderColor: '#3A7058', textColor: '#1A3A2A', labelBg: '#E4F4E8', iconKey: 'Leaf',       defaultSize: { wM: 5,  hM: 4  }, canOpenZone: true,  description: 'Culinary & medicinal herbs'       },
+    { key: 'foodForest',      name: 'Food Forest',      category: 'planting',       color: '#3A6038', borderColor: '#1A3018', textColor: '#FFFFFF', labelBg: '#DCEEDC', iconKey: 'TreeDeciduous', defaultSize: { wM: 16, hM: 12 }, canOpenZone: true,  description: 'Multi-layer edible woodland'      },
 ];
 
 export const GENERAL_STRUCTURES_MAP = Object.fromEntries(GENERAL_STRUCTURES.map(s => [s.key, s]));
@@ -116,6 +118,7 @@ export const GENERAL_KEYS_SET = new Set(GENERAL_STRUCTURES.map(s => s.key));
 export const OPENABLE_ZONE_KEYS = new Set([
     'greenhouse', 'pond', 'guild', 'orchard',
     'berryPatch', 'vegetableGarden', 'stapleCrops',
+    'herbGarden', 'foodForest',
 ]);
 
 // Maps legacy overlay item names → new GENERAL_STRUCTURES key
@@ -140,4 +143,6 @@ export const LEGACY_NAME_TO_KEY = {
     'Kids Playground':    'kidsPlayground',
     'Staple Crops':       'stapleCrops',
     'Woodlot':            'woodlot',
+    'Herb Garden':        'herbGarden',
+    'Food Forest':        'foodForest',
 };

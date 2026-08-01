@@ -456,6 +456,55 @@ export function Orchard({ faded, pxPerM, pxPerMY }) {
     );
 }
 
+// ─── FOOD FOREST ──────────────────────────────────────────────────────────────
+
+const FOOD_FOREST_CANOPY = [
+    { cx: 22, cy: 18, rTree: 6.5, fruit: ICONS.walnut },
+    { cx: 50, cy: 14, rTree: 7,   fruit: ICONS.apple },
+    { cx: 78, cy: 19, rTree: 6,   fruit: ICONS.hazelnut },
+];
+const FOOD_FOREST_SHRUBS = [
+    { cx: 14, cy: 38, color: '#7eb0d4', r: 2.4 }, // blueberry shrub layer
+    { cx: 36, cy: 42, color: '#a8c490', r: 2.2 },
+    { cx: 50, cy: 36, color: '#d870a0', r: 2.4 }, // raspberry
+    { cx: 64, cy: 42, color: '#a8c490', r: 2.2 },
+    { cx: 86, cy: 38, color: '#7eb0d4', r: 2.4 },
+];
+const FOOD_FOREST_GROUNDCOVER = [
+    { cx: 20, cy: 52, icon: ICONS.strawberry },
+    { cx: 34, cy: 50, icon: ICONS.garlic },
+    { cx: 48, cy: 53, icon: ICONS.chamomile },
+    { cx: 62, cy: 50, icon: ICONS.calendula },
+    { cx: 76, cy: 53, icon: ICONS.strawberry },
+    { cx: 90, cy: 50, icon: ICONS.garlic },
+];
+
+export function FoodForest({ faded, pxPerM, pxPerMY }) {
+    return (
+        <>
+            <Layer opacity={faded ? 0.55 : 1}>
+                <defs>
+                    <pattern id="grass-stripes-ff" width="100" height="6" patternUnits="userSpaceOnUse">
+                        <rect width="100" height="6" fill="#b6cf92" />
+                        <rect y="3" width="100" height="3" fill="#a2bf7e" />
+                    </pattern>
+                </defs>
+                <rect width={GW} height={GH} fill="url(#grass-stripes-ff)" />
+                {Array.from({ length: 100 }).map((_, i) => { const r = rng(i + 41); const x = r() * GW, y = r() * GH; return <circle key={i} cx={x} cy={y} r={0.4 + r() * 0.4} fill="#85a868" opacity={0.5} />; })}
+                {FOOD_FOREST_CANOPY.map((t, i) => <circle key={`mulch-${i}`} cx={t.cx} cy={t.cy} r={t.rTree + 1.5} fill="#5a3e1d" opacity="0.35" />)}
+            </Layer>
+            <div style={{ position: 'absolute', inset: 0, opacity: faded ? 0.55 : 1, pointerEvents: 'none' }}>
+                {FOOD_FOREST_SHRUBS.map((s, i) => <Bush key={`shrub-${i}`} cx={s.cx} cy={s.cy} pxPerM={pxPerM} pxPerMY={pxPerMY} color={s.color} r={s.r} />)}
+                {FOOD_FOREST_GROUNDCOVER.map((g, i) => <PlantTile key={`gc-${i}`} cx={g.cx} cy={g.cy} sizeM={1.1} icon={g.icon} pxPerM={pxPerM} pxPerMY={pxPerMY} />)}
+                {FOOD_FOREST_CANOPY.map((t, i) => <Canopy key={`tree-${i}`} cx={t.cx} cy={t.cy} rM={t.rTree} pxPerM={pxPerM} pxPerMY={pxPerMY} fruit={t.fruit} tone="dark" />)}
+                <Pill x={20} y={48} text="Shrub layer" size={10} />
+                <Pill x={50} y={58} text="Groundcover layer" size={10} />
+                <CalloutCard x={50} y={3.5} text="FOOD FOREST" subtitle="Canopy · shrub · groundcover layers" />
+            </div>
+        </>
+    );
+}
+
 // ─── BERRY PATCH ──────────────────────────────────────────────────────────────
 
 const BERRY_ROWS = [

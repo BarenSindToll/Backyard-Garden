@@ -1820,12 +1820,12 @@ const AI_TO_GENERAL_KEY = {
     intensive_beds: 'vegetableGarden', raised_beds: 'vegetableGarden',
     orchard: 'orchard', fruit_trees: 'orchard',
     berry_patch: 'berryPatch', berry_strip: 'berryPatch',
-    guild: 'guild', food_forest: 'woodlot', forest_garden: 'woodlot', coppice: 'woodlot',
+    guild: 'guild', food_forest: 'foodForest', forest_garden: 'foodForest', forest_edge_guild: 'foodForest', coppice: 'woodlot',
     wild_zone: 'woodlot', windbreak: 'woodlot',
     compost: 'compost',
     pond: 'pond', swale: 'pond', duck_pond: 'pond',
     greenhouse: 'greenhouse',
-    herb_garden: 'vegetableGarden',
+    herb_garden: 'herbGarden',
     coop: 'coop', chicken_coop: 'coop',
     beehive: 'beehives', apiary: 'beehives',
     path: 'carRoad',
@@ -1840,6 +1840,7 @@ const GENERAL_ICON_KEYS = {
     coop: 'Bird', beehives: 'Hexagon', carRoad: 'Car', workshop: 'Hammer',
     stapleCrops: 'Wheat', animalRun: 'PawPrint', kidsPlayground: 'Smile',
     house: 'Home', outdoorKitchen: 'CookingPot',
+    herbGarden: 'Leaf', foodForest: 'TreeDeciduous',
 };
 const GENERAL_COLORS = {
     vegetableGarden: '#D8E8B0', orchard: '#B8DCA0', berryPatch: '#F0A8C0', guild: '#D8B8E8',
@@ -1847,6 +1848,7 @@ const GENERAL_COLORS = {
     coop: '#D8C898', beehives: '#FFE082', carRoad: '#C8C0B0', workshop: '#B0A898',
     stapleCrops: '#EEE098', animalRun: '#C8E0B8', kidsPlayground: '#FFF08A',
     house: '#E8D5B0', outdoorKitchen: '#D4907A',
+    herbGarden: '#A8D0B0', foodForest: '#3A6038',
 };
 const GENERAL_BORDER_COLORS = {
     vegetableGarden: '#5A8028', orchard: '#3A8038', berryPatch: '#B03060', guild: '#7040A0',
@@ -1854,6 +1856,7 @@ const GENERAL_BORDER_COLORS = {
     coop: '#8A7040', beehives: '#C8880A', carRoad: '#7A7060', workshop: '#6B5E52',
     stapleCrops: '#A08010', animalRun: '#5A8840', kidsPlayground: '#C07010',
     house: '#A87840', outdoorKitchen: '#8F5A3A',
+    herbGarden: '#3A7058', foodForest: '#1A3018',
 };
 
 // AI catalogKeys that create a dedicated zone tab after apply.
@@ -1865,6 +1868,7 @@ const ZONE_PORTAL_CATALOG_KEYS = new Set([
     'berry_patch', 'berry_strip',
     'guild',
     'greenhouse',
+    'food_forest', 'forest_garden', 'forest_edge_guild',
 ]);
 
 // Map a zone-portal catalogKey to the overlay item's type + structureKey
@@ -1875,6 +1879,8 @@ function resolvePortalTypeInfo(ck) {
     if (ck === 'greenhouse') return { type: 'greenhouse', structureKey: 'greenhouse' };
     if (ck === 'pond') return { type: 'pond', structureKey: 'pond' };
     if (ck === 'staple_crops') return { type: 'stapleCrops', structureKey: 'stapleCrops' };
+    if (ck === 'herb_garden') return { type: 'herbGarden', structureKey: 'herbGarden' };
+    if (ck === 'food_forest' || ck === 'forest_garden' || ck === 'forest_edge_guild') return { type: 'foodForest', structureKey: 'foodForest' };
     return { type: 'vegetableGarden', structureKey: 'vegetableGarden' };
 }
 
@@ -1895,10 +1901,12 @@ function getRenderMode(catalogKey, name) {
     if (ck === 'path' || n.includes('path') || n.includes('walkway') || n.includes('trail'))
         return 'path';
     if (
-        ck === 'vegetable_garden' || ck === 'orchard' || ck === 'food_forest' || ck === 'berry_patch' ||
+        ck === 'vegetable_garden' || ck === 'orchard' || ck === 'food_forest' || ck === 'forest_garden' ||
+        ck === 'forest_edge_guild' || ck === 'berry_patch' ||
         ck === 'pond' || ck === 'swale' || ck === 'guild' || ck === 'herb_garden' || ck === 'wild_zone' ||
         ck === 'windbreak' || ck === 'coop' || ck === 'beehive' ||
-        n.includes('vegetable') || n.includes('orchard') || n.includes('food forest') || n.includes('berry') ||
+        n.includes('vegetable') || n.includes('orchard') || n.includes('food forest') || n.includes('forest garden') ||
+        n.includes('forest edge') || n.includes('berry') ||
         n.includes('pond') || n.includes('meadow') || n.includes('swale') || n.includes('guild') ||
         n.includes('herb') || n.includes('windbreak') || n.includes('hedge') || n.includes('patch') ||
         n.includes('wild') || n.includes(' run') || n.includes('coop') || n.includes('pasture') ||

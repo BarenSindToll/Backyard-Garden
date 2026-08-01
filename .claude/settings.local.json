@@ -13,7 +13,16 @@
       "Bash(node --check controllers/permaculturePlanController.js)",
       "Bash(node verify_setup.mjs)",
       "Bash(sleep 4 && cat /tmp/backend2.log 2>/dev/null | tail -10)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(cd \"/c/Users/anama/Documents/GitHub/Backyard Garden/Backyard-Garden/fixed-backend\" && grep -n \"gardenLayoutModel\\\\|userModel\\\\|export default\\\\|schema\" models/gardenLayoutModel.js | head -20 && echo --- && grep -n \"schema\\\\|export default\" models/userModel.js | head -10)",
+      "Read(//c/c/Users/anama/Documents/GitHub/Backyard Garden/Backyard-Garden/fixed-backend/models/**)",
+      "Bash(cd \"/c/Users/anama/Documents/GitHub/Backyard Garden/Backyard-Garden/fixed-backend\" && grep -n \"export const generateDraft\\\\|export const applyPlan\\\\|req.body\\\\|widthM\\\\|heightM\" controllers/permaculturePlanController.js | head -30)",
+      "Read(//c/c/Users/anama/Documents/GitHub/Backyard Garden/Backyard-Garden/fixed-backend/controllers/**)",
+      "Bash(grep -v \"^[0-9]*: *//\")",
+      "Bash(cd \"/c/Users/anama/Documents/GitHub/Backyard Garden/Backyard-Garden/fixed-backend\" && cat routes/gardenLayoutRoutes.js)",
+      "Read(//c/c/Users/anama/Documents/GitHub/Backyard Garden/Backyard-Garden/fixed-backend/routes/**)",
+      "Bash(node verify_cleanup.mjs 6a2a38705872ddfd1616bc8c)",
+      "Bash(git check-ignore *)"
     ]
   }
 }

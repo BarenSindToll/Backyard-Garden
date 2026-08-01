@@ -452,6 +452,7 @@ const ALIAS_MAP = new Map([
     // Food forest
     ['food forest', 'food_forest'],
     ['forest garden', 'food_forest'],
+    ['forest edge guild', 'food_forest'],
     ['edible forest', 'food_forest'],
     ['edible woodland', 'food_forest'],
 
@@ -560,12 +561,12 @@ export const VALID_ACTIONS = new Set([
 
 // ── General Map canonical type normalization ───────────────────────────────────
 
-/** The 17 approved canonical general map structure types (camelCase, matching gardenZoneConfig.js). */
+/** The 19 approved canonical general map structure types (camelCase, matching gardenZoneConfig.js). */
 export const CANONICAL_GENERAL_KEYS = new Set([
     'house', 'outdoorKitchen', 'greenhouse', 'compost', 'pond',
     'workshop', 'carRoad', 'coop', 'animalRun', 'guild', 'orchard',
     'berryPatch', 'vegetableGarden', 'beehives', 'kidsPlayground',
-    'stapleCrops', 'woodlot',
+    'stapleCrops', 'woodlot', 'herbGarden', 'foodForest',
 ]);
 
 /** Clean, short display names for each canonical general map key. */
@@ -587,6 +588,8 @@ export const CANONICAL_DISPLAY_NAMES = {
     kidsPlayground:  'Kids Playground',
     stapleCrops:     'Staple Crops',
     woodlot:         'Woodlot',
+    herbGarden:      'Herb Garden',
+    foodForest:      'Food Forest',
 };
 
 /**
@@ -595,6 +598,7 @@ export const CANONICAL_DISPLAY_NAMES = {
  */
 export const MULTI_ALLOWED_CANONICAL_KEYS = new Set([
     'guild', 'orchard', 'berryPatch', 'vegetableGarden', 'pond', 'woodlot',
+    'herbGarden', 'foodForest',
 ]);
 
 // Map: catalog key (snake_case) → { key: camelCase canonical, name: forced display name or null }
@@ -608,8 +612,8 @@ const CATALOG_TO_CANONICAL = {
     intensive_beds:    { key: 'vegetableGarden', name: 'Vegetable Garden' },
     raised_beds:       { key: 'vegetableGarden', name: 'Vegetable Garden' },
     raised_bed:        { key: 'vegetableGarden', name: 'Vegetable Garden' },
-    // Herb garden — maps to vegetableGarden visual but keeps its own zone tab name
-    herb_garden:       { key: 'vegetableGarden', name: 'Herb Garden' },
+    // Herb garden — dedicated General Map structure with its own icon/zone tab
+    herb_garden:       { key: 'herbGarden',      name: null },
     // Staple crops group
     staple_crops:      { key: 'stapleCrops',     name: 'Staple Crops' },
     grain_plot:        { key: 'stapleCrops',     name: 'Staple Crops' },
@@ -618,11 +622,13 @@ const CATALOG_TO_CANONICAL = {
     fruit_trees:       { key: 'orchard',         name: 'Orchard' },
     // Guild — keep original for multi-instance naming (e.g. "Apple Guild", "Pear Guild")
     guild:             { key: 'guild',            name: null },
-    // Woodlot group — multi-allowed (food forest, wild zone, windbreak can all
-    // coexist), keep each element's own descriptive name (e.g. "Food Forest",
-    // "Windbreak Hedge", "Wild Meadow") rather than forcing a single label.
-    food_forest:       { key: 'woodlot',          name: null },
-    forest_garden:     { key: 'woodlot',          name: null },
+    // Food forest group — dedicated General Map structure, keep each element's
+    // own descriptive name (e.g. "Food Forest", "Forest Edge Guild").
+    food_forest:       { key: 'foodForest',       name: null },
+    forest_garden:     { key: 'foodForest',       name: null },
+    forest_edge_guild: { key: 'foodForest',       name: null },
+    // Woodlot group — multi-allowed (wild zone, windbreak can coexist), keep
+    // each element's own descriptive name (e.g. "Windbreak Hedge", "Wild Meadow").
     wild_zone:         { key: 'woodlot',          name: null },
     // Berry patch group
     berry_patch:       { key: 'berryPatch',       name: 'Berry Patch' },
@@ -657,11 +663,12 @@ const NAME_PATTERNS = [
     [/orchard|fruit[\s-]?tree/i,                         'orchard'],
     [/berry[\s-]?(?:patch|strip|area|garden|bed)|soft\s+fruit/i, 'berryPatch'],
     [/\bguild\b/i,                                       'guild'],
-    [/food[\s-]?forest|forest[\s-]?garden|edible\s+(?:forest|woodland)|woodland|woodlot|coppice/i, 'woodlot'],
+    [/food[\s-]?forest|forest[\s-]?garden|forest[\s-]?edge[\s-]?guild|edible\s+(?:forest|woodland)/i, 'foodForest'],
+    [/woodland|woodlot|coppice/i,                       'woodlot'],
     [/wild[\s-]?(?:zone|area)|wildflower\s+meadow/i,    'woodlot'],
     [/staple\s*crop|grain\s*plot|crop\s*field|wheat\s*field|potato\s*(?:plot|field)/i, 'stapleCrops'],
     [/vegetable|kitchen\s+garden|potager|raised\s*bed|intensive\s+bed/i, 'vegetableGarden'],
-    [/\bherb[\s-]?(?:garden|bed|border)\b/i,            'vegetableGarden'],
+    [/\bherb[\s-]?(?:garden|bed|border)\b/i,            'herbGarden'],
     [/workshop|storage\s+shed|tool\s+shed/i,            'workshop'],
     [/outdoor\s*kitchen|fire\s*pit/i,                   'outdoorKitchen'],
     [/driveway|car[\s-]?(?:road|park)|parking/i,        'carRoad'],

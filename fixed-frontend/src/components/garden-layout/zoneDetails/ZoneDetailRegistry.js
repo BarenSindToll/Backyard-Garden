@@ -2,7 +2,7 @@ import { detectZoneType } from '../gardenZoneConfig';
 import {
     GuildDetail, PondDetail, HerbGardenDetail, VegetableGardenDetail,
     Orchard, BerryPatch, BeeHives, ChickenCoop, Compost,
-    Greenhouse, Pasture, Grain, House, Patio,
+    Greenhouse, Pasture, Grain, House, Patio, FoodForest,
 } from './ZoneDetailViews.jsx';
 
 export function detectDetailType(name = '') {
@@ -32,4 +32,5 @@ export const DETAIL_REGISTRY = {
     pond: PondDetail,
     herb: HerbGardenDetail,
     vegetable: VegetableGardenDetail,
+    forest: FoodForest,
 };
