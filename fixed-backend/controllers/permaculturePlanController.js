@@ -8,6 +8,7 @@ import {
     validatePermaculturePlan,
     normalizeGeneratedElement,
     resolvePlanElementOverlaps,
+    splitDraftSuggestionsForMvp,
 } from '../utils/permaculturePlanValidation.js';
 
 // ── Bed-layout generator ──────────────────────────────────────────────────────
@@ -296,8 +297,17 @@ function getTargetElementCount(areaM2, householdNeeds = {}, generationRequest = 
 }
 
 // ── Rule-based mock draft (fallback when AI is unavailable) ──────────────────
-// variantType 'A' = Solar Priority, 'B' = Flow & Access
 // sourceContext contains existingMapStructures, availableStructureCatalog, and generationRequest.
+//
+// MVP NOTE: this function used to build two structurally different drafts
+// (Solar Priority vs Flow & Access) selected by `variantType`. The two-variant
+// system has been removed — generateDraft() now always calls this with
+// variantType='A', so `isVariantB` below is permanently false and every
+// "VARIANT B — FLOW & ACCESS" branch in this function is dead code, kept only
+// because it's deeply interleaved with the live Solar Priority path via
+// `isVariantB ? x : y` ternaries throughout. It is intentionally left in place
+// rather than risk a large manual excision; see git history for the two-variant
+// version if that's ever needed again.
 function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourceContext = {}, variantType = 'A', variantStrategy = 'solar-priority') {
     const setup = layoutSnapshot.setup || {};
     const zones = layoutSnapshot.zones || [];
@@ -495,65 +505,21 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
                 });
             });
         } else if (canAddRaisedBed) {
-            // Create ONE Vegetable Garden zone portal (not multiple scattered raised beds)
-            const vgW = areaM2 < 200 ? 8 : areaM2 < 1000 ? 12 : 14;
-            const vgH = areaM2 < 200 ? 5 : areaM2 < 1000 ? 7 : 8;
-            const bedX = Math.max(1, Math.min(widthM * sunnyPos.xFrac, widthM - vgW - 1));
-            const bedY = Math.max(1, Math.min(heightM * sunnyPos.yFrac, heightM - vgH - 1));
-            let vgPos = clampToGarden(bedX, bedY, vgW, vgH, widthM, heightM);
-            const vgShifted = avoidForestShadeBuffer(vgPos.x, vgPos.y, vgW, vgH, widthM, heightM, forestEdges);
-            const vgForestShadeAvoided = vgShifted.x !== vgPos.x || vgShifted.y !== vgPos.y;
-            vgPos = vgShifted;
-
+            // MVP: Vegetable Garden is advice-only — never auto-generated as a
+            // map element (it isn't in the MVP-supported structure set, and
+            // proposing a whole multi-bed "garden within a garden" made the
+            // draft read as a full garden generator rather than a small
+            // assistant). A short recommendation replaces the previous
+            // elaborate multi-bed portal with internalBeds/detailPlan.
             const sunFact = saved?.sectors?.sunnyAreas
                 ? `Sunniest area per site analysis: ${saved.sectors.sunnyAreas}`
                 : `${sunEdge}-facing edge estimated as sunniest`;
-            const soilFact = saved?.soil?.soilType
-                ? `Site analysis: ${saved.soil.soilType} soil`
-                : null;
-            const forestFact = vgForestShadeAvoided
-                ? ` Shifted away from the forest-bordered edge to avoid shade on this sun-hungry zone.`
-                : '';
-
-            // Determine which internal beds to include based on crop preferences
-            const inclTomato = !wantGreenhouse;   // if greenhouse selected, tomatoes go there
-            const inclLeafy = wantSaladGreens || true;
-            const inclRoots = wantRoots || true;
-            const inclLegumes = wantLegumes || areaM2 >= 200;
-            const inclCucurb = wantThreeSisters || areaM2 >= 400;
-            const inclCompan = true;
-
-            const beds = [];
-            let bedY0 = 0;
-            const addBed = (label, plants, heightM_, spacingCm) => {
-                if (bedY0 + heightM_ > vgH) return; // no space
-                beds.push({ id: `bed-${beds.length + 1}`, label, x: 0, y: parseFloat(bedY0.toFixed(2)), widthM: vgW, heightM: heightM_, plants, spacingCm });
-                bedY0 += heightM_ + 0.15;
-            };
-            if (inclTomato) addBed('Tomatoes, Peppers & Herbs', ['Tomato (Roma)', 'Pepper (Kapia)', 'Basil', 'Marigold'], 1.3, 45);
-            if (inclLeafy) addBed('Leafy Greens', ['Lettuce', 'Spinach', 'Swiss Chard', 'Kale', 'Radish'], 1.0, 25);
-            if (inclRoots) addBed('Root Crops', ['Carrot', 'Parsley Root', 'Beetroot', 'Onion'], 1.0, 15);
-            if (inclLegumes) addBed('Legumes', ['Bean (Fasole)', 'Pea (Mazăre)', 'Dill'], 1.0, 30);
-            if (inclCucurb) addBed('Cucurbits', ['Zucchini (Dovlecel)', 'Cucumber', 'Pumpkin'], 1.2, 60);
-            if (inclCompan) addBed('Companion Flowers', ['Calendula (Gălbenele)', 'Marigold (Crăițe)', 'Nasturtium', 'Borage'], 0.8, 30);
-
-            console.log(`[buildMockDraft] Variant A: creating Vegetable Garden portal (${vgW}×${vgH}m, ${beds.length} beds)`);
             proposed.push({
-                action: 'create_new', catalogKey: 'vegetable_garden', canonicalType: 'vegetable_garden',
+                action: 'recommendation_only', canonicalType: 'vegetable_garden',
                 type: 'structure', name: 'Vegetable Garden', targetZone: '1',
-                variantStrategy: 'solar-priority',
-                strategyReason: 'Sunniest area reserved for heat-loving vegetables.',
-                strategyTags: ['full-sun', 'zone-1', 'daily-harvest'],
-                x: vgPos.x, y: vgPos.y, width: vgW, height: vgH, rotation: 0,
-                plants: ['Marigold', 'Nasturtium'],
-                reason: `Solar Priority: ${sunFact}. All vegetable production grouped in one area facing the sun.${forestFact} ${soilFact ? soilFact + ' — raised bed rows improve drainage.' : ''}`,
-                confidence: 0.93, warnings: [],
-                internalBeds: beds,
-                detailPlan: {
-                    layoutType: 'rows',
-                    suggestedPlants: beds.flatMap(b => b.plants).slice(0, 10),
-                    notes: 'Vegetable garden with companion-planted rows. Rotate crops annually.',
-                },
+                plants: [],
+                reason: `Consider a dedicated vegetable growing area on the ${sunFact.toLowerCase()}. Group tomatoes/peppers, leafy greens, root crops and legumes together for easier care and crop rotation.`,
+                confidence: 0.7, warnings: [],
             });
         }
 
@@ -649,8 +615,11 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             });
         }
 
-        // Orchard / guild (Variant A — if selected in crop preferences)
-        if (canAddOrchard && areaM2 > 100) {
+        // Orchard / guild (Variant A — if selected in crop preferences).
+        // MVP: never propose a new orchard when one already exists — this was
+        // the one create_new spot in this file missing the dedup check that
+        // every other structure type (compost/pond/coop/greenhouse) already had.
+        if (canAddOrchard && !hasByCanon('orchard') && areaM2 > 100) {
             const oPos = clampToGarden(widthM * 0.58, heightM * 0.55, 10.0, 8.0, widthM, heightM);
             proposed.push({
                 action: 'create_new', catalogKey: 'orchard', canonicalType: 'orchard',
@@ -1050,11 +1019,11 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             proposed.push({
                 action: 'create_new', catalogKey: 'orchard', canonicalType: 'orchard',
                 type: 'structure', name: 'Mixed Fruit Orchard', targetZone: '3',
-                variantStrategy: 'solar-priority', strategyReason: 'Solar Priority: placed accounting for sun and mature tree shade.',
+                variantStrategy: 'solar-priority', strategyReason: 'Sun-based placement: accounting for sun and mature tree shade.',
                 strategyTags: ['zone-3', 'outer-zone', 'low-maintenance'],
                 x: ffPos.x, y: ffPos.y, width: ffPos.width, height: ffPos.height, rotation: 0,
                 plants: ['Comfrey', 'Clover', 'Yarrow'],
-                reason: `Solar Priority: orchard placed in Zone 3 with space for mature trees. Romanian varieties (Ionatan apple, Italian prune plum) are well adapted. Underplanted with comfrey and clover. ${saved?.sectors?.sunnyAreas ? 'Sunniest areas reserved for annual beds.' : 'Confirm mature tree shadow does not fall on annual beds.'}`,
+                reason: `Sun-based placement: orchard placed in Zone 3 with space for mature trees. Romanian varieties (Ionatan apple, Italian prune plum) are well adapted. Underplanted with comfrey and clover. ${saved?.sectors?.sunnyAreas ? 'Sunniest areas reserved for annual beds.' : 'Confirm mature tree shadow does not fall on annual beds.'}`,
                 confidence: 0.84, warnings: ['Allow 5 m spacing. Consider semi-dwarf rootstocks.'],
                 detailPlan: {
                     layoutType: 'trees',
@@ -1075,7 +1044,7 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             strategyTags: ['zone-1', 'near-house', 'partial-shade'],
             x: hgPos.x, y: hgPos.y, width: hgPos.width, height: 4.0, rotation: 0,
             plants: ['Lovage', 'Dill', 'Parsley', 'Chives'],
-            reason: 'Solar Priority: herb garden in Zone 1. Perennial herbs (lovage, thyme) tolerate partial shade; annual herbs (basil, dill) need good light. Placed so it does not shade sun-hungry beds.',
+            reason: 'Sun-based placement: herb garden in Zone 1. Perennial herbs (lovage, thyme) tolerate partial shade; annual herbs (basil, dill) need good light. Placed so it does not shade sun-hungry beds.',
             confidence: 0.91, warnings: [],
             detailPlan: {
                 layoutType: 'blocks',
@@ -1101,7 +1070,7 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             strategyReason: isVariantB ? 'Zone 3 — potatoes visited weekly for hilling and harvest.' : 'Full sun required for maximum potato yield.',
             strategyTags: isVariantB ? ['zone-3', 'outer-zone', 'weekly-harvest'] : ['full-sun', 'zone-3'],
             x: pPos.x, y: pPos.y, width: pPos.width, height: 6.0, rotation: 0, plants: [],
-            reason: `${isVariantB ? 'ZONE 3 (Flow & Access)' : 'Solar Priority'}: potato and staple crop patch. Potatoes are planted once and harvested in bulk — does not need to be close to the house. ${isVariantB ? 'Placed in Zone 3 to free up accessible Zone 1/2 space for daily-harvest crops.' : 'Placed in open sun for maximum yield.'}`,
+            reason: `${isVariantB ? 'ZONE 3 (Flow & Access)' : 'Sun-based placement'}: potato and staple crop patch. Potatoes are planted once and harvested in bulk — does not need to be close to the house. ${isVariantB ? 'Placed in Zone 3 to free up accessible Zone 1/2 space for daily-harvest crops.' : 'Placed in open sun for maximum yield.'}`,
             confidence: 0.86, warnings: [],
             detailPlan: { layoutType: 'rows', suggestedPlants: ['Potato (Désirée)', 'Potato (Red Emmalie)', 'Comfrey', 'Nasturtium'], notes: 'Plant in spring, harvest in autumn. Use comfrey leaves as mulch around plants.' },
         });
@@ -1118,7 +1087,7 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             strategyReason: isVariantB ? 'Zone 2 — cabbages checked every few days.' : 'Full sun placement for brassica yield.',
             strategyTags: isVariantB ? ['zone-2', 'weekly-harvest'] : ['full-sun', 'zone-1'],
             x: cbPos.x, y: cbPos.y, width: 3.5, height: 1.2, rotation: 0, plants: ['Dill', 'Marigold'],
-            reason: `${isVariantB ? 'ZONE 2 (Flow & Access): brassica bed at medium distance' : 'Solar Priority: brassica bed in full-sun area'}. Cabbage, kale and kohlrabi for fresh eating, sauerkraut and winter storage.`,
+            reason: `${isVariantB ? 'ZONE 2 (Flow & Access): brassica bed at medium distance' : 'Sun-based placement: brassica bed in full-sun area'}. Cabbage, kale and kohlrabi for fresh eating, sauerkraut and winter storage.`,
             confidence: 0.85, warnings: [],
             detailPlan: { layoutType: 'rows', suggestedPlants: ['Cabbage (Varză)', 'Kale', 'Kohlrabi', 'Dill', 'Marigold'], notes: 'Plant dill between rows as companion. Marigold at edges deters pests.' },
         });
@@ -1133,7 +1102,7 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             strategyReason: isVariantB ? 'Zone 2 — root crops pulled when needed, not daily.' : 'Partial shade acceptable for root crops.',
             strategyTags: isVariantB ? ['zone-2', 'weekly-harvest'] : ['partial-shade', 'zone-1'],
             x: rcPos.x, y: rcPos.y, width: 3.5, height: 1.2, rotation: 0, plants: ['Parsley Root'],
-            reason: `${isVariantB ? 'ZONE 2 (Flow & Access): root crop bed at medium distance from house' : 'Solar Priority: root crops tolerate partial shade'}. Carrots, parsley root, beetroot and celery root — Romanian soup staples.`,
+            reason: `${isVariantB ? 'ZONE 2 (Flow & Access): root crop bed at medium distance from house' : 'Sun-based placement: root crops tolerate partial shade'}. Carrots, parsley root, beetroot and celery root — Romanian soup staples.`,
             confidence: 0.85, warnings: [],
             detailPlan: { layoutType: 'rows', suggestedPlants: ['Carrot', 'Parsley Root', 'Beetroot', 'Celery Root', 'Radish'], notes: 'Succession sow carrots every 3 weeks. Parsley root at back (taller). Radish as quick catch crop.' },
         });
@@ -1148,7 +1117,7 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             strategyReason: isVariantB ? 'Zone 3 — grapes harvested in autumn bulk, not daily.' : 'Full sun essential for grape sugar development.',
             strategyTags: isVariantB ? ['zone-3', 'outer-zone'] : ['full-sun', 'shade-avoidance'],
             x: vPos.x, y: vPos.y, width: 8.0, height: 2.0, rotation: 0, plants: ['Clover', 'Nasturtium'],
-            reason: `${isVariantB ? 'ZONE 3 (Flow & Access): grape trellis in outer zone' : 'Solar Priority: grape vine on sunniest boundary wall or fence'}. Grapes need maximum sun for fruit ripening and good airflow to prevent disease.`,
+            reason: `${isVariantB ? 'ZONE 3 (Flow & Access): grape trellis in outer zone' : 'Sun-based placement: grape vine on sunniest boundary wall or fence'}. Grapes need maximum sun for fruit ripening and good airflow to prevent disease.`,
             confidence: 0.84, warnings: ['Ensure good airflow to prevent mildew. Prune in late winter.'],
             detailPlan: { layoutType: 'rows', suggestedPlants: ['Grape (Viță de vie)', 'Clover (underplant)', 'Nasturtium'], notes: 'Train along wire trellis. Prune to 2 buds per spur in February.' },
         });
@@ -1164,7 +1133,7 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             strategyTags: isVariantB ? ['zone-2', 'path-access'] : ['full-sun', 'zone-2'],
             x: mpPos.x, y: mpPos.y, width: mpPos.width, height: 2.5, rotation: 0,
             plants: ['Calendula', 'Yarrow', 'Chamomile', 'Lavender'],
-            reason: `${isVariantB ? 'ZONE 2 (Flow & Access): medicinal and pollinator strip along the path' : 'Solar Priority: medicinal flowers need full sun for potency'}. Calendula, yarrow, chamomile and lavender for teas, tinctures and pollinator support.`,
+            reason: `${isVariantB ? 'ZONE 2 (Flow & Access): medicinal and pollinator strip along the path' : 'Sun-based placement: medicinal flowers need full sun for potency'}. Calendula, yarrow, chamomile and lavender for teas, tinctures and pollinator support.`,
             confidence: 0.87, warnings: [],
             detailPlan: { layoutType: 'blocks', suggestedPlants: ['Calendula (Gălbenele)', 'Yarrow (Coada șoricelului)', 'Chamomile', 'Lavender', 'Borage'], notes: 'Harvest flowers in the morning. Dry for teas. Lavender at edge for border structure.' },
         });
@@ -1197,7 +1166,7 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
             strategyReason: isVariantB ? 'Zone 2 — near pollinator-rich areas but clear of daily harvest path.' : 'Sun-facing entrance for winter cluster warmth.',
             strategyTags: isVariantB ? ['zone-2', 'weekly-harvest'] : ['full-sun', 'zone-2'],
             x: bhPos.x, y: bhPos.y, width: 1.0, height: 1.0, rotation: 0, plants: [],
-            reason: `${isVariantB ? 'ZONE 2 (Flow & Access)' : 'Solar Priority'}: beehive near flowering crops. Bees increase pollination 20–30% and provide honey. Face entrance south-east. Place 5+ m from main daily paths for safety.`,
+            reason: `${isVariantB ? 'ZONE 2 (Flow & Access)' : 'Sun-based placement'}: beehive near flowering crops. Bees increase pollination 20–30% and provide honey. Face entrance south-east. Place 5+ m from main daily paths for safety.`,
             confidence: 0.90, warnings: ['Keep 5 m from daily paths. Ensure water source within 50 m.'],
         });
         // Add pollinator strip near beehive
@@ -1329,21 +1298,17 @@ function buildMockDraft(layoutSnapshot, userRequirements, locationContext, sourc
     const hhStrategy = deriveHouseholdFoodStrategy(layoutSnapshot, genReq);
 
     // ── Plan narrative ────────────────────────────────────────────────────────
-    const variantLabel = isVariantB ? 'Flow & Access' : 'Solar Priority';
     const zoneWord = zones.length === 1 ? 'zone' : 'zones';
     const itemWord = overlayItems.length === 1 ? 'structure' : 'structures';
     const bedCount = existingBeds.length;
 
-    const planNarrative = `## Permaculture Plan — Variant ${variantType}: ${variantLabel}
+    const planNarrative = `## Permaculture Draft
 
 **Site Overview**
 Your garden covers ${widthM} m × ${heightM} m (${areaM2} m²) with ${zones.length} defined planting ${zoneWord} and ${overlayItems.length} existing ${itemWord}${bedCount > 0 ? ` including ${bedCount} raised bed(s)` : ''}. North is set to the **${northDirection}** of the map; the sunniest side is the **${sunEdge}** edge.
 
-**Variant Focus**
-${isVariantB
-            ? `This plan uses a **Flow & Access** spatial strategy. Elements are positioned by visit frequency: daily-use crops, herbs and compost are in Zone 1 (close to the house), main vegetable beds and berries in Zone 2, and orchard, guilds and low-maintenance systems in Zone 3. Paths connect all productive areas. The goal is to minimise daily walking effort and make every element easy to reach and use.`
-            : `This plan uses a **Solar Priority** spatial strategy. The ${sunEdge}-facing side of the garden (highest direct sun) is reserved for demanding crops — tomatoes, peppers, greenhouse production and summer annuals. Partial-shade areas are used for root crops, leafy greens, herbs and currants. Tall structures are placed so they do not cast shade on sun-sensitive beds.${saved?.sectors?.sunnyAreas ? ` Site Analysis confirms sunny areas: ${saved.sectors.sunnyAreas}.` : ' Sun-based placement estimated from North direction — add sun sector data to Site Analysis for higher accuracy.'}`}
-${waterGravityAvailable ? `\n**Water & Gravity note:** Slope or water flow data detected in Site Analysis. A Water & Gravity strategy can be applied as a future refinement — swales on contour, pond at low point, drought-tolerant crops higher up.` : ''}
+**Placement Approach**
+The ${sunEdge}-facing side of the garden (highest direct sun) is reserved for demanding crops — tomatoes, peppers, greenhouse production and summer annuals. Partial-shade areas are used for root crops, leafy greens, herbs and currants. Tall structures are placed so they do not cast shade on sun-sensitive beds.${saved?.sectors?.sunnyAreas ? ` Site Analysis confirms sunny areas: ${saved.sectors.sunnyAreas}.` : ' Sun-based placement estimated from North direction — add sun sector data to Site Analysis for higher accuracy.'}
 
 **Design Principles Applied**
 This draft applies key Holmgren (2002) permaculture principles: observe and interact; catch and store energy; obtain a yield; use and value diversity; integrate rather than segregate; use edges and value the marginal.
@@ -1378,8 +1343,7 @@ Review and select individual elements before applying. The plan is advisory — 
         proposedElements: proposed,
         planNarrative,
         bibliography,
-        variantType,
-        summary: `Variant ${variantType}: ${variantLabel} — ${proposed.filter(p => p.action !== 'recommendation_only').length} actionable elements proposed based on your existing garden layout.`,
+        summary: `Permaculture Draft — ${proposed.filter(p => p.action !== 'recommendation_only').length} actionable elements proposed based on your existing garden layout.`,
     };
 }
 
@@ -1389,11 +1353,14 @@ Review and select individual elements before applying. The plan is advisory — 
 export const generateDraft = async (req, res) => {
     try {
         const userId = req.user.id;
-        const {
-            generationRequest = {},
-            variantType = 'A',
-            variantStrategy = variantType === 'B' ? 'flow-access' : 'solar-priority',
-        } = req.body;
+        const { generationRequest = {} } = req.body;
+        // MVP: single-draft generation only — the old two-variant system
+        // (Solar Priority / Flow & Access, client-selected via variantType) has
+        // been removed. 'solar-priority' is kept as the one internal placement
+        // strategy used by the rule-based fallback. See git history if a future
+        // scope expansion needs variants back.
+        const variantType = 'A';
+        const variantStrategy = 'solar-priority';
 
         // Load the current layout so we can snapshot it
         const layout = await gardenLayoutModel.findOne({ userId });
@@ -1494,16 +1461,12 @@ export const generateDraft = async (req, res) => {
             userRequirements,
             locationContext: mergedLocation,
             generationRequest,
-            variantType,
-            variantStrategy,
         });
 
         // Attach saved site analysis — also set generationRequest explicitly in case
         // buildPermacultureContext did not yet propagate it to the returned context.
         if (savedSiteAnalysis) sourceContext.savedSiteAnalysis = savedSiteAnalysis;
         if (!sourceContext.generationRequest) sourceContext.generationRequest = generationRequest;
-        if (!sourceContext.variantType) sourceContext.variantType = variantType;
-        if (!sourceContext.variantStrategy) sourceContext.variantStrategy = variantStrategy;
 
         // Build and attach the structured site analysis summary
         const siteAnalysisSummary = buildSiteAnalysisSummary(
@@ -1517,8 +1480,7 @@ export const generateDraft = async (req, res) => {
         if (householdFoodStrategy) sourceContext.householdFoodStrategy = householdFoodStrategy;
 
         // ── Try AI, fall back to rule-based mock ─────────────────────────────
-        // Inject variant type + strategy into sourceContext for AI prompt.
-        const sourceContextWithVariant = { ...(sourceContext || {}), variantType, variantStrategy };
+        const sourceContextWithVariant = sourceContext || {};
 
         let rawPlan = null;
         let usedFallback = false;
@@ -1708,14 +1670,9 @@ export const generateDraft = async (req, res) => {
             bibliography: rawPlan.bibliography || [],
             aiSource,
             status: 'draft',
-            // variantType is stored as a plan warning annotation so the frontend can read it
-            // without requiring a schema migration (planWarnings is already an array field).
         });
 
-        // Inject variantType into the returned plan object for the frontend
-        const planWithVariant = { ...plan.toObject(), variantType };
-
-        res.json({ success: true, plan: planWithVariant });
+        res.json({ success: true, plan: plan.toObject() });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -2066,9 +2023,24 @@ export const applyPlan = async (req, res) => {
             newPositions.push({ x: 200 + (i % 4) * 180, y: 120 + Math.floor(i / 4) * 160, inGeneral: false, shape: 'circle' });
         }
 
-        for (const el of (plan.proposedElements || [])) {
-            const elName = el.name || 'Unnamed';
-            const action = el.action || 'create_new';
+        // ── MVP suggestion split — the single source of truth for what's ────
+        // applyable. Rebuilt independently here (never trusted from the
+        // client) against the CURRENT layout, mirroring buildDraftPreview()
+        // on the frontend exactly: action=create_new only, MVP-supported
+        // catalog key, not already existing on the map, in bounds,
+        // non-overlapping, capped at MAX_MAP_SUGGESTIONS. Nothing outside
+        // this set — enhance_existing, plant_inside_existing,
+        // add_near_existing, recommendation_only, non-MVP types, duplicates —
+        // can ever be applied, regardless of what the client selects.
+        const { mapSuggestions } = splitDraftSuggestionsForMvp(plan.proposedElements || [], {
+            widthM, heightM, overlayItems: layout.overlayItems || [],
+        });
+        const mapSuggestionNames = new Set(mapSuggestions.map(el => el.name));
+        console.log(`[applyPlan] MVP map suggestions: ${[...mapSuggestionNames].join(', ') || '(none)'}`);
+
+        for (const el of mapSuggestions) {
+            const elName = el.name;
+            const action = 'create_new'; // guaranteed by splitDraftSuggestionsForMvp
 
             // Honour the user's checkbox selection from the preview
             if (selectedSet && !selectedSet.has(elName)) {
@@ -2076,74 +2048,9 @@ export const applyPlan = async (req, res) => {
                 continue;
             }
 
-            // ── Block path elements — users add paths manually ────────────────
-            if (getRenderMode(el.catalogKey || '', elName) === 'path') {
-                skipped.push({ element: elName, reason: 'Path placement is disabled — add paths manually.' });
-                continue;
-            }
-
-            // ── recommendation_only: save as note, never add to map ──────────
-            // 'permaculture-zone' is reserved for the conceptual Zone 0-5 overlay
-            // (no catalogKey/canonicalType). Any element with a real catalogKey is
-            // a real garden zone and must be applied, even if mislabeled by the AI.
-            const hasCatalogKey = !!(el.catalogKey || el.canonicalType);
-            if (action === 'recommendation_only' || (el.type === 'permaculture-zone' && !hasCatalogKey)) {
-                skipped.push({
-                    element: elName,
-                    reason: action === 'recommendation_only'
-                        ? 'Recommendation only — see plan notes for details.'
-                        : 'Permaculture zone overlay — conceptual only, not added to map.',
-                });
-                continue;
-            }
-
-            // ── enhance_existing / plant_inside_existing ─────────────────────
-            // For bed-like targets: generate and save a real bedLayout so the user
-            // sees plants immediately in the Bed Editor without manual entry.
-            if (action === 'enhance_existing' || action === 'plant_inside_existing') {
-                let bedLayoutCreated = false;
-
-                if (el.targetElementId) {
-                    const targetId = String(el.targetElementId);
-                    // Find the target item among overlay items (General map) or zone items
-                    const allZoneItems = Object.values(layout.zoneItems || {}).flat();
-                    const targetItem =
-                        (layout.overlayItems || []).find(it => String(it.id) === targetId) ||
-                        allZoneItems.find(it => String(it.id) === targetId);
-
-                    const isBedLike = targetItem && ['Raised Bed', 'Greenhouse'].includes(targetItem.name);
-
-                    if (isBedLike && (el.bedLayoutSuggestion || (el.plants || []).length > 0)) {
-                        // Prefer an explicit bedLayoutSuggestion; fall back to generating from plants list
-                        const suggestion = el.bedLayoutSuggestion || makeBedLayoutFromPlants(el.plants || [], targetItem);
-                        // Merge with any existing bedLayout (don't overwrite existing rows)
-                        const existing = newBedLayouts[targetId] || { rows: [], blocks: [], layoutMode: 'rows' };
-                        newBedLayouts[targetId] = {
-                            layoutMode: existing.layoutMode || 'rows',
-                            blocks: existing.blocks || [],
-                            rows: [...(existing.rows || []), ...suggestion.rows],
-                        };
-                        bedLayoutCreated = true;
-                        console.log(`[applyPlan] ${action} "${elName}" → bedLayout updated for id=${targetId} (${suggestion.rows.length} row(s) added)`);
-                    }
-                }
-
-                applied.push({
-                    element: elName,
-                    action,
-                    targetElementId: el.targetElementId || null,
-                    canonicalType: el.canonicalType || null,
-                    plants: el.plants || [],
-                    reason: el.reason || '',
-                    bedLayoutCreated,
-                });
-                if (!bedLayoutCreated) {
-                    console.log(`[applyPlan] ${action} "${elName}" targeting id=${el.targetElementId} (no bed layout — not a bed-like target)`);
-                }
-                continue;
-            }
-
-            // ── create_new / add_near_existing: add as new overlay item ─────
+            // ── create_new: add as new overlay item ──────────────────────────
+            // (MVP catalog-key / dedup / bounds / overlap already validated by
+            // splitDraftSuggestionsForMvp above — el is guaranteed eligible.)
 
             // sourceEl is the preview element (with exact user-visible coordinates) if
             // the frontend sent selectedPreviewElements; falls back to stored plan element.
@@ -2164,31 +2071,33 @@ export const applyPlan = async (req, res) => {
                 continue;
             }
 
-            // ── Placement repair ─────────────────────────────────────────────
-            // Never overlap House/Car Road (or other stable structures) or items
-            // already placed in this batch. If the preview position collides,
-            // nudge to the nearest free spot rather than silently dropping the
-            // element. Only skip if no free spot exists at all.
+            // ── Placement validation (never repositioning) ───────────────────
+            // MVP correctness fix: apply must place elements at EXACTLY the
+            // coordinates the user reviewed in the preview — the frontend's
+            // buildDraftPreview() already validated bounds and non-overlap
+            // before this element was ever shown as a map suggestion. If it no
+            // longer fits (e.g. the map changed between preview and apply),
+            // SKIP it — never silently move it to a different spot. This is
+            // what guarantees the applied result visually matches the preview.
             const placedObstacles = newOverlayItems
                 .filter(it => !STABLE_STRUCTURE_NAMES.has(it.name) && it.xM != null && it.yM != null && it.wM != null && it.hM != null)
                 .map(it => ({ xM: it.xM, yM: it.yM, wM: it.wM, hM: it.hM, marginM: 0.25 }));
             const obstacles = [...stables, ...placedObstacles];
 
-            const placement = repairPlacement(previewXM, previewYM, wM, hM, widthM, heightM, obstacles);
-            if (!placement) {
+            const fitsAtPreviewPosition = !obstacles.some(o =>
+                rectsOverlapM(previewXM, previewYM, wM, hM, o.xM, o.yM, o.wM, o.hM, o.marginM ?? 0.25)
+            );
+            if (!fitsAtPreviewPosition) {
                 skipped.push({
                     element: elName,
-                    reason: `No free space found for "${elName}" (${wM.toFixed(1)}×${hM.toFixed(1)}m) without overlapping House, Car Road, or other elements.`,
+                    reason: `"${elName}" no longer fits at its previewed position without overlapping House, Car Road, or another element — not applied. Regenerate the draft to get an updated suggestion.`,
                 });
-                console.warn(`[applyPlan] Skipped "${elName}" — no free placement found near (${previewXM.toFixed(1)},${previewYM.toFixed(1)})`);
+                console.warn(`[applyPlan] Skipped "${elName}" — preview position (${previewXM.toFixed(1)},${previewYM.toFixed(1)}) no longer free`);
                 continue;
             }
-            const xM = placement.x;
-            const yM = placement.y;
-            const wasRepositioned = placement.repaired;
-            if (wasRepositioned) {
-                console.log(`[applyPlan] Repositioned "${elName}" from (${previewXM.toFixed(1)},${previewYM.toFixed(1)}) to (${xM.toFixed(1)},${yM.toFixed(1)}) to avoid overlap`);
-            }
+            const xM = previewXM;
+            const yM = previewYM;
+            const wasRepositioned = false;
 
             // ── Canonical-type duplicate guard ───────────────────────────────
             // Normalize the incoming element and skip if the same singular canonical type
@@ -2197,7 +2106,9 @@ export const applyPlan = async (req, res) => {
             // (e.g. Greenhouse, Compost) — productive zones (vegetableGarden, orchard,
             // berryPatch, pond, guild) are MULTI_ALLOWED and never hit this guard.
             {
-                const normCheck = normalizeGeneralStructure({ catalogKey: sourceEl.catalogKey || el.catalogKey || '', name: elName });
+                // Identity check — trust the server-stored plan element's catalogKey, not
+                // the client-echoed preview (which only carries position/size fidelity).
+                const normCheck = normalizeGeneralStructure({ catalogKey: el.catalogKey || sourceEl.catalogKey || '', name: elName });
                 if (normCheck) {
                     const { canonicalKey } = normCheck;
                     const isSingular = !MULTI_ALLOWED_CANONICAL_KEYS.has(canonicalKey);
@@ -2210,22 +2121,24 @@ export const applyPlan = async (req, res) => {
                                 element: elName,
                                 reason: `A ${CANONICAL_DISPLAY_NAMES[canonicalKey] || canonicalKey} already exists on the map — skipped to prevent duplicate.`,
                             });
-                            console.log(`[applyPlan] Skipped duplicate ${canonicalKey}: "${elName}" (catalogKey="${sourceEl.catalogKey || el.catalogKey || ''}") — already on map`);
+                            console.log(`[applyPlan] Skipped duplicate ${canonicalKey}: "${elName}" (catalogKey="${el.catalogKey || sourceEl.catalogKey || ''}") — already on map`);
                             continue;
                         }
                     }
                 }
             }
 
-            // Determine if this element becomes a dedicated zone portal (openable tab).
-            // Productive planting areas only: vegetable garden, herb garden, orchard,
-            // berry patch, guild, greenhouse. Buildings/utilities/animals stay on General Map.
-            const ck = sourceEl.catalogKey || el.catalogKey || '';
+            // MVP: AI apply NEVER creates a zone tab/portal — it only creates a
+            // simple overlay item on the General Map (Option A, safest MVP).
+            // Zone tabs remain something the user creates by hand from the
+            // palette; the applied structure is fully functional (movable,
+            // resizable, deletable) as a plain marker either way. Previously
+            // this opened a dedicated tab for greenhouse/orchard AI suggestions
+            // — removed because unrequested new tabs were confusing in the demo.
+            const ck = el.catalogKey || sourceEl.catalogKey || '';
             const detailPlants = (sourceEl.detailPlan?.suggestedPlants || el.detailPlan?.suggestedPlants || []).filter(Boolean);
             const internalBeds = (sourceEl.internalBeds || el.internalBeds || []);
-            const isNewZonePortal =
-                ZONE_PORTAL_CATALOG_KEYS.has(ck) ||
-                (ck === 'raised_bed' && (detailPlants.length >= 2 || internalBeds.length > 0));
+            const isNewZonePortal = false;
             const portalTypeInfo = isNewZonePortal ? resolvePortalTypeInfo(ck) : null;
 
             // Zone portals get a larger minimum area so the visual reads as a garden zone
@@ -2379,18 +2292,23 @@ export const applyPlan = async (req, res) => {
                 x: xM, y: yM, wM, hM,
                 repositioned: wasRepositioned,
             });
-            console.log(`[applyPlan] ${action} "${elName}" placed at (${xM.toFixed(1)},${yM.toFixed(1)}) m${wasRepositioned ? ' [repositioned to avoid overlap]' : preservePreviewPlacement ? ' [preview position]' : ''} size=${wM.toFixed(1)}×${hM.toFixed(1)}`);
+            console.log(`[applyPlan] ${action} "${elName}" placed at (${xM.toFixed(1)},${yM.toFixed(1)}) m${preservePreviewPlacement ? ' [preview position]' : ''} size=${wM.toFixed(1)}×${hM.toFixed(1)}`);
         }
 
-        // ── Post-apply validation: catch elements selected by the frontend that
-        // were never matched against plan.proposedElements (e.g. a name mismatch),
-        // so nothing disappears without a visible reason.
+        // ── Post-apply validation: catch names the client selected that aren't
+        // in the independently-rebuilt mapSuggestions set (non-MVP type,
+        // duplicate, name mismatch, or the map changed since preview) — so
+        // nothing disappears without a visible reason, and a client can never
+        // sneak an advice-only item through by selecting its name.
         if (selectedSet) {
             const accountedNames = new Set([...applied.map(a => a.element), ...skipped.map(s => s.element)]);
             for (const name of selectedSet) {
                 if (!accountedNames.has(name)) {
-                    skipped.push({ element: name, reason: 'Selected element not found in plan — could not be applied.' });
-                    console.warn(`[applyPlan] Selected element "${name}" not found in plan.proposedElements`);
+                    const reason = mapSuggestionNames.has(name)
+                        ? 'Not applied — see other skip reasons above.'
+                        : 'Not a validated MVP map suggestion — kept as advice only.';
+                    skipped.push({ element: name, reason });
+                    console.warn(`[applyPlan] Selected element "${name}" was not applied (${reason})`);
                 }
             }
         }

@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { STRUCTURES, ZONE_TYPES, detectZoneType, GENERAL_STRUCTURES_MAP } from './gardenZoneConfig';
+import { ZONE_TYPES, detectZoneType, GENERAL_STRUCTURES_MAP } from './gardenZoneConfig';
 import { RULER_SIZE, goodInterval, HorizontalRuler, VerticalRuler } from './MapComponents';
 import RaisedBedZoneCanvas from './RaisedBedZoneCanvas';
 import OrchardZoneCanvas from './OrchardZoneCanvas';
-import PlantingModal from './PlantingModal';
 import AddZoneModal from './AddZoneModal';
 import ZoneTabs from './ZoneTabs';
 import { useLanguage } from '../../utils/languageContext';
@@ -11,9 +10,8 @@ import ProposedElementsOverlay from '../permaculture/ProposedElementsOverlay';
 import { CompassRose } from './canvas/CompassRose';
 import { NeighbourhoodBands } from './canvas/NeighbourhoodBands';
 import { OverlayItem } from './canvas/OverlayItem';
-import { BedRowPreview, BedBlockPreview } from './canvas/BedPreviews';
 import { resolveIconSrc } from './canvas/iconUtils';
-import { LINEAR_STRUCTURES, CIRCULAR_STRUCTURES, BED_LIKE_STRUCTURES, MAP_ACTION_BUTTON_STYLE, PAPER_LABEL_STYLE } from './canvas/sharedConstants';
+import { LINEAR_STRUCTURES, CIRCULAR_STRUCTURES, MAP_ACTION_BUTTON_STYLE, PAPER_LABEL_STYLE } from './canvas/sharedConstants';
 
 const CELL_PX = 36;
 const MIN_CELL = 28;
@@ -22,25 +20,29 @@ const FOOTER_H = 24;
 const GENERAL_PX_PER_M = 10;
 // RULER_SIZE, goodInterval, HorizontalRuler, VerticalRuler imported from MapComponents
 
-// Structures that become real zones when dropped on the General map (legacy)
-const ZONE_STRUCTURES = new Set(['Greenhouse']);
-
-// Default sizes in metres for each structure when first dropped on General map
+// Default sizes in metres for each structure when first dropped on General map.
+// Legacy display-name entries are kept as a defensive fallback for pre-MVP saved
+// overlay items that predate the structureKey system.
 const STRUCTURE_DEFAULTS = {
-    // Legacy names
     Path: { wM: 20, hM: 1 },
-    Fence: { wM: 10, hM: 0.5 },
     Greenhouse: { wM: 5, hM: 4 },
     Compost: { wM: 2, hM: 2 },
     Pond: { wM: 5, hM: 5 },
     House: { wM: 10, hM: 8 },
-    Shed: { wM: 4, hM: 3 },
-    'Raised Bed': { wM: 3, hM: 1.2 },
     Coop: { wM: 3, hM: 3 },
-    // New GENERAL_STRUCTURES keys — auto-derived from config
+    'Raised Bed': { wM: 3, hM: 1.2 },
+    // GENERAL_STRUCTURES keys — auto-derived from config
     ...Object.fromEntries(Object.values(GENERAL_STRUCTURES_MAP).map(s => [s.key, s.defaultSize])),
 };
-const DEFAULT_PLANT_SIZE = { wM: 1, hM: 1 };
+
+// MVP NOTE: this file used to contain a second, older zone-detail rendering
+// system (ZoneItemLayer / PlantBlock / ZoneBlock + a `grids`-based plant grid,
+// resize/rename/drop handlers, and a PlantingModal wired to it). It was fully
+// superseded by RaisedBedZoneCanvas / OrchardZoneCanvas + the zoneItems/
+// bedLayouts system and was never actually rendered (dead code with zero
+// reachable JSX). Removed for MVP stability — see git history if needed.
+// (ZoneCircle below is NOT part of that dead system — it's the live General Map
+// zone-circle renderer and is still used by GeneralCanvas.)
 
 const ZONE_STYLES = {
     raised: { border: '#b09060', bg: '#ede0c4', headerBg: '#7a5c30', gridLine: 'rgba(160,128,72,0.18)', bw: 5 },
@@ -59,166 +61,6 @@ const ZONE_STYLES = {
     path: { border: '#a09068', bg: '#d0cdbc', headerBg: '#807050', gridLine: 'rgba(140,120,80,0.15)', bw: 3 },
     general: { border: '#7a9868', bg: '#c4dc9a', headerBg: '#4a6838', gridLine: 'rgba(100,140,80,0.15)', bw: 3 },
 };
-const ROLE_BG = {
-    'Producer': 'rgba(160,200,100,0.32)',
-    'Nitrogen fixer': 'rgba(100,160,210,0.32)',
-    'Pollinator attractor': 'rgba(220,195,100,0.32)',
-    'Dynamic accumulator': 'rgba(185,155,210,0.32)',
-    'Pest repellent': 'rgba(215,150,90,0.32)',
-    'Groundcover': 'rgba(100,195,175,0.32)',
-};
-const ROLE_BORDER = {
-    'Producer': 'rgba(110,160,60,0.60)',
-    'Nitrogen fixer': 'rgba(60,120,180,0.60)',
-    'Pollinator attractor': 'rgba(180,150,40,0.60)',
-    'Dynamic accumulator': 'rgba(140,100,180,0.60)',
-    'Pest repellent': 'rgba(185,110,50,0.60)',
-    'Groundcover': 'rgba(50,150,130,0.60)',
-};
-const STRUCTURE_MAP = Object.fromEntries(STRUCTURES.map(s => [s.name, s]));
-
-function resizeGridLocal(grid, newRows, newCols) {
-    return Array.from({ length: newRows }, (_, r) =>
-        Array.from({ length: newCols }, (_, c) => grid[r]?.[c] ?? null)
-    );
-}
-// ── Zone item overlay (raised beds / paths inside a zone) ────────────────────
-function ZoneItemLayer({ items = [], pxPerM, zoneName, selectedBedId, onSelectBed, onUpdateItems, onRemoveItem, bedLayouts, selectedBedElementId, onSelectBedElement, onUpdateBedLayout, borderW = 3 }) {
-    const [dragState, setDragState] = useState(null);
-    const [resizeState, setResizeState] = useState(null);
-    const [livePos, setLivePos] = useState({});
-    const [liveSize, setLiveSize] = useState({});
-    const pxPerMRef = useRef(pxPerM);
-    useEffect(() => { pxPerMRef.current = pxPerM; }, [pxPerM]);
-    const itemsRef = useRef(items);
-    useEffect(() => { itemsRef.current = items; }, [items]);
-    const onUpdateRef = useRef(onUpdateItems);
-    useEffect(() => { onUpdateRef.current = onUpdateItems; }, [onUpdateItems]);
-
-    useEffect(() => {
-        if (!dragState) return;
-        const { itemId, startX, startY, origXM, origYM } = dragState;
-        const onMove = (e) => {
-            const dxM = (e.clientX - startX) / pxPerMRef.current;
-            const dyM = (e.clientY - startY) / pxPerMRef.current;
-            setLivePos({ [itemId]: { xM: Math.max(0, origXM + dxM), yM: Math.max(0, origYM + dyM) } });
-        };
-        const onUp = (e) => {
-            const dxM = (e.clientX - startX) / pxPerMRef.current;
-            const dyM = (e.clientY - startY) / pxPerMRef.current;
-            onUpdateRef.current?.(itemsRef.current.map(it => it.id === itemId
-                ? { ...it, xM: Math.max(0, origXM + dxM), yM: Math.max(0, origYM + dyM) }
-                : it
-            ));
-            setLivePos({}); setDragState(null);
-        };
-        window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
-        return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-    }, [dragState]);
-
-    useEffect(() => {
-        if (!resizeState) return;
-        const { itemId, startX, startY, origWM, origHM } = resizeState;
-        const onMove = (e) => {
-            const dwM = (e.clientX - startX) / pxPerMRef.current;
-            const dhM = (e.clientY - startY) / pxPerMRef.current;
-            setLiveSize({ [itemId]: { wM: Math.max(0.5, origWM + dwM), hM: Math.max(0.3, origHM + dhM) } });
-        };
-        const onUp = (e) => {
-            const dwM = (e.clientX - startX) / pxPerMRef.current;
-            const dhM = (e.clientY - startY) / pxPerMRef.current;
-            onUpdateRef.current?.(itemsRef.current.map(it => it.id === itemId
-                ? { ...it, wM: Math.max(0.5, origWM + dwM), hM: Math.max(0.3, origHM + dhM) }
-                : it
-            ));
-            setLiveSize({}); setResizeState(null);
-        };
-        window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
-        return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-    }, [resizeState]);
-
-    if (items.length === 0) return null;
-
-    return (
-        <div style={{ position: 'absolute', top: HEADER_H + borderW, left: borderW, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 10 }}>
-            {items.map(item => {
-                const lp = livePos[item.id] || {};
-                const ls = liveSize[item.id] || {};
-                const xM = lp.xM ?? item.xM ?? 0;
-                const yM = lp.yM ?? item.yM ?? 0;
-                const wM = ls.wM ?? item.wM ?? 3;
-                const hM = ls.hM ?? item.hM ?? 1.2;
-                const xPx = xM * pxPerM;
-                const yPx = yM * pxPerM;
-                const wPx = Math.max(24, wM * pxPerM);
-                const hPx = Math.max(16, hM * pxPerM);
-                const isBedLike = BED_LIKE_STRUCTURES.has(item.name);
-                const isSelected = selectedBedId === item.id;
-                const bedLayout = bedLayouts?.[item.id];
-                const bedRows = bedLayout?.rows || [];
-                const bedBlocks = bedLayout?.blocks || [];
-                const hasBedContent = isBedLike && (bedRows.length > 0 || bedBlocks.length > 0);
-                return (
-                    <div key={item.id} style={{
-                        position: 'absolute', left: xPx, top: yPx, width: wPx, height: hPx,
-                        pointerEvents: 'auto', zIndex: isSelected ? 20 : 5, cursor: 'grab', userSelect: 'none',
-                    }}
-                        onMouseDown={e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); setDragState({ itemId: item.id, startX: e.clientX, startY: e.clientY, origXM: item.xM || 0, origYM: item.yM || 0 }); }}
-                        onClick={e => { e.stopPropagation(); if (isBedLike) onSelectBed?.(item.id, zoneName); }}
-                        onDoubleClick={e => { e.stopPropagation(); if (!isBedLike) onRemoveItem?.(item.id); }}
-                    >
-                        {isSelected && (
-                            <div style={{ position: 'absolute', top: -18, left: '50%', transform: 'translateX(-50%)', background: '#a8d870', color: '#1a3a0a', fontSize: 9, fontWeight: 700, borderRadius: 4, padding: '1px 7px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 25 }}>Editing</div>
-                        )}
-                        <div style={{
-                            position: 'relative', width: '100%', height: '100%',
-                            background: item.color ? item.color + '28' : 'rgba(139,94,60,0.15)',
-                            border: isSelected ? '2px solid #a8d870' : `1.5px dashed ${item.color || '#8B5E3C'}70`,
-                            borderRadius: 8,
-                            boxShadow: isSelected ? '0 0 0 2px rgba(168,216,112,0.35), 0 4px 14px rgba(0,0,0,0.18)' : '0 2px 6px rgba(0,0,0,0.10)',
-                            overflow: 'hidden',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-                        }}>
-                            {!hasBedContent && (
-                                <div style={{
-                                    ...PAPER_LABEL_STYLE,
-                                    fontSize: Math.max(8, Math.min(11, Math.min(wPx, hPx) * 0.18)),
-                                    padding: hPx < 50 ? '2px 6px' : '3px 10px',
-                                    maxWidth: wPx - 8, overflow: 'hidden', textOverflow: 'ellipsis',
-                                }}>{item.name}</div>
-                            )}
-                            {hasBedContent && (
-                                <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-                                    {bedRows.map(row => (
-                                        <BedRowPreview key={row.id} row={row} bedWM={wM} bedHM={hM} pxPerM={pxPerM}
-                                            selected={row.id === selectedBedElementId}
-                                            onDragStart={e => e.stopPropagation()}
-                                            onClick={() => onSelectBedElement?.(row.id === selectedBedElementId ? null : row.id)}
-                                            onResizeStart={e => e.stopPropagation()}
-                                        />
-                                    ))}
-                                    {bedBlocks.map(block => (
-                                        <BedBlockPreview key={block.id} block={block} bedWM={wM} bedHM={hM} pxPerM={pxPerM}
-                                            selected={block.id === selectedBedElementId}
-                                            onDragStart={e => e.stopPropagation()}
-                                            onClick={() => onSelectBedElement?.(block.id === selectedBedElementId ? null : block.id)}
-                                            onResizeStart={e => e.stopPropagation()}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <div title="Drag to resize" style={{ position: 'absolute', bottom: -4, right: -4, width: 10, height: 10, background: 'white', border: '1.5px solid #555', borderRadius: 2, cursor: 'se-resize', zIndex: 30 }}
-                            onMouseDown={e => { e.preventDefault(); e.stopPropagation(); setResizeState({ itemId: item.id, startX: e.clientX, startY: e.clientY, origWM: item.wM || 3, origHM: item.hM || 1.2 }); }} />
-                        <button title="Remove" style={{ position: 'absolute', top: -8, right: -8, width: 16, height: 16, background: '#dc2626', color: 'white', border: 'none', borderRadius: '50%', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 30, lineHeight: 1, padding: 0 }}
-                            onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }}
-                            onClick={e => { e.stopPropagation(); onRemoveItem?.(item.id); }}>×</button>
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
 
 // ── Zone circle / rectangle ───────────────────────────────────────────────────
 function ZoneCircle({ zone, zoneIdx, position, selected, pxPerM, zoom = 1, onMouseDown, onClick, onShapeToggle, onRectResizeStart, onRemoveFromGeneral }) {
@@ -343,133 +185,6 @@ function ZoneCircle({ zone, zoneIdx, position, selected, pxPerM, zoom = 1, onMou
                     )}
                 </>
             )}
-        </div>
-    );
-}
-
-// ── PlantBlock ────────────────────────────────────────────────────────────────
-function PlantBlock({ cell, row, col, cellW, cellH, cellSizeM, zoneIdx, plantList, onRemove, onPlantResizeStart }) {
-    const [hovered, setHovered] = useState(false);
-    const spanCols = cell.spanCols || 1;
-    const spanRows = cell.spanRows || 1;
-    const isBlock = spanCols > 1 || spanRows > 1;
-    const blockW = spanCols * cellW;
-    const blockH = spanRows * cellH;
-    const iconSize = Math.min(cellW * 0.68, cellH * 0.68, 26);
-    const totalCount = spanCols * spanRows;
-    const iconSrc = resolveIconSrc(cell.iconData);
-    const plantData = plantList.find(p => p.name === cell.plant);
-    const role = plantData?.guildRole?.[0];
-    const blockBg = isBlock ? (ROLE_BG[role] || 'rgba(180,220,140,0.3)') : 'transparent';
-    const blockBorder = isBlock ? (ROLE_BORDER[role] || 'rgba(100,160,60,0.5)') : 'transparent';
-    const tiles = [];
-    for (let dr = 0; dr < spanRows; dr++)
-        for (let dc = 0; dc < spanCols; dc++)
-            tiles.push({ x: dc * cellW + cellW / 2, y: dr * cellH + cellH / 2 });
-    const HANDLE = 9;
-    const corners = [
-        { bottom: -HANDLE / 2, right: -HANDLE / 2, cursor: 'se-resize' },
-        { bottom: -HANDLE / 2, left: -HANDLE / 2, cursor: 'sw-resize' },
-        { top: -HANDLE / 2, right: -HANDLE / 2, cursor: 'ne-resize' },
-        { top: -HANDLE / 2, left: -HANDLE / 2, cursor: 'nw-resize' },
-    ];
-    return (
-        <div
-            style={{ position: 'absolute', left: col * cellW, top: row * cellH, width: blockW, height: blockH, cursor: 'grab', zIndex: hovered ? 20 : 1 }}
-            onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-            onDoubleClick={onRemove} draggable
-            onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('plant', JSON.stringify({ name: cell.plant, iconData: cell.iconData, fromZone: zoneIdx, fromRow: row, fromCol: col, spanCols, spanRows })); }}
-        >
-            {isBlock && <div className="absolute inset-0 rounded-sm" style={{ background: blockBg, border: `1px solid ${blockBorder}` }} />}
-            {(isBlock ? tiles : [{ x: blockW / 2, y: blockH / 2 }]).map(({ x, y }, i) =>
-                iconSrc
-                    ? <img key={i} src={iconSrc} alt={cell.plant} draggable={false} style={{ position: 'absolute', left: x - iconSize / 2, top: y - iconSize / 2, width: iconSize, height: iconSize, pointerEvents: 'none' }} className="object-contain" />
-                    : <span key={i} style={{ position: 'absolute', left: x - 10, top: y - 10, fontSize: 18, pointerEvents: 'none' }}>🌱</span>
-            )}
-            {hovered && (
-                <>
-                    <div className="absolute inset-0 rounded-sm pointer-events-none" style={{ boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.8)' }} />
-                    {isBlock && blockH >= 56 ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20">
-                            <div className="bg-white/85 rounded-md px-2 py-1 text-center shadow-sm">
-                                <p className="font-bold text-forest text-[11px] leading-tight">Block of {cell.plant}</p>
-                                <p className="text-gray-600 text-[10px]">{spanCols} × {spanRows} ({totalCount})</p>
-                                <p className="text-gray-500 text-[9px]">{(spanCols * cellSizeM).toFixed(1)}m × {(spanRows * cellSizeM).toFixed(1)}m</p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 bg-[#fefce8] border border-amber-200 rounded-lg shadow-lg px-2.5 py-1.5 text-xs pointer-events-none z-40 whitespace-nowrap" style={{ minWidth: 130 }}>
-                            <p className="font-bold text-forest">{isBlock ? `Block of ${cell.plant}` : cell.plant}</p>
-                            {isBlock && <p className="text-gray-600">{spanCols} × {spanRows} ({totalCount} plants)</p>}
-                            {cell.plantedDate && <p className="text-gray-500">🗓 {cell.plantedDate}</p>}
-                            <p className="text-red-400 text-[9px] mt-0.5">dbl-click to remove</p>
-                        </div>
-                    )}
-                    {corners.map((s, i) => (
-                        <div key={i} style={{ position: 'absolute', width: HANDLE, height: HANDLE, background: 'white', border: '1.5px solid #555', borderRadius: 2, zIndex: 30, ...s }}
-                            onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onPlantResizeStart(e, zoneIdx, row, col, spanCols, spanRows, i); }} />
-                    ))}
-                </>
-            )}
-        </div>
-    );
-}
-
-// ── Zone block (detail view) ──────────────────────────────────────────────────
-function ZoneBlock({ zone, grid, position, zoneIdx, selected, cellSizeM, plantList, onResizeMouseDown, onZoneDrop, onRemovePlant, onPlantResizeStart, onDelete, onStartRename, renameValue, onRenameChange, onRenameConfirm, onRenameCancel, isRenaming, resizePreview, plantResizePreview, detailView, zoom = 1 }) {
-    const zoneType = detectZoneType(zone);
-    const style = ZONE_STYLES[zoneType] || ZONE_STYLES.general;
-    // zoom changes actual pixel size so scroll area updates correctly
-    const cellW = Math.max(4, cellSizeM * CELL_PX * zoom);
-    const cellH = Math.max(4, cellSizeM * CELL_PX * zoom);
-    const liveCols = resizePreview?.zoneIdx === zoneIdx ? resizePreview.cols : (grid[0]?.length || 1);
-    const liveRows = resizePreview?.zoneIdx === zoneIdx ? resizePreview.rows : grid.length;
-    const bodyW = liveCols * cellW;
-    const bodyH = liveRows * cellH;
-    const coveredSet = new Set();
-    grid.forEach((row, r) => row.forEach((cell, c) => {
-        if (!cell?.plant) return;
-        const sc = cell.spanCols || 1; const sr = cell.spanRows || 1;
-        for (let dr = 0; dr < sr; dr++) for (let dc = 0; dc < sc; dc++)
-            if (dr !== 0 || dc !== 0) coveredSet.add(`${r + dr},${c + dc}`);
-    }));
-    return (
-        <div style={{ position: detailView ? 'relative' : 'absolute', left: detailView ? undefined : position.x, top: detailView ? undefined : position.y, width: bodyW, border: `${style.bw}px solid ${style.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: selected ? '0 0 0 3px #a8d870, 0 4px 18px rgba(0,0,0,0.35)' : '0 2px 10px rgba(0,0,0,0.28)', zIndex: 2, userSelect: 'none' }}
-            onClick={e => e.stopPropagation()} onDragStart={e => e.preventDefault()}>
-            <div style={{ background: style.headerBg, height: HEADER_H, cursor: 'default' }} className="flex items-center px-2 gap-1.5 select-none">
-                {isRenaming ? (
-                    <input autoFocus value={renameValue} onChange={onRenameChange} onBlur={onRenameConfirm}
-                        onKeyDown={e => { if (e.key === 'Enter') onRenameConfirm(); if (e.key === 'Escape') onRenameCancel(); }}
-                        onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}
-                        className="flex-1 min-w-0 bg-white/25 text-white text-xs font-bold px-1.5 py-0.5 rounded outline-none" />
-                ) : (
-                    <span className="text-white text-xs font-bold flex-1 truncate pointer-events-none">{zone}</span>
-                )}
-                <button onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onStartRename(zoneIdx, zone); }} className="text-white/50 hover:text-white text-xs">✏</button>
-                <button onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(zoneIdx); }} className="text-white/50 hover:text-white text-sm leading-none">×</button>
-            </div>
-            <div style={{ position: 'relative', width: bodyW, height: bodyH, backgroundColor: style.bg, backgroundImage: [`linear-gradient(${style.gridLine.replace(/[\d.]+\)$/, '0.28)')} 1px, transparent 1px)`, `linear-gradient(90deg, ${style.gridLine.replace(/[\d.]+\)$/, '0.28)')} 1px, transparent 1px)`, `linear-gradient(${style.gridLine} 1px, transparent 1px)`, `linear-gradient(90deg, ${style.gridLine} 1px, transparent 1px)`].join(', '), backgroundSize: [`${cellW * 5}px ${cellH * 5}px`, `${cellW * 5}px ${cellH * 5}px`, `${cellW}px ${cellH}px`, `${cellW}px ${cellH}px`].join(', '), overflow: 'visible' }}
-                onDragOver={e => e.preventDefault()} onDrop={e => { e.stopPropagation(); onZoneDrop(e, zoneIdx, cellH, cellW); }}>
-                {resizePreview?.zoneIdx === zoneIdx && <div className="absolute inset-0 border-2 border-dashed border-white/40 pointer-events-none z-10 rounded-sm" />}
-                {grid.flatMap((row, r) => row.map((cell, c) => {
-                    if (!cell?.plant || coveredSet.has(`${r},${c}`)) return null;
-                    const preview = plantResizePreview?.zoneIdx === zoneIdx && plantResizePreview.row === r && plantResizePreview.col === c ? plantResizePreview : null;
-                    return <PlantBlock key={`${r}-${c}`} cell={preview ? { ...cell, spanCols: preview.spanCols, spanRows: preview.spanRows } : cell} row={r} col={c} cellW={cellW} cellH={cellH} cellSizeM={cellSizeM} zoneIdx={zoneIdx} plantList={plantList} onRemove={() => onRemovePlant(zoneIdx, r, c, cell.spanRows || 1, cell.spanCols || 1)} onPlantResizeStart={onPlantResizeStart} />;
-                }))}
-            </div>
-            <div style={{ height: FOOTER_H, background: style.headerBg + '12', borderTop: `1px solid ${style.border}30`, position: 'relative' }} className="flex items-center px-2">
-                <span className="flex-1 text-center text-[10px]" style={{ color: style.headerBg, opacity: 0.55 }}>
-                    {resizePreview?.zoneIdx === zoneIdx ? `${resizePreview.rows} × ${resizePreview.cols} cells` : `${grid.length} × ${grid[0]?.length || 1} cells`}
-                </span>
-                <div className="absolute bottom-0 right-0 w-5 h-5 flex items-end justify-end pb-0.5 pr-0.5" style={{ cursor: 'se-resize' }}
-                    onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onResizeMouseDown(e, zoneIdx); }} title="Drag to resize area">
-                    <svg width="10" height="10" viewBox="0 0 10 10">
-                        <circle cx="8" cy="8" r="1.5" fill={style.headerBg} opacity="0.6" />
-                        <circle cx="4.5" cy="8" r="1.5" fill={style.headerBg} opacity="0.35" />
-                        <circle cx="8" cy="4.5" r="1.5" fill={style.headerBg} opacity="0.35" />
-                    </svg>
-                </div>
-            </div>
         </div>
     );
 }
@@ -688,15 +403,6 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
             // Block individual plants from the General map
             if (!dropped.isStructure) return;
 
-            // Legacy: Greenhouse creates a real zone
-            if (ZONE_STRUCTURES.has(dropped.name) && !dropped.structureKey) {
-                const def = STRUCTURE_DEFAULTS[dropped.name] || { wM: 5, hM: 4 };
-                const wBase = def.wM * basePxPerM;
-                const hBase = def.hM * basePxPerM;
-                onAddZone(dropped.name, true, { x: baseX + wBase / 2, y: baseY + hBase / 2, w: wBase, h: hBase });
-                return;
-            }
-
             // Resolve config from GENERAL_STRUCTURES if structureKey is provided
             const gsConfig = dropped.structureKey ? GENERAL_STRUCTURES_MAP[dropped.structureKey] : null;
             const def = gsConfig?.defaultSize || STRUCTURE_DEFAULTS[dropped.name] || { wM: 4, hM: 4 };
@@ -893,129 +599,11 @@ function GeneralCanvas({ zones, positions, currentZone, overlayItems, plantList,
 }
 
 // ── Main canvas ───────────────────────────────────────────────────────────────
-export default function GardenCanvas({ zones, grids, positions, setup, currentZone, onSelectZone, onUpdateGrid, onUpdatePositions, onAddZone, onDeleteZone, onRenameZone, plantList, overlayItems = [], onUpdateOverlayItems, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, zoneItems, onUpdateZoneItems, onAddZoneItem, onResetZone, proposedItems = [], proposedHoveredName = null, proposedSelectedNames = null, onOpenZonePortal, neighbourhood = null, onRotateNorth, hideCompass = false }) {
+export default function GardenCanvas({ zones, positions, setup, currentZone, onSelectZone, onUpdatePositions, onAddZone, onDeleteZone, onRenameZone, plantList, overlayItems = [], onUpdateOverlayItems, selectedBedId, onSelectBed, selectedBedElementId, onSelectBedElement, bedLayouts, onUpdateBedLayout, zoneItems, onUpdateZoneItems, onResetZone, proposedItems = [], proposedHoveredName = null, proposedSelectedNames = null, onOpenZonePortal, neighbourhood = null, onRotateNorth, hideCompass = false }) {
     const { t, language } = useLanguage();
-    const [resizeState, setResizeState] = useState(null);
-    const [plantResizeState, setPlantResizeState] = useState(null);
-    const [resizePreview, setResizePreview] = useState(null);
     const [generalZoom, setGeneralZoom] = useState(1);
-    const [zoomMap, setZoomMap] = useState({});
     const [detailModeMap, setDetailModeMap] = useState({});
-    const detailContainerRef = useRef(null);
-    const detailZoom = zoomMap[currentZone] ?? 1;
-    const setDetailZoom = (val) => setZoomMap(prev => ({ ...prev, [currentZone]: typeof val === 'function' ? val(prev[currentZone] ?? 1) : val }));
-
-    // Compute zoom that fits the current zone in the container
-    const computeFitZoom = () => {
-        if (currentZone < 0 || !zones[currentZone]) return 1;
-        const el = detailContainerRef.current;
-        const cw = el ? el.clientWidth : 800;
-        const ch = el ? el.clientHeight : 600;
-        const grid = grids[currentZone] || [];
-        const cols = grid[0]?.length || 1;
-        const rows = grid.length || 1;
-        const baseCell = (setup.cellSizeM || 1) * CELL_PX;
-        const zoneW = cols * baseCell;
-        const zoneH = HEADER_H + rows * baseCell + FOOTER_H;
-        const pad = 56;
-        return Math.max(0.05, Math.min(1, Math.min((cw - pad) / zoneW, (ch - pad) / zoneH)));
-    };
-
-    // Auto-fit only on first visit to a zone (zoom persists on subsequent tab switches)
-    const visitedZones = useRef(new Set());
-    useEffect(() => {
-        if (currentZone < 0) return;
-        if (!visitedZones.current.has(currentZone)) {
-            visitedZones.current.add(currentZone);
-            setDetailZoom(computeFitZoom());
-        }
-    }, [currentZone]);
-
-    // Ctrl+scroll zoom on the detail canvas
-    useEffect(() => {
-        const el = detailContainerRef.current;
-        if (!el) return;
-        const onWheel = (e) => {
-            if (!e.ctrlKey && !e.metaKey) return;
-            e.preventDefault();
-            setDetailZoom(z => Math.min(5, Math.max(0.05, z * (e.deltaY < 0 ? 1.1 : 0.9))));
-        };
-        el.addEventListener('wheel', onWheel, { passive: false });
-        return () => el.removeEventListener('wheel', onWheel);
-    }, [currentZone]);
-    const [plantResizePreview, setPlantResizePreview] = useState(null);
-    const [pendingDrop, setPendingDrop] = useState(null);
     const [addZoneOpen, setAddZoneOpen] = useState(false);
-    const [renaming, setRenaming] = useState(null);
-
-    const cellSizeM = setup.cellSizeM || 1;
-    const cellW = Math.max(4, cellSizeM * CELL_PX * detailZoom);
-    const cellH = Math.max(4, cellSizeM * CELL_PX * detailZoom);
-
-    useEffect(() => {
-        if (!resizeState) return;
-        const { zoneIdx, startX, startY, origCols, origRows, cw, ch, grid } = resizeState;
-        const onMove = (e) => setResizePreview({ zoneIdx, cols: Math.max(1, origCols + Math.round((e.clientX - startX) / cw)), rows: Math.max(1, origRows + Math.round((e.clientY - startY) / ch)) });
-        const onUp = (e) => { onUpdateGrid(zoneIdx, resizeGridLocal(grid, Math.max(1, origRows + Math.round((e.clientY - startY) / ch)), Math.max(1, origCols + Math.round((e.clientX - startX) / cw)))); setResizePreview(null); setResizeState(null); };
-        window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
-        return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-    }, [resizeState]);
-
-    useEffect(() => {
-        if (!plantResizeState) return;
-        const { zoneIdx, row, col, startX, startY, origSC, origSR, cw, ch, gridCols, gridRows, cornerIdx, grid } = plantResizeState;
-        const calc = (e) => {
-            const dx = e.clientX - startX; const dy = e.clientY - startY;
-            const signX = cornerIdx === 0 || cornerIdx === 2 ? 1 : -1;
-            const signY = cornerIdx === 0 || cornerIdx === 1 ? 1 : -1;
-            return { newSC: Math.max(1, Math.min(origSC + signX * Math.round(dx / cw), gridCols - col)), newSR: Math.max(1, Math.min(origSR + signY * Math.round(dy / ch), gridRows - row)) };
-        };
-        const onMove = (e) => { const { newSC, newSR } = calc(e); setPlantResizePreview({ zoneIdx, row, col, spanCols: newSC, spanRows: newSR }); };
-        const onUp = (e) => { const { newSC, newSR } = calc(e); onUpdateGrid(zoneIdx, grid.map((r, ri) => r.map((c, ci) => { if (ri === row && ci === col) return { ...c, spanCols: newSC, spanRows: newSR }; if (ri >= row && ri < row + newSR && ci >= col && ci < col + newSC) return null; return c; }))); setPlantResizePreview(null); setPlantResizeState(null); };
-        window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
-        return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-    }, [plantResizeState]);
-
-    const handleResizeMouseDown = (e, zoneIdx) => { e.preventDefault(); const grid = grids[zoneIdx]; setResizeState({ zoneIdx, startX: e.clientX, startY: e.clientY, origCols: grid[0]?.length || 1, origRows: grid.length, cw: cellW, ch: cellH, grid }); };
-    const handlePlantResizeStart = (e, zoneIdx, row, col, origSC, origSR, cornerIdx) => { const grid = grids[zoneIdx]; setPlantResizeState({ zoneIdx, row, col, startX: e.clientX, startY: e.clientY, origSC, origSR, cornerIdx, cw: cellW, ch: cellH, gridCols: grid[0]?.length || 1, gridRows: grid.length, grid }); };
-
-    const handleZoneDrop = (e, zoneIdx, dropCH, dropCW) => {
-        e.preventDefault(); e.stopPropagation();
-        const raw = e.dataTransfer.getData('plant'); if (!raw) return;
-        try {
-            const dropped = JSON.parse(raw);
-            const rect = e.currentTarget.getBoundingClientRect();
-            const colIndex = Math.max(0, Math.min(Math.floor((e.clientX - rect.left) / dropCW), (grids[zoneIdx][0]?.length || 1) - 1));
-            const rowIndex = Math.max(0, Math.min(Math.floor((e.clientY - rect.top) / dropCH), (grids[zoneIdx]?.length || 1) - 1));
-            if (dropped.fromZone !== undefined) {
-                const { fromZone, fromRow, fromCol, spanCols: dSC = 1, spanRows: dSR = 1 } = dropped;
-                const cell = grids[fromZone]?.[fromRow]?.[fromCol];
-                if (!cell || (fromZone === zoneIdx && fromRow === rowIndex && fromCol === colIndex)) return;
-                const clearSrc = (g) => g.map((row, r) => row.map((c, col) => r >= fromRow && r < fromRow + dSR && col >= fromCol && col < fromCol + dSC ? null : c));
-                const placeAt = (g) => g.map((row, r) => row.map((c, co) => { if (r === rowIndex && co === colIndex) return cell; if (r >= rowIndex && r < rowIndex + dSR && co >= colIndex && co < colIndex + dSC) return null; return c; }));
-                if (fromZone === zoneIdx) { onUpdateGrid(zoneIdx, placeAt(clearSrc(grids[zoneIdx]))); } else { onUpdateGrid(fromZone, clearSrc(grids[fromZone])); onUpdateGrid(zoneIdx, placeAt(grids[zoneIdx])); }
-                return;
-            }
-            if (dropped.isStructure) { const def = STRUCTURE_MAP[dropped.name]; onUpdateGrid(zoneIdx, grids[zoneIdx].map((row, r) => row.map((c, col) => r === rowIndex && col === colIndex ? { plant: dropped.name, isStructure: true, iconData: dropped.icon || def?.icon, structureColor: dropped.color || def?.color, notes: '', spanCols: 1, spanRows: 1 } : c))); return; }
-            const fullPlant = plantList.find(p => p.name === dropped.name);
-            const zt = fullPlant?.planting?.zoneTimes?.[setup.hardinessZone || '7b'];
-            const suggestedDate = zt?.directSow || zt?.transplant || new Date().toISOString().split('T')[0];
-            setPendingDrop({ zoneIdx, rowIndex, colIndex, plant: dropped, fullPlant, suggestedDate });
-        } catch (err) { console.error('Drop error', err); }
-    };
-
-    const handleConfirmDrop = ({ date, notes }) => {
-        const { zoneIdx, rowIndex, colIndex, plant, fullPlant } = pendingDrop;
-        const plantedDate = new Date(date);
-        let expectedHarvest = null;
-        if (fullPlant?.planting?.daysToMaturity) { const h = new Date(plantedDate); h.setDate(h.getDate() + fullPlant.planting.daysToMaturity); expectedHarvest = h.toISOString().split('T')[0]; }
-        onUpdateGrid(zoneIdx, grids[zoneIdx].map((row, r) => row.map((c, co) => r === rowIndex && co === colIndex ? { plant: plant.name, plantedDate: plantedDate.toISOString().split('T')[0], expectedHarvest, notes, iconData: plant.iconData, spanCols: 1, spanRows: 1 } : c)));
-        setPendingDrop(null);
-    };
-
-    const handleRemovePlant = (zoneIdx, row, col, spanRows = 1, spanCols = 1) => onUpdateGrid(zoneIdx, grids[zoneIdx].map((r, ri) => r.map((c, ci) => ri >= row && ri < row + spanRows && ci >= col && ci < col + spanCols ? null : c)));
-
-    const handleRenameConfirm = () => { if (!renaming) return; const updated = [...zones]; updated[renaming.idx] = renaming.value.trim() || zones[renaming.idx]; onRenameZone(updated); setRenaming(null); };
 
     const isGeneralView = currentZone === -1;
     const isValidZone = currentZone >= 0 && currentZone < zones.length;
@@ -1031,10 +619,10 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
             </div>
 
             {isGeneralView ? (
-                <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} onAddZone={onAddZone} selectedBedId={selectedBedId} onSelectBed={onSelectBed} selectedBedElementId={selectedBedElementId} onSelectBedElement={onSelectBedElement} bedLayouts={bedLayouts} onUpdateBedLayout={onUpdateBedLayout} proposedItems={proposedItems} proposedHoveredName={proposedHoveredName} proposedSelectedNames={proposedSelectedNames} onOpenZonePortal={onOpenZonePortal} neighbourhood={neighbourhood} onRotateNorth={onRotateNorth} hideCompass={hideCompass || addZoneOpen || !!pendingDrop} zoneItems={zoneItems} />
+                <GeneralCanvas zones={zones} positions={positions} currentZone={currentZone} overlayItems={overlayItems} plantList={plantList} setup={setup} onSelectZone={onSelectZone} onUpdatePositions={onUpdatePositions} onUpdateOverlayItems={onUpdateOverlayItems} onAddZone={onAddZone} selectedBedId={selectedBedId} onSelectBed={onSelectBed} selectedBedElementId={selectedBedElementId} onSelectBedElement={onSelectBedElement} bedLayouts={bedLayouts} onUpdateBedLayout={onUpdateBedLayout} proposedItems={proposedItems} proposedHoveredName={proposedHoveredName} proposedSelectedNames={proposedSelectedNames} onOpenZonePortal={onOpenZonePortal} neighbourhood={neighbourhood} onRotateNorth={onRotateNorth} hideCompass={hideCompass || addZoneOpen} zoneItems={zoneItems} />
             ) : (
                 <div className="flex-1" style={{ position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    {!hideCompass && !addZoneOpen && !pendingDrop && (
+                    {!hideCompass && !addZoneOpen && (
                         <CompassRose northDirection={setup?.northDirection || 'top'} onRotate={onRotateNorth} />
                     )}
                     {currentZoneName ? (() => {
@@ -1062,7 +650,6 @@ export default function GardenCanvas({ zones, grids, positions, setup, currentZo
             )}
 
             {addZoneOpen && <AddZoneModal onAdd={name => { onAddZone(name, true); setAddZoneOpen(false); }} onClose={() => setAddZoneOpen(false)} />}
-            {pendingDrop && <PlantingModal plant={pendingDrop.plant} suggestedDate={pendingDrop.suggestedDate} onConfirm={handleConfirmDrop} onCancel={() => setPendingDrop(null)} />}
         </div>
     );
 }

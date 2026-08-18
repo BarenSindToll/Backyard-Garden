@@ -22,7 +22,28 @@
       "Bash(cd \"/c/Users/anama/Documents/GitHub/Backyard Garden/Backyard-Garden/fixed-backend\" && cat routes/gardenLayoutRoutes.js)",
       "Read(//c/c/Users/anama/Documents/GitHub/Backyard Garden/Backyard-Garden/fixed-backend/routes/**)",
       "Bash(node verify_cleanup.mjs 6a2a38705872ddfd1616bc8c)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(node --experimental-modules -e \"require\\('@babel/core'\\)\")",
+      "Bash(./node_modules/.bin/esbuild src/main.jsx --bundle --format=esm --outfile=/tmp/check_bundle.js --loader:.js=jsx --loader:.svg=text --loader:.png=text --loader:.css=empty --loader:.jpg=text --loader:.jpeg=text --loader:.gif=text --loader:.webp=text --loader:.woff=text --loader:.woff2=text --loader:.ttf=text)",
+      "Bash(rm -f /tmp/*.js 2>/dev/null; echo done)",
+      "Bash(node --check services/permacultureAiService.js)",
+      "Bash(node --check services/permacultureContextService.js)",
+      "Bash(./node_modules/.bin/esbuild src/main.jsx --bundle --format=esm --outfile=/tmp/final_bundle.js --loader:.js=jsx --loader:.svg=text --loader:.png=text --loader:.css=empty --loader:.jpg=text --loader:.jpeg=text --loader:.gif=text --loader:.webp=text --loader:.woff=text --loader:.woff2=text --loader:.ttf=text)",
+      "Bash(./node_modules/.bin/esbuild src/main.jsx --bundle --format=esm --outfile=/tmp/check1.js --loader:.js=jsx --loader:.svg=text --loader:.png=text --loader:.css=empty --loader:.jpg=text --loader:.jpeg=text --loader:.gif=text --loader:.webp=text --loader:.woff=text --loader:.woff2=text --loader:.ttf=text)",
+      "Bash(grep -rniE \"solar priority|flow.{0,3}access|variant a|variant b|two variants|generate two variants|variant switcher|layout strategies\" --include=\"*.js\" --include=\"*.jsx\" fixed-frontend/src fixed-backend)",
+      "Bash(grep -viE \"^\\\\s*//|MVP NOTE|git history|has been removed|removed for MVP|see git history|used to \\(build|contain|generate\\)|old \\(variant|two-variant\\)|the two-variant|dead \\(code|weight\\)|no variant|previously \\(opened|generated\\)\")",
+      "Bash(node --check fixed-backend/controllers/permaculturePlanController.js)",
+      "Bash(./node_modules/.bin/esbuild src/main.jsx --bundle --format=esm --outfile=/tmp/final_check.js --loader:.js=jsx --loader:.svg=text --loader:.png=text --loader:.css=empty --loader:.jpg=text --loader:.jpeg=text --loader:.gif=text --loader:.webp=text --loader:.woff=text --loader:.woff2=text --loader:.ttf=text)",
+      "Bash(./node_modules/.bin/esbuild src/main.jsx --bundle --format=esm --outfile=/tmp/verify_final.js --loader:.js=jsx --loader:.svg=text --loader:.png=text --loader:.css=empty --loader:.jpg=text --loader:.jpeg=text --loader:.gif=text --loader:.webp=text --loader:.woff=text --loader:.woff2=text --loader:.ttf=text)",
+      "Bash(awk 'NR==1096,NR==1330' fixed-backend/controllers/permaculturePlanController.js)",
+      "Bash(./node_modules/.bin/esbuild src/config/permaculturePlanSchema.js --bundle=false --format=esm --outfile=/tmp/schema_check.js)",
+      "Bash(node --check utils/permaculturePlanValidation.js)",
+      "Bash(awk -F: '$1 >= 2080 && $1 <= 2400')",
+      "Bash(./node_modules/.bin/esbuild src/components/permaculture/PermaculturePlanSidePreview.jsx --bundle=false --format=esm --outfile=/tmp/sidepreview_check.js)",
+      "Bash(node --check fixed-backend/utils/permaculturePlanValidation.js)"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
     ]
   }
 }

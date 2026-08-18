@@ -832,8 +832,6 @@ export async function buildPermacultureContext({
     userRequirements   = {},
     locationContext    = {},
     generationRequest  = {},
-    variantType        = 'A',
-    variantStrategy    = '',
 } = {}) {
     try {
         // ── Fetch user profile ─────────────────────────────────────────────────
@@ -980,6 +978,8 @@ export async function buildPermacultureContext({
                 hasCatalogGreenhouse:  STRUCTURE_CATALOG.some(s => s.canonicalType === 'greenhouse' && s.canCreateNew),
                 hasExistingCoop:       existingMapStructures.some(s => s.canonicalType === 'coop'),
                 hasCatalogCoop:        STRUCTURE_CATALOG.some(s => s.canonicalType === 'coop' && s.canCreateNew),
+                hasExistingOrchard:    existingMapStructures.some(s => s.canonicalType === 'orchard'),
+                hasCatalogOrchard:     STRUCTURE_CATALOG.some(s => s.canonicalType === 'orchard' && s.canCreateNew),
             },
 
             plannerPolicy: {
@@ -991,10 +991,8 @@ export async function buildPermacultureContext({
                 doNotInventUnknownStructureTypes:  true,
             },
 
-            // Pass through variant + request data so AI service can read them directly
+            // Pass through request data so AI service can read it directly
             generationRequest,
-            variantType,
-            variantStrategy,
         };
 
         return { success: true, context };

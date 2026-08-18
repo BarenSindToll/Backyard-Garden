@@ -17,14 +17,6 @@ const ACTION_FILL = {
     recommendation_only:   { normal: 'rgba(136,136,136,0.05)', hover: 'rgba(136,136,136,0.1)' },
 };
 
-const ACTION_LABEL = {
-    create_new:            'New',
-    enhance_existing:      'Enhance',
-    plant_inside_existing: 'Plant in',
-    add_near_existing:     'Add near',
-    recommendation_only:   'Note',
-};
-
 // Per-type icons shown in the label chip — by AI schema type
 const TYPE_ICONS = {
     'permaculture-zone': '🔵',
@@ -64,6 +56,26 @@ const MAP_RENDERABLE_ACTIONS = new Set([
     'add_near_existing',
 ]);
 
+// MVP thesis-demo simplification: the map overlay shows only a short name, a
+// dashed outline, and a small type icon — no confidence %, plant lists,
+// warning icons, or "[New]"/"[Enhance]" action-tag prefixes. Those details
+// stay in the side preview panel. See permaculturePlanSchema.js for the
+// separate cap that limits `items` to at most MAX_MAP_SUGGESTIONS elements.
+const EXACT_SHORT_LABELS = {
+    'herb & pollinator border':   'Pollinator Border',
+    'kitchen garden access path': 'Access Path',
+};
+
+function shortMapLabel(el) {
+    const raw = (el.name || 'Suggestion').trim().replace(/^\[[^\]]+\]\s*/, '');
+    const key = raw.toLowerCase();
+    if (EXACT_SHORT_LABELS[key]) return EXACT_SHORT_LABELS[key];
+    if (el.action === 'plant_inside_existing') return `${raw} Planting`;
+    if (el.action === 'enhance_existing') return `${raw} Area`;
+    if (el.action === 'create_new' && key.includes('vegetable')) return 'Vegetable Area';
+    return raw.length > 22 ? raw.slice(0, 20).trimEnd() + '…' : raw;
+}
+
 /**
  * Renders proposed permaculture plan elements on the General Map as temporary
  * dashed overlays. Non-interactive (pointerEvents: none).
@@ -95,10 +107,10 @@ export default function ProposedElementsOverlay({ items = [], pxPerM, hoveredNam
                 const canonColor = canonKey ? CANONICAL_TYPE_COLORS[canonKey] : null;
                 const color      = canonColor || ACTION_COLOR[action] || ACTION_COLOR.create_new;
                 const fills      = ACTION_FILL[action]  || ACTION_FILL.create_new;
-                const actionTag  = ACTION_LABEL[action] || 'Proposed';
                 const icon       = (canonKey && CANONICAL_ICONS[canonKey])
                     || TYPE_ICONS[el.type]
                     || '📍';
+                const label      = shortMapLabel(el);
 
                 const isHovered   = el.name === hoveredName;
                 const isSelected  = selectedNames === null || selectedNames.has(el.name);
@@ -108,12 +120,8 @@ export default function ProposedElementsOverlay({ items = [], pxPerM, hoveredNam
                 const hPx = Math.max(16, (el.height ?? 2) * pxPerM);
 
                 const fill       = isHovered ? fills.hover : fills.normal;
-                const borderPx   = isHovered ? 3 : (isEnhance ? 2 : 2);
-                const borderStyle = isEnhance ? 'dashed' : 'dashed';
+                const borderPx   = isHovered ? 3 : 2;
                 const labelTop   = isHovered ? -23 : -17;
-                const hasWarnings = el.warnings?.length > 0;
-                const hasPlants   = el.plants?.length > 0 && wPx > 68;
-                const hasConf     = el.confidence != null && wPx > 52;
 
                 return (
                     <div
@@ -124,7 +132,7 @@ export default function ProposedElementsOverlay({ items = [], pxPerM, hoveredNam
                             top:           (el.y ?? 0) * pxPerM,
                             width:         wPx,
                             height:        hPx,
-                            border:        `${borderPx}px ${borderStyle} ${color}`,
+                            border:        `${borderPx}px dashed ${color}`,
                             background:    isSelected ? fill : `${color}04`,
                             borderRadius:  isEnhance ? 12 : 8,
                             pointerEvents: 'none',   // no edit/remove controls ever
@@ -159,80 +167,9 @@ export default function ProposedElementsOverlay({ items = [], pxPerM, hoveredNam
                             boxShadow:    isHovered ? '0 2px 6px rgba(0,0,0,0.28)' : 'none',
                             transition:   'top 0.12s ease, box-shadow 0.12s ease',
                         }}>
-                            <span style={{ fontSize: 8, lineHeight: 1, flexShrink: 0 }}>{icon}</span>
-                            <span style={{ opacity: 0.8, fontSize: 8, flexShrink: 0 }}>[{actionTag}]</span>
-                            <span>{el.name}</span>
-                            {hasWarnings && <span style={{ marginLeft: 1, opacity: 0.85, flexShrink: 0 }}>⚠</span>}
+                            <span style={{ fontSize: 9, lineHeight: 1, flexShrink: 0 }}>{icon}</span>
+                            <span>{label}</span>
                         </div>
-
-                        {/* ── Confidence badge (top-right, only when selected) ── */}
-                        {hasConf && isSelected && (
-                            <div style={{
-                                position:     'absolute',
-                                top:          4,
-                                right:        4,
-                                background:   el.confidence >= 0.85
-                                    ? 'rgba(74,124,63,0.88)'
-                                    : el.confidence >= 0.65
-                                        ? 'rgba(160,112,64,0.88)'
-                                        : 'rgba(176,64,64,0.88)',
-                                color:        '#fff',
-                                fontSize:     8,
-                                borderRadius: 3,
-                                padding:      '1px 3px',
-                                lineHeight:   1,
-                                fontWeight:   700,
-                            }}>
-                                {Math.round(el.confidence * 100)}%
-                            </div>
-                        )}
-
-                        {/* ── Plant chips for plant_inside_existing (inner indicator) ── */}
-                        {action === 'plant_inside_existing' && el.plants?.length > 0 && isSelected && (
-                            <div style={{
-                                position:   'absolute',
-                                top:        '50%',
-                                left:       '50%',
-                                transform:  'translate(-50%, -50%)',
-                                display:    'flex',
-                                gap:        3,
-                                flexWrap:   'wrap',
-                                justifyContent: 'center',
-                                maxWidth:   wPx - 8,
-                            }}>
-                                {el.plants.slice(0, 3).map((pl, pi) => (
-                                    <span key={pi} style={{
-                                        fontSize:     7,
-                                        background:   'rgba(46,125,50,0.75)',
-                                        color:        '#fff',
-                                        borderRadius: 3,
-                                        padding:      '1px 3px',
-                                        lineHeight:   1.2,
-                                        fontWeight:   600,
-                                        whiteSpace:   'nowrap',
-                                    }}>🌱 {pl}</span>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* ── Plant list bottom (for other actions) ── */}
-                        {action !== 'plant_inside_existing' && hasPlants && isSelected && (
-                            <div style={{
-                                position:     'absolute',
-                                bottom:       4,
-                                left:         5,
-                                right:        5,
-                                fontSize:     8,
-                                color,
-                                fontWeight:   600,
-                                overflow:     'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace:   'nowrap',
-                                opacity:      isHovered ? 1 : 0.75,
-                            }}>
-                                {el.plants.slice(0, 4).join(' · ')}
-                            </div>
-                        )}
                     </div>
                 );
             })}

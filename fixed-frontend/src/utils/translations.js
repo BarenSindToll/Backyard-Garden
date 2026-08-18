@@ -229,7 +229,7 @@ const en = {
         notesPlaceholder: 'e.g. south-facing raised bed...',
         placePlant: 'Place Plant',
         // AI generation modal
-        generateBtn: '✨ Generate Plan',
+        generateBtn: '✨ Generate Draft',
         generateTitle: 'Generate Permaculture Garden',
         generateSubtitle: 'Let AI design a personalised garden plan based on your needs',
         numZonesLabel: 'Number of Zones',
@@ -619,7 +619,7 @@ const ro = {
         notesPlaceholder: 'ex. strat înălțat orientat spre sud...',
         placePlant: 'Plasează Planta',
         // AI generation modal
-        generateBtn: '✨ Generează Plan',
+        generateBtn: '✨ Generează Draft',
         generateTitle: 'Generează Grădină Permacultură',
         generateSubtitle: 'Lasă AI-ul să proiecteze un plan personalizat bazat pe nevoile tale',
         numZonesLabel: 'Număr de Zone',

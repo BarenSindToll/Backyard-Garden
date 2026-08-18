@@ -9,6 +9,7 @@
  *   normalizeGeneratedElement(element, gardenSetup)             → normalized element
  *   validatePermaculturePlan(plan)                              → { valid, errors, warnings, elementReports }
  *   resolvePlanElementOverlaps(elements, gardenSetup, existing) → { resolved, skipped }
+ *   splitDraftSuggestionsForMvp(elements, garden)               → { mapSuggestions, additionalRecommendations, rejectedSuggestions }
  */
 
 import {
@@ -445,4 +446,153 @@ export function resolvePlanElementOverlaps(elements, gardenSetup, existingOverla
     }
 
     return { resolved, skipped };
+}
+
+// ── splitDraftSuggestionsForMvp ───────────────────────────────────────────────
+// THE single source of truth (backend copy) for splitting a draft's
+// proposedElements into what's map-visible/applyable vs sidebar-only advice.
+// Mirrors buildDraftPreview() in fixed-frontend/src/config/permaculturePlanSchema.js
+// — keep both in sync. Used by applyPlan so the backend independently re-derives
+// exactly the same ≤2 map suggestions the user saw in preview, rather than
+// trusting the client's selection at face value.
+
+// MVP-supported catalog keys — only these may ever be newly created on the map.
+// 'raised_bed' is deliberately excluded: it is not a General Map structure at
+// all (see gardenZoneConfig.js GENERAL_STRUCTURES) — raised beds are placed
+// only inside a zone via the bed editor. A raised_bed create_new suggestion
+// has no real General Map identity, so the backend used to fall back to
+// mislabeling it as "Vegetable Garden" (a catalog key hidden from the MVP
+// palette) — exactly the phantom map suggestion this exclusion prevents.
+export const MVP_APPLYABLE_CATALOG_KEYS = new Set([
+    'greenhouse', 'pond', 'compost', 'coop', 'orchard',
+]);
+
+// Structure types that may only ever exist once — a second suggestion of the
+// same type is always a duplicate. Raised Bed is excluded: multiple are normal.
+const SINGULAR_DEDUPE_CATALOG_KEYS = new Set(['greenhouse', 'pond', 'compost', 'coop', 'orchard']);
+
+export const MAX_MAP_SUGGESTIONS = 2;
+
+// Extra clearance required around certain fixed structures — mirrors
+// FIXED_OBSTACLE_BUFFERS_M in permaculturePlanController.js's applyPlan.
+// Without this, a suggestion can look clear of the house/road here (0-margin
+// check) but still get rejected by applyPlan's fitsAtPreviewPosition check
+// (which enforces these buffers), producing a suggestion that previews fine
+// and then silently fails to apply. Keeping the same buffers here closes
+// that gap — an unsafe suggestion is demoted to advice before the user ever
+// sees it as a map suggestion.
+const FIXED_OBSTACLE_BUFFERS_M = { House: 1.5, 'Car Road': 1.0 };
+const DEFAULT_OBSTACLE_MARGIN_M = 0.25;
+
+function boxesOverlap(a, b, margin = 0) {
+    return a.x < b.x + b.w + margin && a.x + a.w > b.x - margin
+        && a.y < b.y + b.h + margin && a.y + a.h > b.y - margin;
+}
+
+function normalizedKey(el) {
+    return ((el?.catalogKey || el?.canonicalType || '') + '').replace(/-/g, '_');
+}
+
+/**
+ * Classify a single proposed element as applyable or advice-only. MVP rule:
+ * only action="create_new" elements of an MVP-supported, not-already-existing
+ * catalog key are ever applyable. Everything else — enhance_existing,
+ * plant_inside_existing, add_near_existing, recommendation_only, non-MVP
+ * types, and duplicates of an existing structure — is advice-only.
+ *
+ * @param {object} el
+ * @param {Set<string>} existingCatalogKeys — structureKey/canonicalKey values already on the map
+ * @returns {{ applyable: boolean, adviceReason: string|null }}
+ */
+function classifyForMvp(el, existingCatalogKeys) {
+    if (!el || !el.name) return { applyable: false, adviceReason: null };
+    const action = el.action || 'create_new';
+    if (action !== 'create_new') return { applyable: false, adviceReason: null };
+
+    const catalogKey = normalizedKey(el);
+    if (catalogKey === 'path') return { applyable: false, adviceReason: null };
+    if (!catalogKey && (el.type === 'permaculture-zone' || el.canonicalType === 'permaculture-zone')) {
+        return { applyable: false, adviceReason: null };
+    }
+    if (!MVP_APPLYABLE_CATALOG_KEYS.has(catalogKey)) return { applyable: false, adviceReason: null };
+    if (SINGULAR_DEDUPE_CATALOG_KEYS.has(catalogKey) && existingCatalogKeys.has(catalogKey)) {
+        return { applyable: false, adviceReason: `a ${el.name} already exists on the map` };
+    }
+    return { applyable: true, adviceReason: null };
+}
+
+/**
+ * Split proposedElements into the ≤2 validated map suggestions and everything
+ * else (sidebar advice). Positions returned for mapSuggestions are the
+ * element's own x/y/width/height, unmodified — this function never
+ * repositions, only accepts-as-is or demotes to advice.
+ *
+ * @param {object[]} proposedElements — plan.proposedElements, unmodified
+ * @param {{ widthM: number, heightM: number, overlayItems: object[] }} garden — CURRENT saved layout (not a stale generation-time snapshot)
+ * @returns {{ mapSuggestions: object[], additionalRecommendations: object[], rejectedSuggestions: object[] }}
+ */
+export function splitDraftSuggestionsForMvp(proposedElements = [], garden = {}) {
+    const widthM  = Number(garden.widthM)  || 20;
+    const heightM = Number(garden.heightM) || 20;
+    const overlayItems = garden.overlayItems || [];
+    const obstacles = overlayItems.map(it => ({
+        x: Number(it.xM ?? 0), y: Number(it.yM ?? 0), w: Number(it.wM) || 2, h: Number(it.hM) || 2,
+        marginM: FIXED_OBSTACLE_BUFFERS_M[it.name] ?? DEFAULT_OBSTACLE_MARGIN_M,
+    }));
+    const existingCatalogKeys = new Set(
+        overlayItems.map(it => it.structureKey || it.canonicalKey).filter(Boolean)
+    );
+
+    const mapSuggestions = [];
+    const additionalRecommendations = [];
+    const rejectedSuggestions = [];
+    const candidates = [];
+
+    for (const el of (proposedElements || [])) {
+        if (!el || !el.name) { rejectedSuggestions.push(el); continue; }
+        const { applyable, adviceReason } = classifyForMvp(el, existingCatalogKeys);
+        if (!applyable) {
+            additionalRecommendations.push(adviceReason ? { ...el, adviceReason } : el);
+            continue;
+        }
+        candidates.push(el);
+    }
+
+    // Rank best-first: higher confidence, then original order (stable).
+    const ranked = candidates
+        .map((el, idx) => ({ el, idx, score: el.confidence != null ? el.confidence : 0.5 }))
+        .sort((a, b) => b.score - a.score || a.idx - b.idx)
+        .map(x => x.el);
+
+    const placed = [...obstacles];
+    for (const el of ranked) {
+        if (mapSuggestions.length >= MAX_MAP_SUGGESTIONS) {
+            additionalRecommendations.push(el);
+            continue;
+        }
+
+        const { x, y, width: w, height: h } = el;
+        const hasValidDims = [x, y, w, h].every(n => typeof n === 'number' && Number.isFinite(n)) && w > 0 && h > 0;
+        if (!hasValidDims) {
+            additionalRecommendations.push({ ...el, adviceReason: 'placement uncertain' });
+            continue;
+        }
+
+        const inBounds = x >= 0 && y >= 0 && (x + w) <= widthM + 0.01 && (y + h) <= heightM + 0.01;
+        if (!inBounds) {
+            additionalRecommendations.push({ ...el, adviceReason: 'placement uncertain — outside garden bounds' });
+            continue;
+        }
+
+        const box = { x, y, w, h };
+        if (placed.some(o => boxesOverlap(box, o, o.marginM ?? DEFAULT_OBSTACLE_MARGIN_M))) {
+            additionalRecommendations.push({ ...el, adviceReason: 'placement uncertain — overlaps an existing structure' });
+            continue;
+        }
+
+        mapSuggestions.push(el);
+        placed.push({ ...box, marginM: DEFAULT_OBSTACLE_MARGIN_M });
+    }
+
+    return { mapSuggestions, additionalRecommendations, rejectedSuggestions };
 }

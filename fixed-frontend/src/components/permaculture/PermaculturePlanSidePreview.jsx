@@ -2,10 +2,14 @@
  * PermaculturePlanSidePreview
  * Right-side panel shown after the wizard generates a draft.
  * Prototype-style: cream background, serif header, grouped sections,
- * variant cards, sticky footer with Apply / Edit / Regenerate / Discard.
+ * sticky footer with Apply / Regenerate / Discard.
+ *
+ * MVP: single draft only — the old variant-comparison UI (dual strategy cards,
+ * per-element strategy badges tied to solar-priority/flow-access/water-gravity)
+ * has been removed. See git history if it's ever needed back.
  */
 import { useMemo, useState } from 'react';
-import { getApplyMode, isApplyableElement, classifyApplyGroup, getSelectedApplyableElements } from '../../config/permaculturePlanSchema';
+import { getSelectedApplyableElements } from '../../config/permaculturePlanSchema';
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -20,46 +24,6 @@ const C = {
     line:    '#d3cdb8',
     soft:    '#e8e2cc',
 };
-
-// ── Strategy badge derivation ─────────────────────────────────────────────────
-// Returns a short badge string for the active variant strategy, or null.
-function deriveStrategyBadge(el, variantStrategy) {
-    // AI returned explicit strategyReason — use it
-    if (el.strategyReason) return el.strategyReason;
-
-    const reason   = (el.reason || '').toLowerCase();
-    const strategy = el.variantStrategy || variantStrategy || '';
-
-    if (strategy === 'solar-priority' || strategy === 'solar_priority') {
-        if (reason.includes('high-sun') || reason.includes('full sun') || reason.includes('sunniest') || el.strategyTags?.includes('full-sun'))
-            return 'Solar: full-sun placement';
-        if (reason.includes('partial shade') || reason.includes('partial-shade') || el.strategyTags?.includes('partial-shade'))
-            return 'Solar: partial-shade placement';
-        if (reason.includes('solar priority') || reason.includes('variant a'))
-            return 'Solar: sun-optimised';
-        if (reason.includes('sun') || reason.includes('shade'))
-            return 'Solar: sun considered';
-    }
-    if (strategy === 'flow-access' || strategy === 'flow_access') {
-        if (reason.includes('zone 1') || reason.includes('daily harvest') || reason.includes('daily use') || el.strategyTags?.includes('zone-1'))
-            return 'Access: Zone 1 — daily use';
-        if (reason.includes('zone 2') || el.strategyTags?.includes('zone-2'))
-            return 'Access: Zone 2 — regular access';
-        if (reason.includes('zone 3') || el.strategyTags?.includes('zone-3'))
-            return 'Access: Zone 3 — low frequency';
-        if (reason.includes('path') || reason.includes('access') || el.strategyTags?.includes('path-access'))
-            return 'Access: connects productive zones';
-        if (reason.includes('close to house') || reason.includes('near house') || el.strategyTags?.includes('near-house'))
-            return 'Access: near house';
-    }
-    if (strategy === 'water-gravity' || strategy === 'water_gravity') {
-        if (reason.includes('contour') || reason.includes('slope') || el.strategyTags?.includes('contour'))
-            return 'Water: slope / contour';
-        if (reason.includes('low point') || reason.includes('lowest') || el.strategyTags?.includes('low-point'))
-            return 'Water: low-point placement';
-    }
-    return null;
-}
 
 // ── Source extraction ─────────────────────────────────────────────────────────
 // Pulls the first meaningful sentence from an element's reason as a short "Because…" line.
@@ -189,19 +153,6 @@ function FoodStrategyPanel({ strategy }) {
     );
 }
 
-// ── Element classification ─────────────────────────────────────────────────────
-// Grouping is derived from `action` + `catalogKey`/`canonicalType` via
-// classifyApplyGroup (shared with GardenLayout's apply pipeline) — never from
-// the raw `type` field alone, which the AI can mislabel.
-function groupElements(elements) {
-    const groups = { structures: [], productive: [], water_ecology: [], recommendations: [] };
-    elements.forEach(el => {
-        const g = classifyApplyGroup(el);
-        (groups[g] = groups[g] || []).push(el);
-    });
-    return groups;
-}
-
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function formatDim(el) {
     const w = el.width;
@@ -219,19 +170,13 @@ function fitFromConf(confidence) {
     return               { label: 'Optional',       color: '#79857f' };
 }
 
-function avgConf(elements = []) {
-    const cs = elements.filter(e => e.confidence != null).map(e => e.confidence);
-    if (!cs.length) return null;
-    return cs.reduce((a, b) => a + b, 0) / cs.length;
-}
-
-function getTitle(plan, variantIdx, totalVariants) {
-    if (totalVariants >= 2) return variantIdx === 0 ? 'Solar Priority' : 'Flow & Access';
-    // Fall back to plan summary or variant label from planNarrative
+// MVP: single draft only — no variant switcher. Title falls back through the
+// plan's own narrative/summary, or a generic "Permaculture Draft" label.
+function getTitle(plan) {
     const narrativeLine = (plan.planNarrative || '').split('\n').find(l => l.startsWith('## '));
     if (narrativeLine) return narrativeLine.replace('## Permaculture Plan — ', '').trim();
     const s = (plan.summary || '').split('.')[0].trim();
-    return s.length > 0 && s.length <= 60 ? s : 'Permaculture Plan';
+    return s.length > 0 && s.length <= 60 ? s : 'Permaculture Draft';
 }
 
 function getSubtitle(plan) {
@@ -270,39 +215,14 @@ function PlanTag({ children }) {
     );
 }
 
-function VariantCard({ label, sub, confidence, active, onClick }) {
-    return (
-        <button onClick={onClick}
-            style={{
-                textAlign: 'left', flex: 1, padding: '8px 12px',
-                background: active ? C.paper : 'transparent',
-                border: `1px solid ${active ? C.forest : 'transparent'}`,
-                borderRadius: 6, cursor: 'pointer', transition: 'all 0.12s',
-            }}
-        >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', color: active ? C.forest : C.muted, fontWeight: 600 }}>
-                    {label}
-                </span>
-                {confidence != null && (
-                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9.5, color: active ? C.inkSoft : C.muted }}>
-                        {Math.round(confidence * 100)}%
-                    </span>
-                )}
-            </div>
-            {sub && (
-                <div style={{ fontSize: 10.5, color: C.muted, marginTop: 2, lineHeight: 1.3 }}>{sub}</div>
-            )}
-        </button>
-    );
-}
-
 // ── Element card ───────────────────────────────────────────────────────────────
-function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHoverLeave, applying, variantStrategy }) {
-    const applyMode   = getApplyMode(el);
-    const isApplyable = applyMode !== 'recommendationOnly';
-    const createsZoneTab = applyMode === 'linkedZoneElement';
-    const isTip       = el.action === 'recommendation_only';
+function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHoverLeave, applying, isMapVisible }) {
+    // MVP cap: only the ≤2 map-visible, MVP-supported suggestions are applyable.
+    // Everything else (non-MVP catalog types AND MVP items beyond the cap) is
+    // advice-only — no checkbox, never sent to the apply endpoint. Applying
+    // never creates a zone tab (Option A: simple overlay items only), so no
+    // "creates zone tab" badge is shown here either.
+    const isApplyable = isMapVisible;
     const dim = formatDim(el);
     const fit = fitFromConf(el.confidence);
 
@@ -323,8 +243,8 @@ function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHover
                 {isApplyable ? (
                     <PlanCheckbox checked={checked} onChange={onToggle} disabled={applying} />
                 ) : (
-                    <span style={{ width: 16, height: 16, marginTop: 2, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: C.muted, fontSize: 11 }}>
-                        {isTip ? '·' : '○'}
+                    <span title="Advice only" style={{ width: 16, height: 16, marginTop: 2, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: C.muted, fontSize: 11 }}>
+                        ·
                     </span>
                 )}
 
@@ -342,6 +262,15 @@ function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHover
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
+                        {!isApplyable && (
+                            <span style={{
+                                fontSize: 10, fontWeight: 600, color: C.muted,
+                                background: C.cream, border: `1px solid ${C.line}`,
+                                borderRadius: 999, padding: '1px 7px',
+                            }}>
+                                Additional recommendation
+                            </span>
+                        )}
                         {el.type && (
                             <span style={{ fontSize: 11, color: C.muted }}>
                                 {el.type.replace(/-/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase())}
@@ -357,33 +286,18 @@ function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHover
                                 </span>
                             </>
                         )}
-                        {createsZoneTab && (
-                            <span style={{
-                                fontSize: 10, fontWeight: 600, color: '#4a3a90',
-                                background: 'rgba(91,78,192,0.10)', border: '1px solid rgba(91,78,192,0.25)',
-                                borderRadius: 999, padding: '1px 7px',
-                            }}>
-                                ↗ creates zone tab
-                            </span>
-                        )}
                     </div>
 
-                    {(() => {
-                        const badge = deriveStrategyBadge(el, variantStrategy);
-                        return badge ? (
-                            <div style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 4,
-                                marginTop: 5, padding: '2px 8px', borderRadius: 999,
-                                background: variantStrategy === 'flow-access' ? 'rgba(91,78,192,0.09)' : variantStrategy === 'water-gravity' ? 'rgba(26,112,192,0.09)' : 'rgba(180,140,0,0.10)',
-                                border: `1px solid ${variantStrategy === 'flow-access' ? 'rgba(91,78,192,0.22)' : variantStrategy === 'water-gravity' ? 'rgba(26,112,192,0.22)' : 'rgba(180,140,0,0.22)'}`,
-                                fontSize: 10.5, color: variantStrategy === 'flow-access' ? '#4a3a90' : variantStrategy === 'water-gravity' ? '#1a5a90' : '#7a6000',
-                                fontWeight: 500,
-                            }}>
-                                {variantStrategy === 'flow-access' ? '🚶' : variantStrategy === 'water-gravity' ? '💧' : '☀️'}
-                                <span>{badge}</span>
-                            </div>
-                        ) : null;
-                    })()}
+                    {el.strategyReason && (
+                        <div style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            marginTop: 5, padding: '2px 8px', borderRadius: 999,
+                            background: 'rgba(180,140,0,0.10)', border: '1px solid rgba(180,140,0,0.22)',
+                            fontSize: 10.5, color: '#7a6000', fontWeight: 500,
+                        }}>
+                            <span>{el.strategyReason}</span>
+                        </div>
+                    )}
 
                     {el.reason && (() => {
                         const because = extractBecause(el.reason);
@@ -419,9 +333,9 @@ function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHover
                         </div>
                     )}
 
-                    {isTip && (
+                    {!isApplyable && (
                         <p style={{ fontSize: 10.5, color: C.muted, fontStyle: 'italic', margin: '4px 0 0' }}>
-                            Panel recommendation — not drawn on map.
+                            Advice only — not applied to the map{el.adviceReason ? ` (${el.adviceReason})` : ''}.
                         </p>
                     )}
                 </div>
@@ -431,19 +345,31 @@ function PlanElementCard({ el, checked, onToggle, hovered, onHoverEnter, onHover
 }
 
 // ── Section group ──────────────────────────────────────────────────────────────
-function PlanSection({ title, items, selected, onToggle, hoveredName, onHover, applying, variantStrategy }) {
+// Collapsible when `collapsible` is set — used for the Map suggestions /
+// Additional recommendations split (task: additional recs collapsed by default).
+function PlanSection({ title, subtitle, items, selected, onToggle, hoveredName, onHover, applying, isMapSection = false, collapsible = false, defaultCollapsed = false }) {
+    const [collapsed, setCollapsed] = useState(defaultCollapsed);
     if (!items || items.length === 0) return null;
     return (
         <div style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', paddingBottom: 6, marginBottom: 2 }}>
+            <div
+                onClick={collapsible ? () => setCollapsed(v => !v) : undefined}
+                style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', paddingBottom: 6, marginBottom: 2, cursor: collapsible ? 'pointer' : 'default' }}
+            >
                 <h3 style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, margin: 0, color: C.deep, fontWeight: 500 }}>
                     {title}
                 </h3>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.muted }}>
-                    {items.length} {items.length === 1 ? 'item' : 'items'}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.muted }}>
+                        {items.length} {items.length === 1 ? 'item' : 'items'}
+                    </span>
+                    {collapsible && <span style={{ fontSize: 10, color: C.muted }}>{collapsed ? '▼' : '▲'}</span>}
                 </span>
             </div>
-            {items.map((el, i) => (
+            {subtitle && !collapsed && (
+                <p style={{ fontSize: 11, color: C.muted, margin: '0 0 6px', lineHeight: 1.4 }}>{subtitle}</p>
+            )}
+            {!collapsed && items.map((el, i) => (
                 <PlanElementCard
                     key={i} el={el}
                     checked={selected?.has(el.name) ?? true}
@@ -452,7 +378,7 @@ function PlanSection({ title, items, selected, onToggle, hoveredName, onHover, a
                     onHoverEnter={() => onHover(el.name)}
                     onHoverLeave={() => onHover(null)}
                     applying={applying}
-                    variantStrategy={variantStrategy}
+                    isMapVisible={isMapSection}
                 />
             ))}
         </div>
@@ -463,6 +389,8 @@ function PlanSection({ title, items, selected, onToggle, hoveredName, onHover, a
 
 export default function PermaculturePlanSidePreview({
     plan,
+    mapSuggestions = [],
+    additionalRecommendations = [],
     selectedNames,
     onSelectionChange,
     hoveredName,
@@ -477,29 +405,26 @@ export default function PermaculturePlanSidePreview({
     skipped = [],
     previewHidden,
     onToggleHide,
-    variants = [],
-    activeVariantIndex = 0,
-    onVariantSwitch,
 }) {
     if (!plan) return null;
 
     const {
-        proposedElements  = [],
         planNarrative     = '',
         summary           = '',
         planWarnings      = [],
         siteAnalysis      = {},
     } = plan;
 
+    // mapSuggestions / additionalRecommendations come pre-validated from
+    // GardenLayout's buildDraftPreview() — the same split used for the map
+    // overlay and the apply payload. Never re-derived here.
+    const mapItems        = mapSuggestions;
+    const additionalItems = additionalRecommendations;
+
     const siteAnalysisSummary   = siteAnalysis?.siteAnalysisSummary             || null;
     const householdFoodStrategy = plan.sourceContext?.householdFoodStrategy      || null;
-    const variantStrategy       = plan.sourceContext?.variantStrategy             || null;
-    const waterGravityAvailable = !!(plan.sourceContext?.siteAnalysisSummary?.usedFacts?.some(f => /slope|water flow|pooling|low point/i.test(f)));
 
-    const applyableElements = useMemo(
-        () => proposedElements.filter(isApplyableElement),
-        [proposedElements]
-    );
+    const applyableElements = mapItems;
 
     const selected = useMemo(
         () => selectedNames === null ? new Set(applyableElements.map(e => e.name)) : (selectedNames || new Set()),
@@ -511,11 +436,16 @@ export default function PermaculturePlanSidePreview({
     // Same selection used by GardenLayout's apply payload — keeps the button
     // count and the actual number of elements applied in sync.
     const selectedApplyableElements = useMemo(
-        () => getSelectedApplyableElements(proposedElements, selectedNames),
-        [proposedElements, selectedNames]
+        () => getSelectedApplyableElements(applyableElements, selectedNames),
+        [applyableElements, selectedNames]
     );
     const applyCount  = selectedApplyableElements.length;
     const noneChecked = applyCount === 0;
+    // Distinguish "nothing was even suggested for the map" (e.g. every MVP
+    // structure already exists) from "suggestions exist but none checked" —
+    // the former gets its own disabled state instead of a misleading
+    // "Select elements to apply" prompt with nothing to select.
+    const hasNoMapSuggestions = mapItems.length === 0;
 
     const toggleElement = (name) => {
         const next = new Set(selected);
@@ -524,14 +454,8 @@ export default function PermaculturePlanSidePreview({
     };
     const toggleAll = () => onSelectionChange(allChecked ? new Set() : null);
 
-    const groups = useMemo(() => groupElements(proposedElements), [proposedElements]);
-
-    const totalVariants = variants.length;
-    const planTitle = getTitle(plan, activeVariantIndex, totalVariants);
+    const planTitle = getTitle(plan);
     const planSub   = getSubtitle(plan);
-
-    const confA = avgConf(variants[0]?.proposedElements);
-    const confB = avgConf(variants[1]?.proposedElements);
 
     return (
         <div style={{ width: '100%', height: '100%', background: C.paper, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -541,9 +465,7 @@ export default function PermaculturePlanSidePreview({
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ minWidth: 0 }}>
                         <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.muted, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            {totalVariants >= 2
-                                ? (activeVariantIndex === 0 ? '☀️ Variant A — Solar Priority' : '🚶 Variant B — Flow & Access')
-                                : 'Draft plan'}
+                            Permaculture Draft
                             {/* Source badge */}
                             {plan.aiSource === 'ai' && (
                                 <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 3, background: 'rgba(61,107,52,0.15)', color: C.forest, fontWeight: 700, letterSpacing: '0.08em' }}>AI</span>
@@ -565,25 +487,6 @@ export default function PermaculturePlanSidePreview({
                     >✕</button>
                 </div>
 
-                {/* Variant strategy cards */}
-                {variants.length > 1 && (
-                    <div style={{ display: 'flex', gap: 4, marginTop: 12, padding: 3, background: C.cream, borderRadius: 8 }}>
-                        <VariantCard
-                            label="☀️ Solar Priority"
-                            sub="Sun-optimised placement"
-                            confidence={confA}
-                            active={activeVariantIndex === 0}
-                            onClick={() => onVariantSwitch?.(0)}
-                        />
-                        <VariantCard
-                            label="🚶 Flow & Access"
-                            sub="Proximity-optimised placement"
-                            confidence={confB}
-                            active={activeVariantIndex === 1}
-                            onClick={() => onVariantSwitch?.(1)}
-                        />
-                    </div>
-                )}
             </div>
 
             {/* ── Toolbar ── */}
@@ -607,26 +510,31 @@ export default function PermaculturePlanSidePreview({
                 </button>
             </div>
 
+            {/* ── Human-review note ── */}
+            <div style={{ padding: '8px 22px', background: C.cream, borderBottom: `1px solid ${C.soft}`, flexShrink: 0 }}>
+                <p style={{ fontSize: 11, color: C.inkSoft, margin: 0, lineHeight: 1.4 }}>
+                    This draft is based on your current garden layout and brief. Only selected MVP-supported suggestions can be applied to the map. Other ideas are shown as advice only.
+                </p>
+            </div>
+
             {/* ── Scrollable body ── */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '14px 22px 20px', minHeight: 0 }}>
+
+                {/* How this draft was generated — short, grounds it in the real garden */}
+                <div style={{ background: '#f0f7ec', border: '1px solid rgba(61,107,52,0.2)', borderRadius: 8, padding: '9px 13px', marginBottom: 18 }}>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.forest, fontWeight: 600 }}>
+                        How this draft was generated
+                    </span>
+                    <p style={{ fontSize: 11.5, color: C.inkSoft, margin: '4px 0 0', lineHeight: 1.4 }}>
+                        Built from your current map ({plan.sourceContext?.gardenLayout?.widthM ?? '—'} × {plan.sourceContext?.gardenLayout?.heightM ?? '—'} m), its existing structures and zones, and your brief.
+                    </p>
+                </div>
 
                 {/* Site Analysis summary */}
                 <SiteAnalysisPanel summary={siteAnalysisSummary} />
 
                 {/* Household food strategy */}
                 <FoodStrategyPanel strategy={householdFoodStrategy} />
-
-                {/* Water & Gravity availability note */}
-                {waterGravityAvailable && (
-                    <div style={{ background: '#eef6ff', border: '1px solid rgba(26,112,192,0.25)', borderRadius: 6, padding: '8px 12px', marginBottom: 18 }}>
-                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#1a5a90', fontWeight: 600 }}>
-                            💧 Water & Gravity data available
-                        </span>
-                        <div style={{ fontSize: 11, color: '#1d3a60', marginTop: 3, lineHeight: 1.4 }}>
-                            Slope or water-flow data detected in Site Analysis. A Water & Gravity strategy can be applied as a future refinement.
-                        </div>
-                    </div>
-                )}
 
                 {/* Plan warnings */}
                 {planWarnings.length > 0 && (
@@ -640,11 +548,23 @@ export default function PermaculturePlanSidePreview({
                     </div>
                 )}
 
-                {/* Grouped sections */}
-                <PlanSection title="Structures"               items={groups.structures}     selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
-                <PlanSection title="Productive zones"         items={groups.productive}     selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
-                <PlanSection title="Water & ecology"          items={groups.water_ecology}  selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
-                <PlanSection title="Recommendations & warnings" items={groups.recommendations} selected={selected} onToggle={toggleElement} hoveredName={hoveredName} onHover={onHover} applying={applying} variantStrategy={variantStrategy} />
+                {/* Map suggestions — the ≤2 elements actually drawn on the General Map */}
+                <PlanSection
+                    title="Map suggestions"
+                    subtitle="Shown as dashed boxes on the map. Uncheck any you don't want applied."
+                    items={mapItems} selected={selected} onToggle={toggleElement}
+                    hoveredName={hoveredName} onHover={onHover} applying={applying}
+                    isMapSection
+                />
+
+                {/* Additional recommendations — advice-only, never drawn on the map */}
+                <PlanSection
+                    title="Additional recommendations"
+                    subtitle="Not drawn on the map — advice only."
+                    items={additionalItems} selected={selected} onToggle={toggleElement}
+                    hoveredName={hoveredName} onHover={onHover} applying={applying}
+                    collapsible defaultCollapsed
+                />
 
                 {/* Skipped elements */}
                 {skipped.length > 0 && (
@@ -690,45 +610,56 @@ export default function PermaculturePlanSidePreview({
 
                 {/* Primary apply button */}
                 {!applyWarning && (
-                    <button
-                        onClick={() => onApply(false)}
-                        disabled={applying || noneChecked}
-                        style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                            width: '100%', padding: '13px 16px', borderRadius: 8,
-                            background: !noneChecked && !applying ? C.forest : C.line,
-                            color: !noneChecked && !applying ? '#f4f1e6' : C.muted,
-                            border: 'none', fontSize: 14, fontWeight: 500,
-                            cursor: !noneChecked && !applying ? 'pointer' : 'not-allowed',
-                            transition: 'background 0.12s',
-                        }}
-                    >
-                        {applying ? (
-                            <>
-                                <svg width="14" height="14" viewBox="0 0 14 14" style={{ flexShrink: 0 }}>
-                                    <circle cx="7" cy="7" r="5.5" fill="none" stroke="rgba(244,241,230,0.35)" strokeWidth="1.5"/>
-                                    <circle cx="7" cy="7" r="5.5" fill="none" stroke="#f4f1e6" strokeWidth="1.5"
-                                        strokeDasharray="12 22" strokeLinecap="round" transform="rotate(-90 7 7)">
-                                        <animateTransform attributeName="transform" type="rotate" from="0 7 7" to="360 7 7" dur="1s" repeatCount="indefinite"/>
-                                    </circle>
-                                </svg>
-                                Applying…
-                            </>
-                        ) : noneChecked ? (
-                            'Select elements to apply'
-                        ) : (
-                            `✓ Apply ${applyCount} element${applyCount !== 1 ? 's' : ''} to map`
-                        )}
-                    </button>
+                    hasNoMapSuggestions ? (
+                        <button
+                            disabled
+                            title="Every MVP-supported structure already exists on your map, or nothing fit safely — see Additional recommendations for advice instead."
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                width: '100%', padding: '13px 16px', borderRadius: 8,
+                                background: C.line, color: C.muted,
+                                border: 'none', fontSize: 14, fontWeight: 500, cursor: 'not-allowed',
+                            }}
+                        >
+                            No map changes suggested
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => onApply(false)}
+                            disabled={applying || noneChecked}
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                width: '100%', padding: '13px 16px', borderRadius: 8,
+                                background: !noneChecked && !applying ? C.forest : C.line,
+                                color: !noneChecked && !applying ? '#f4f1e6' : C.muted,
+                                border: 'none', fontSize: 14, fontWeight: 500,
+                                cursor: !noneChecked && !applying ? 'pointer' : 'not-allowed',
+                                transition: 'background 0.12s',
+                            }}
+                        >
+                            {applying ? (
+                                <>
+                                    <svg width="14" height="14" viewBox="0 0 14 14" style={{ flexShrink: 0 }}>
+                                        <circle cx="7" cy="7" r="5.5" fill="none" stroke="rgba(244,241,230,0.35)" strokeWidth="1.5"/>
+                                        <circle cx="7" cy="7" r="5.5" fill="none" stroke="#f4f1e6" strokeWidth="1.5"
+                                            strokeDasharray="12 22" strokeLinecap="round" transform="rotate(-90 7 7)">
+                                            <animateTransform attributeName="transform" type="rotate" from="0 7 7" to="360 7 7" dur="1s" repeatCount="indefinite"/>
+                                        </circle>
+                                    </svg>
+                                    Applying…
+                                </>
+                            ) : noneChecked ? (
+                                'Select elements to apply'
+                            ) : (
+                                `✓ Apply ${applyCount} element${applyCount !== 1 ? 's' : ''} to map`
+                            )}
+                        </button>
+                    )
                 )}
 
-                {/* Secondary actions */}
+                {/* Secondary actions — single-draft MVP: one Regenerate reopens the brief */}
                 <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                    <button onClick={() => onRegenerate(2)} disabled={applying}
-                        style={{ flex: 1, padding: '8px', background: 'none', border: `1px solid ${C.line}`, color: C.inkSoft, fontSize: 12, borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                        ✏ Edit brief
-                    </button>
-                    <button onClick={() => onRegenerate(1)} disabled={applying}
+                    <button onClick={onRegenerate} disabled={applying}
                         style={{ flex: 1, padding: '8px', background: 'none', border: `1px solid ${C.line}`, color: C.inkSoft, fontSize: 12, borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                         ↺ Regenerate
                     </button>

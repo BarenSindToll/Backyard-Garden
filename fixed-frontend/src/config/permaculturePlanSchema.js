@@ -314,10 +314,23 @@ export function normalizedCatalogKey(el) {
     return (el?.catalogKey || el?.canonicalType || '').replace(/-/g, '_');
 }
 
+// MVP SCOPE (bachelor thesis stabilization): only these catalog keys have full
+// add/move/resize/save/load/delete support in the General Map UI (see
+// GENERAL_STRUCTURES in gardenZoneConfig.js). AI-proposed elements of any other
+// type (berry patch, herb garden, vegetable garden, staple crops, guild, food
+// forest, wild zone, beehive, shed, patio, windbreak, swale) are downgraded to
+// recommendation-only below so Apply never places them on the map.
+// 'raised_bed' is deliberately excluded too: it is not a General Map structure
+// at all — GENERAL_STRUCTURES in gardenZoneConfig.js explicitly places raised
+// beds only inside a zone via the bed editor, never on the General Map palette.
+const MVP_APPLYABLE_CATALOG_KEYS = new Set([
+    'greenhouse', 'pond', 'compost', 'coop', 'orchard',
+]);
+
 /**
  * Classify how a proposed element should be treated by the apply pipeline:
- *  - 'mapElement'        — a real, applyable map element
- *  - 'linkedZoneElement' — applyable AND creates/links a zone tab on apply
+ *  - 'mapElement'         — a real, applyable map element (a simple overlay
+ *                           item — apply never creates a zone tab, MVP Option A)
  *  - 'recommendationOnly' — advice/notes only, never placed on the map
  *
  * Crucially this does NOT trust the raw `type` field alone (AI output may
@@ -328,6 +341,16 @@ export function getApplyMode(el) {
     if (!el) return 'recommendationOnly';
     const action = el.action || 'create_new';
     if (!APPLY_ACTIONS.has(action)) return 'recommendationOnly';
+
+    // MVP stability: only brand-new placements are ever map-visible/applyable.
+    // enhance_existing / plant_inside_existing / add_near_existing all target
+    // something already on the map — the UI cannot yet represent that as a
+    // distinct dashed box without confusion (e.g. "Greenhouse Planting" next
+    // to an existing greenhouse reads as a second greenhouse). These stay
+    // sidebar advice only.
+    if (action !== 'create_new') {
+        return 'recommendationOnly';
+    }
 
     const catalogKey = normalizedCatalogKey(el);
     // Conceptual Zone 0-5 overlays have no catalogKey and are never applyable.
@@ -342,13 +365,154 @@ export function getApplyMode(el) {
         return 'recommendationOnly';
     }
 
-    const elementType = catalogKeyToElementType(catalogKey);
-    if (ZONE_PORTAL_ELEMENT_TYPES.has(elementType)) return 'linkedZoneElement';
+    // MVP stability: everything outside the trimmed General Map structure set
+    // stays advice-only (see MVP_APPLYABLE_CATALOG_KEYS above).
+    if (!MVP_APPLYABLE_CATALOG_KEYS.has(catalogKey)) {
+        return 'recommendationOnly';
+    }
+
     return 'mapElement';
 }
 
 export function isApplyableElement(el) {
     return getApplyMode(el) !== 'recommendationOnly';
+}
+
+// ── Map suggestion cap (MVP thesis-demo simplification) ────────────────────────
+// The General Map overlay is capped to a handful of the best proposed elements
+// so a draft reads as "a few clear suggestions" rather than a wall of dashed
+// boxes. Anything beyond the cap — or anything not MVP-applyable at all — is
+// sidebar-only ("Additional recommendation" text), never drawn on the map.
+export const MAX_MAP_SUGGESTIONS = 2;
+
+// Extra clearance required around certain fixed structures — mirrors
+// FIXED_OBSTACLE_BUFFERS_M in fixed-backend/controllers/permaculturePlanController.js's
+// applyPlan. Without this, a suggestion can look clear of the house/road here
+// (0-margin check) but still get rejected by applyPlan's fitsAtPreviewPosition
+// check (which enforces these buffers) — previews fine, then silently fails
+// to apply. Keeping the same buffers here closes that gap.
+const FIXED_OBSTACLE_BUFFERS_M = { House: 1.5, 'Car Road': 1.0 };
+const DEFAULT_OBSTACLE_MARGIN_M = 0.25;
+
+function boxesOverlap(a, b, margin = 0) {
+    return a.x < b.x + b.w + margin && a.x + a.w > b.x - margin
+        && a.y < b.y + b.h + margin && a.y + a.h > b.y - margin;
+}
+
+/**
+ * Ranks applyable elements best-first for map display:
+ *   1. (pre-filtered by caller) MVP-supported / applyable at all
+ *   2. Higher confidence first
+ *   3. Elements with explicit width+height (clear placement) before vague ones
+ *   4. Elements that don't overlap existing map structures before ones that do
+ * Ties keep their original relative order (stable sort).
+ *
+ * @param {object[]} elements — already-applyable proposed elements
+ * @param {{x:number,y:number,w:number,h:number}[]} obstacles — existing map structures' bounding boxes
+ */
+export function rankMapCandidates(elements, obstacles = []) {
+    return elements
+        .map((el, idx) => {
+            const hasDims    = el.width != null && el.height != null;
+            const confidence = el.confidence != null ? el.confidence : 0.5;
+            const box        = { x: el.x || 0, y: el.y || 0, w: el.width || 2, h: el.height || 2 };
+            const overlaps   = obstacles.some(o => boxesOverlap(box, o));
+            const score      = confidence * 100 + (hasDims ? 20 : 0) - (overlaps ? 25 : 0);
+            return { el, idx, score };
+        })
+        .sort((a, b) => b.score - a.score || a.idx - b.idx)
+        .map(x => x.el);
+}
+
+/**
+ * THE single source of truth for splitting a draft's proposedElements into
+ * what's map-visible/applyable vs sidebar-only advice. Used identically by:
+ *   - the General Map overlay (which elements to draw, at which coordinates)
+ *   - the side preview panel (Map suggestions vs Additional recommendations)
+ *   - the apply payload (exactly the elements the user was shown — no re-derivation)
+ *
+ * Positions returned for mapSuggestions are FINAL — nothing downstream may
+ * reposition, re-rank, or reinterpret them. An element either fits safely
+ * where the AI put it, or it is demoted to advice-only. This is what
+ * guarantees preview and apply always agree.
+ *
+ * @param {object[]} proposedElements — plan.proposedElements, unmodified
+ * @param {{widthM:number, heightM:number, overlayItems:object[]}} garden — current saved layout
+ * @returns {{ mapSuggestions: object[], additionalRecommendations: object[], rejectedSuggestions: object[] }}
+ */
+// Structure types that may only ever exist once — a second AI suggestion of
+// the same type is always a duplicate, never a distinct new map element
+// (e.g. a second Greenhouse suggestion when one already exists). Raised Bed
+// is deliberately excluded: multiple raised beds are normal.
+const SINGULAR_DEDUPE_CATALOG_KEYS = new Set(['greenhouse', 'pond', 'compost', 'coop', 'orchard']);
+
+export function buildDraftPreview(proposedElements = [], garden = {}) {
+    const widthM  = garden.widthM  || 20;
+    const heightM = garden.heightM || 20;
+    const overlayItems = garden.overlayItems || [];
+    const obstacles = overlayItems.map(it => ({
+        x: it.xM ?? 0, y: it.yM ?? 0, w: it.wM || 2, h: it.hM || 2,
+        marginM: FIXED_OBSTACLE_BUFFERS_M[it.name] ?? DEFAULT_OBSTACLE_MARGIN_M,
+    }));
+    const existingCatalogKeys = new Set(
+        overlayItems.map(it => it.structureKey || it.canonicalKey).filter(Boolean)
+    );
+
+    const mapSuggestions = [];
+    const additionalRecommendations = [];
+    const rejectedSuggestions = [];
+    const candidates = [];
+
+    for (const el of proposedElements) {
+        if (!el || !el.name) { rejectedSuggestions.push(el); continue; }
+        if (!isApplyableElement(el)) { additionalRecommendations.push(el); continue; }
+
+        // Duplicate guard: a Greenhouse/Pond/Compost/Coop/Orchard suggestion
+        // is advice-only once one already exists on the map — never a second
+        // dashed box. Matches the generator's own dedup logic; this is the
+        // defense-in-depth layer in case that ever slips.
+        const catalogKey = normalizedCatalogKey(el);
+        if (SINGULAR_DEDUPE_CATALOG_KEYS.has(catalogKey) && existingCatalogKeys.has(catalogKey)) {
+            additionalRecommendations.push({ ...el, adviceReason: `a ${el.name} already exists on the map` });
+            continue;
+        }
+
+        candidates.push(el);
+    }
+
+    const ranked = rankMapCandidates(candidates, obstacles);
+    const placed = [...obstacles];
+
+    for (const el of ranked) {
+        if (mapSuggestions.length >= MAX_MAP_SUGGESTIONS) {
+            additionalRecommendations.push(el);
+            continue;
+        }
+
+        const { x, y, width: w, height: h } = el;
+        const hasValidDims = [x, y, w, h].every(n => typeof n === 'number' && Number.isFinite(n)) && w > 0 && h > 0;
+        if (!hasValidDims) {
+            additionalRecommendations.push({ ...el, adviceReason: 'placement uncertain' });
+            continue;
+        }
+
+        const inBounds = x >= 0 && y >= 0 && (x + w) <= widthM + 0.01 && (y + h) <= heightM + 0.01;
+        if (!inBounds) {
+            additionalRecommendations.push({ ...el, adviceReason: 'placement uncertain — outside garden bounds' });
+            continue;
+        }
+
+        const box = { x, y, w, h };
+        if (placed.some(o => boxesOverlap(box, o, o.marginM ?? DEFAULT_OBSTACLE_MARGIN_M))) {
+            additionalRecommendations.push({ ...el, adviceReason: 'placement uncertain — overlaps an existing structure' });
+            continue;
+        }
+
+        mapSuggestions.push(el);
+        placed.push({ ...box, marginM: DEFAULT_OBSTACLE_MARGIN_M });
+    }
+
+    return { mapSuggestions, additionalRecommendations, rejectedSuggestions };
 }
 
 /**

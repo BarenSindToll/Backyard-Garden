@@ -11,12 +11,8 @@ import BedSidebar from '../components/garden-layout/BedSidebar';
 import PermaculturePlanWizard from '../components/permaculture/PermaculturePlanWizard';
 import PermaculturePlanSidePreview from '../components/permaculture/PermaculturePlanSidePreview';
 import SiteAnalysisWizard from '../components/garden-layout/SiteAnalysisWizard';
-import { STRUCTURES, GENERAL_STRUCTURES_MAP, LEGACY_NAME_TO_KEY, OPENABLE_ZONE_KEYS } from '../components/garden-layout/gardenZoneConfig';
-import { isApplyableElement, getSelectedApplyableElements } from '../config/permaculturePlanSchema';
-
-// Existing structures that must never be overlapped by AI-proposed elements,
-// in preview repacking or in the final apply.
-const FIXED_OBSTACLE_NAMES = new Set(['House', 'Car Road']);
+import { GENERAL_STRUCTURES_MAP, LEGACY_NAME_TO_KEY, OPENABLE_ZONE_KEYS } from '../components/garden-layout/gardenZoneConfig';
+import { buildDraftPreview } from '../config/permaculturePlanSchema';
 import { fetchCurrentUser } from '../utils/fetchCurrentUser';
 import { useLanguage } from '../utils/languageContext';
 
@@ -32,8 +28,6 @@ const DEFAULT_SETUP = {
     goals: [],
     northDirection: 'top',
 };
-
-const STRUCTURE_MAP = Object.fromEntries(STRUCTURES.map(s => [s.name, s]));
 
 const createEmptyGrid = (rows = 10, cols = 10) =>
     Array.from({ length: rows }, () => Array(cols).fill(null));
@@ -187,100 +181,40 @@ export default function GardenLayout() {
 
     // ── Permaculture wizard state ─────────────────────────────────────────────
     const [generatePlanOpen, setGeneratePlanOpen] = useState(false);
-    const [wizardInitialStep, setWizardInitialStep] = useState(1);
 
     // ── Permaculture preview state (side panel + map overlay) ─────────────────
+    // MVP: single Permaculture Draft only — the old two-variant (Solar Priority /
+    // Flow & Access) system has been removed. See git history if it's ever needed.
     const [permPlanDraft, setPermPlanDraft] = useState(null);           // active plan (shown on map + panel)
-    const [permPlanVariants, setPermPlanVariants] = useState([]);        // [planA, planB] when two variants generated
-    const [activeVariantIndex, setActiveVariantIndex] = useState(0);    // which variant is displayed
     const [previewSelectedNames, setPreviewSelectedNames] = useState(null); // null = all selected
     const [hoveredPreviewName, setHoveredPreviewName] = useState(null);
     const [previewHidden, setPreviewHidden] = useState(false);
 
-    // ── Re-layout: reflow selected proposed elements to avoid overlaps ─────────
-    // When elements are deselected the remaining selected elements are repacked
-    // so they don't overlap each other. Purely visual — stored plan is unchanged.
-    const displayProposedElements = useMemo(() => {
+    // ── Draft preview: THE single validated split of proposedElements ─────────
+    // buildDraftPreview() is the only place that decides map-suggestion
+    // positions, bounds/overlap validity, and the MVP/advice-only split.
+    // Nobody downstream (map overlay, sidebar, or apply payload) may recompute,
+    // reposition, or reinterpret these — that guarantee is what keeps preview
+    // and apply in exact agreement. Positions are the AI's original x/y/width/
+    // height in metres; an element that doesn't fit safely is demoted to advice
+    // rather than shifted, so what you see is always exactly what gets applied.
+    const draftPreview = useMemo(() => {
         const elements = permPlanDraft?.proposedElements;
-        if (!elements?.length) return [];
-        if (previewHidden) return [];
-
-        const gW              = setup?.widthM  || 20;
-        const gH              = setup?.heightM || 20;
-        const variantStrategy = permPlanDraft?.sourceContext?.variantStrategy || 'solar-priority';
-        const isFlowAccess    = variantStrategy === 'flow-access';
-
-        // Detect whether any path element was deselected (affects Flow & Access warning)
-        const selectedSet    = previewSelectedNames;
-        const pathDeselected = isFlowAccess && elements.some(
-            el => el.canonicalType === 'path' && selectedSet !== null && !selectedSet.has(el.name)
-        );
-
-        // Strategy-aware ordering: for flow-access, process Zone 1 elements first so they
-        // win any overlap resolution. For solar-priority, preserve AI generation order.
-        const ordered = isFlowAccess
-            ? [...elements].sort((a, b) => (a.permacultureZone ?? 5) - (b.permacultureZone ?? 5))
-            : elements;
-
-        // Seed the occupied-space map with fixed structures (House, Car Road) so
-        // proposed elements are repacked away from them — matching the backend's
-        // overlap repair during apply.
-        const placed = (overlayItems || [])
-            .filter(it => FIXED_OBSTACLE_NAMES.has(it.name))
-            .map(it => {
-                const buffer = it.name === 'House' ? 1.5 : 1.0; // matches backend noOverlapBufferM
-                return {
-                    x: (it.xM ?? 0) - buffer,
-                    y: (it.yM ?? 0) - buffer,
-                    w: (it.wM || 2) + buffer * 2,
-                    h: (it.hM || 2) + buffer * 2,
-                };
-            });
-
-        return ordered.map(el => {
-            const isSelected = previewSelectedNames === null || previewSelectedNames.has(el.name);
-            // Non-map or deselected: pass through as-is (overlay handles opacity)
-            if (!isSelected || !isApplyableElement(el)) {
-                return el;
-            }
-
-            const w = Math.max(0.1, el.width  || 2);
-            const h = Math.max(0.1, el.height || 2);
-            let x  = Math.max(0, Math.min(gW - w, el.x || 0));
-            let y  = Math.max(0, Math.min(gH - h, el.y || 0));
-
-            const overlaps = (cx, cy) => placed.some(p =>
-                cx < p.x + p.w + 0.2 && cx + w > p.x - 0.2 &&
-                cy < p.y + p.h + 0.2 && cy + h > p.y - 0.2
-            );
-
-            if (overlaps(x, y)) {
-                const shifts = [
-                    [0, h + 0.5], [0, -(h + 0.5)], [w + 0.5, 0], [-(w + 0.5), 0],
-                    [0, h + 1.5], [0, -(h + 1.5)], [w + 1.5, 0], [-(w + 1.5), 0],
-                    [w + 0.5, h + 0.5], [-(w + 0.5), h + 0.5],
-                ];
-                for (const [dx, dy] of shifts) {
-                    const nx = Math.max(0, Math.min(gW - w, x + dx));
-                    const ny = Math.max(0, Math.min(gH - h, y + dy));
-                    if (!overlaps(nx, ny)) { x = nx; y = ny; break; }
-                }
-            }
-
-            placed.push({ x, y, w, h });
-
-            // Flow & Access: add warning on elements that relied on a now-deselected path
-            const extraWarnings = (isFlowAccess && pathDeselected &&
-                el.canonicalType !== 'path' && (el.permacultureZone ?? 5) >= 2)
-                ? ['This element may be harder to access because the related path was deselected.']
-                : [];
-
-            const base = (x === el.x && y === el.y) ? el : { ...el, x, y };
-            return extraWarnings.length
-                ? { ...base, warnings: [...(base.warnings || []), ...extraWarnings] }
-                : base;
+        if (!elements?.length) return { mapSuggestions: [], additionalRecommendations: [], rejectedSuggestions: [] };
+        return buildDraftPreview(elements, {
+            widthM: setup?.widthM,
+            heightM: setup?.heightM,
+            overlayItems,
         });
-    }, [permPlanDraft?.proposedElements, permPlanDraft?.sourceContext?.variantStrategy, previewSelectedNames, previewHidden, setup?.widthM, setup?.heightM, overlayItems]);
+    }, [permPlanDraft?.proposedElements, setup?.widthM, setup?.heightM, overlayItems]);
+
+    // What the map overlay actually renders: the validated map suggestions,
+    // unmodified, minus anything the user has unchecked (opacity only — see
+    // ProposedElementsOverlay — never a position change).
+    const displayProposedElements = useMemo(() => {
+        if (previewHidden) return [];
+        return draftPreview.mapSuggestions;
+    }, [draftPreview, previewHidden]);
 
     // ── Apply state (lifted from wizard, now owned by GardenLayout) ───────────
     const [applying, setApplying] = useState(false);
@@ -567,20 +501,6 @@ export default function GardenLayout() {
         if (userId) saveToBackend(grids, zones, setup, positions, overlayItems, bedLayouts, zoneItems, false, data);
     };
 
-    const handleAddZoneItem = (zoneName, type) => {
-        const def = STRUCTURE_MAP[type] || {};
-        const sizeDefaults = { 'Raised Bed': { wM: 3, hM: 1.2 }, 'Path': { wM: 4, hM: 1 } };
-        const { wM, hM } = sizeDefaults[type] || { wM: 2, hM: 2 };
-        const newItem = {
-            id: Date.now() + Math.random(), name: type, type,
-            xM: 0.5, yM: 0.5, wM, hM,
-            color: def.color || null, iconData: def.icon || null, isStructure: true,
-        };
-        const updated = { ...zoneItems, [zoneName]: [...(zoneItems[zoneName] || []), newItem] };
-        setZoneItems(updated);
-        if (userId) saveToBackend(grids, zones, setup, positions, overlayItems, bedLayouts, updated);
-    };
-
     // ── Escape to close bed editor ────────────────────────────────────────────
     useEffect(() => {
         const onKeyDown = (e) => {
@@ -836,8 +756,6 @@ export default function GardenLayout() {
 
     const clearPreview = () => {
         setPermPlanDraft(null);
-        setPermPlanVariants([]);
-        setActiveVariantIndex(0);
         setPreviewSelectedNames(null);
         setHoveredPreviewName(null);
         setPreviewHidden(false);
@@ -846,41 +764,19 @@ export default function GardenLayout() {
         setSkippedElements([]);
     };
 
-    // Called by wizard when generation succeeds.
-    // planA is the food-production variant; planB is the biodiversity variant (may be null).
-    const handleDraftChange = (planA, planB = null, variantWarning = null) => {
-        const primary = planA || planB;
-        if (primary) {
-            const variants = [planA, planB].filter(Boolean);
-            setPermPlanVariants(variants);
-            setPermPlanDraft(primary);
-            setActiveVariantIndex(0);
+    // Called by the wizard when generation succeeds — one draft, one plan.
+    const handleDraftChange = (plan) => {
+        if (plan) {
+            setPermPlanDraft(plan);
             setPreviewSelectedNames(null);
             setHoveredPreviewName(null);
             setPreviewHidden(false);
             setApplyWarning(null);
-            setApplyError(variantWarning || '');   // show partial-failure note in the panel
-            setSkippedElements([]);
-            setGeneratePlanOpen(false);
-            if (variantWarning) {
-                toast.warn(variantWarning, { position: 'top-center', autoClose: 5000 });
-            }
-        } else {
-            clearPreview();
-        }
-    };
-
-    // Switch between Variant A and B in the side panel
-    const handleVariantSwitch = (index) => {
-        const plan = permPlanVariants[index];
-        if (plan) {
-            setPermPlanDraft(plan);
-            setActiveVariantIndex(index);
-            setPreviewSelectedNames(null);  // reset selection for the new variant
-            setHoveredPreviewName(null);
-            setApplyWarning(null);
             setApplyError('');
             setSkippedElements([]);
+            setGeneratePlanOpen(false);
+        } else {
+            clearPreview();
         }
     };
 
@@ -902,9 +798,12 @@ export default function GardenLayout() {
             'x','y','width','height','rotation','targetZone','permacultureZone',
             'targetElementId','plants','reason','confidence','warnings','detailPlan',
             'bedLayoutSuggestion','variantStrategy','strategyReason','strategyTags'];
-        // Same selection logic used by the side preview's count/button — the
-        // apply payload must contain exactly the elements the user was shown.
-        const selectedElements = getSelectedApplyableElements(displayProposedElements, selectedSet);
+        // Apply always sources from draftPreview.mapSuggestions — the exact same
+        // validated, final-position elements the side preview and map overlay
+        // show — independent of the "Hide on map" toggle. Never re-derived here.
+        const selectedElements = selectedSet
+            ? draftPreview.mapSuggestions.filter(el => selectedSet.has(el.name))
+            : draftPreview.mapSuggestions;
         const selectedPreviewElements = selectedElements.map(el => {
             const out = {};
             PREVIEW_FIELDS.forEach(k => { if (el[k] !== undefined) out[k] = el[k]; });
@@ -1007,10 +906,9 @@ export default function GardenLayout() {
         clearPreview();
     };
 
-    // Reopen wizard (initialStep = 1 for "New plan", 2 for "Edit requirements")
-    const handlePreviewRegenerate = (initialStep = 1) => {
+    // Reopen the (single-screen) wizard to generate a new draft.
+    const handlePreviewRegenerate = () => {
         clearPreview();
-        setWizardInitialStep(initialStep);
         setGeneratePlanOpen(true);
     };
 
@@ -1081,7 +979,7 @@ export default function GardenLayout() {
 
                 {/* Generate plan */}
                 <button
-                    onClick={() => { setWizardInitialStep(1); setGeneratePlanOpen(true); }}
+                    onClick={() => setGeneratePlanOpen(true)}
                     style={{
                         display: 'inline-flex', alignItems: 'center', gap: 6,
                         padding: '7px 14px', background: 'transparent',
@@ -1165,7 +1063,6 @@ export default function GardenLayout() {
                         onUpdateBedLayout={handleUpdateBedLayout}
                         zoneItems={zoneItems}
                         onUpdateZoneItems={handleUpdateZoneItems}
-                        onAddZoneItem={handleAddZoneItem}
                         onResetZone={handleResetZoneRequest}
                         proposedItems={displayProposedElements}
                         proposedHoveredName={hoveredPreviewName}
@@ -1189,6 +1086,8 @@ export default function GardenLayout() {
                     {permPlanDraft ? (
                         <PermaculturePlanSidePreview
                             plan={permPlanDraft}
+                            mapSuggestions={draftPreview.mapSuggestions}
+                            additionalRecommendations={draftPreview.additionalRecommendations}
                             selectedNames={previewSelectedNames}
                             onSelectionChange={setPreviewSelectedNames}
                             hoveredName={hoveredPreviewName}
@@ -1203,9 +1102,6 @@ export default function GardenLayout() {
                             skipped={skippedElements}
                             previewHidden={previewHidden}
                             onToggleHide={() => setPreviewHidden(h => !h)}
-                            variants={permPlanVariants}
-                            activeVariantIndex={activeVariantIndex}
-                            onVariantSwitch={handleVariantSwitch}
                         />
                     ) : selectedBedId ? (
                         <BedSidebar
@@ -1260,14 +1156,12 @@ export default function GardenLayout() {
                 />
             )}
 
-            {/* 2-step permaculture plan wizard (centered modal, Steps 1 & 2 only) */}
+            {/* Single-screen permaculture draft brief (MVP — one draft, no variants) */}
             {generatePlanOpen && (
                 <PermaculturePlanWizard
                     setup={setup}
                     siteAnalysis={siteAnalysis}
                     favoritePlants={favoritePlants}
-                    overlayItems={overlayItems}
-                    initialStep={wizardInitialStep}
                     onDraftChange={handleDraftChange}
                     onClose={handlePlanWizardClose}
                     onOpenSiteAnalysis={() => {

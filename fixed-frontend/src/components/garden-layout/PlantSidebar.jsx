@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { STRUCTURES, GENERAL_STRUCTURES } from './gardenZoneConfig';
+import { GENERAL_STRUCTURES } from './gardenZoneConfig';
 import { useLanguage } from '../../utils/languageContext';
 import {
     Home, CookingPot, Sprout, Recycle, Waves, Hammer, Car, Bird, PawPrint,
@@ -110,19 +110,24 @@ export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNa
                             {g.plantsTab}
                         </button>
                     )}
-                    <button
-                        onClick={() => setTab('structures')}
-                        style={{
-                            padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer',
-                            fontFamily: 'JetBrains Mono, monospace', fontSize: 10,
-                            letterSpacing: '0.15em', textTransform: 'uppercase',
-                            color: tab === 'structures' ? '#3d6b34' : '#7c857a',
-                            borderBottom: tab === 'structures' ? '2px solid #3d6b34' : '2px solid transparent',
-                            transition: 'color 0.12s',
-                        }}
-                    >
-                        {isGeneralView ? 'Elements' : g.structuresTab}
-                    </button>
+                    {/* MVP: the "Structures" tab inside a zone was removed — dragging its
+                        items never worked (RaisedBedZoneCanvas / OrchardZoneCanvas both
+                        ignore isStructure drops), so it's General-Map-only now. */}
+                    {isGeneralView && (
+                        <button
+                            onClick={() => setTab('structures')}
+                            style={{
+                                padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer',
+                                fontFamily: 'JetBrains Mono, monospace', fontSize: 10,
+                                letterSpacing: '0.15em', textTransform: 'uppercase',
+                                color: tab === 'structures' ? '#3d6b34' : '#7c857a',
+                                borderBottom: tab === 'structures' ? '2px solid #3d6b34' : '2px solid transparent',
+                                transition: 'color 0.12s',
+                            }}
+                        >
+                            Elements
+                        </button>
+                    )}
                 </div>
 
                 {tab === 'plants' && (
@@ -246,45 +251,6 @@ export default function PlantSidebar({ setup = {}, allPlants = [], placedPlantNa
                                 )}
                             </div>
                         ))}
-                    </div>
-                )}
-
-                {tab === 'structures' && !isGeneralView && (
-                    <div style={{ padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {STRUCTURES.map((structure) => {
-                            const tr = g.structures[structure.name] || { name: structure.name, description: structure.description };
-                            return (
-                                <div
-                                    key={structure.name}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: 10,
-                                        background: 'rgba(0,0,0,0.03)', border: '1px solid #e8e2cc',
-                                        borderRadius: 8, padding: '8px 10px',
-                                        cursor: 'grab',
-                                    }}
-                                    draggable
-                                    onDragStart={e => e.dataTransfer.setData('plant', JSON.stringify({
-                                        name: structure.name,
-                                        isStructure: true,
-                                        icon: structure.icon,
-                                        color: structure.color,
-                                    }))}
-                                >
-                                    <div style={{
-                                        width: 34, height: 34, borderRadius: 6, flexShrink: 0,
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        background: (structure.color || '#888') + '33',
-                                        overflow: 'hidden',
-                                    }}>
-                                        <img src={structure.icon} alt={tr.name} style={{ width: 26, height: 26 }} />
-                                    </div>
-                                    <div>
-                                        <p style={{ fontSize: 12.5, fontWeight: 600, color: '#1d2a20', margin: 0 }}>{tr.name}</p>
-                                        <p style={{ fontSize: 10.5, color: '#7c857a', margin: 0 }}>{tr.description}</p>
-                                    </div>
-                                </div>
-                            );
-                        })}
                     </div>
                 )}
 
